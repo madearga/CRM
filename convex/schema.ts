@@ -1,3 +1,4 @@
+// RISK: community library - not official Convex
 import { defineEnt, defineEntSchema, getEntDefinitions } from 'convex-ents';
 import { v } from 'convex/values';
 
@@ -52,6 +53,11 @@ const schema = defineEntSchema(
       createdAt: v.number(),
       metadata: v.optional(v.union(v.null(), v.string())),
       monthlyCredits: v.number(),
+      settings: v.optional(
+        v.object({
+          currency: v.union(v.literal('IDR'), v.literal('USD')),
+        })
+      ),
     })
       .field('slug', v.string(), { unique: true })
       .field('name', v.string(), { index: true })
@@ -142,8 +148,9 @@ const schema = defineEntSchema(
       .edges('companies', { ref: 'ownerId' })
       .edges('contacts', { ref: 'ownerId' })
       .edges('deals', { ref: 'ownerId' })
-      .edges('activities', { ref: 'assigneeId', optional: true })
-      .edges('createdActivities', { to: 'activities', ref: 'createdBy' })
+      // Note: activities use polymorphic entityType/entityId, queried via index
+      // User's activities are fetched via organizationId_entityType_entityId index
+      // No edges for activities — they're queried manually
       .index('email_name', ['email', 'name'])
       .index('name', ['name'])
       .index('username', ['username']),
@@ -193,7 +200,7 @@ const schema = defineEntSchema(
       .edge('owner', { to: 'user', field: 'ownerId' })
       .edges('contacts', { ref: 'companyId' })
       .edges('deals', { ref: 'companyId' })
-      .edges('activities', { to: 'activities', ref: 'entityId' })
+      // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_name', ['organizationId', 'name'])
       .searchIndex('search_companies', {
@@ -224,8 +231,8 @@ const schema = defineEntSchema(
       .field('companyId', v.optional(v.id('companies')), { index: true })
       .edge('owner', { to: 'user', field: 'ownerId' })
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
-      .edges('deals', { to: 'deals', ref: 'primaryContactId', optional: true })
-      .edges('activities', { to: 'activities', ref: 'entityId' })
+      .edges('deals', { to: 'deals', ref: 'primaryContactId' })
+      // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_email', ['organizationId', 'email'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
@@ -266,7 +273,7 @@ const schema = defineEntSchema(
         field: 'primaryContactId',
         optional: true,
       })
-      .edges('activities', { to: 'activities', ref: 'entityId' })
+      // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_stage', ['organizationId', 'stage'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_expectedCloseDate', [
@@ -284,6 +291,7 @@ const schema = defineEntSchema(
       dueAt: v.optional(v.number()),
       completedAt: v.optional(v.number()),
       metadata: v.optional(v.record(v.string(), v.any())),
+      createdAt: v.optional(v.number()),
     })
       .field(
         'type',
@@ -307,8 +315,10 @@ const schema = defineEntSchema(
       )
       .field('entityId', v.string(), { index: true })
       .field('organizationId', v.id('organization'), { index: true })
-      .edge('assignee', { to: 'user', field: 'assigneeId', optional: true })
-      .edge('creator', { to: 'user', field: 'createdBy' })
+      .field('assigneeId', v.optional(v.id('user')), { index: true })
+      .field('createdBy', v.id('user'), { index: true })
+      // No edges to user — activities use polymorphic entityType/entityId
+      // User's activities queried via index, not edges
       .index('organizationId_entityType_entityId', [
         'organizationId',
         'entityType',
@@ -322,6 +332,7 @@ const schema = defineEntSchema(
       before: v.optional(v.any()),
       after: v.optional(v.any()),
       metadata: v.optional(v.record(v.string(), v.any())),
+      createdAt: v.optional(v.number()),
     })
       .field(
         'entityType',

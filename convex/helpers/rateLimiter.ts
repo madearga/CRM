@@ -7,7 +7,7 @@ import type { SessionUser } from '../authHelpers';
 import { components } from '../_generated/api';
 
 // Define rate limits matching the existing Upstash configuration
-export const rateLimiter = new RateLimiter(components.rateLimiter, {
+export const rateLimiter = new RateLimiter(components.rateLimiter as any, {
   // Project limits
   'project/create:free': { kind: 'fixed window', period: MINUTE, rate: 5 },
   'project/create:premium': { kind: 'fixed window', period: MINUTE, rate: 20 },

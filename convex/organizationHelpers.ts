@@ -3,7 +3,7 @@ import { entsTableFactory } from 'convex-ents';
 
 import type { Id } from './_generated/dataModel';
 import type { MutationCtx } from './_generated/server';
-import type { AuthCtx } from '@convex/functions';
+import type { AuthCtx } from './functions';
 
 import { entDefinitions } from './schema';
 
@@ -11,24 +11,30 @@ export const listUserOrganizations = async (
   ctx: AuthCtx,
   userId: Id<'user'>
 ) => {
-  const memberships = await ctx.table('member', 'userId', (q) =>
-    q.eq('userId', userId)
-  );
+  const memberships = await ctx
+    .table('member')
+    .filter((q) => q.eq(q.field('userId'), userId))
+    .take(500);
 
   if (!memberships.length) {
     return [];
   }
 
-  return asyncMap(memberships, async (membership) => {
-    const org = await membership.edgeX('organization');
+  return (
+    await asyncMap(memberships as any[], async (membership) => {
+      const org = await ctx.table('organization').get(membership.organizationId);
+      if (!org) {
+        return null;
+      }
 
-    return {
-      ...org.doc(),
-      _creationTime: org._creationTime,
-      _id: org._id,
-      role: membership.role || 'member',
-    };
-  });
+      return {
+        ...(typeof org.doc === 'function' ? org.doc() : org),
+        _creationTime: org._creationTime,
+        _id: org._id,
+        role: membership.role || 'member',
+      };
+    })
+  ).filter(Boolean);
 };
 
 export const createPersonalOrganization = async (

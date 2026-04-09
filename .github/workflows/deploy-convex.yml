@@ -1,0 +1,38 @@
+name: Deploy Convex
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-convex-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ secrets.CONVEX_DEPLOY_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy Convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: pnpm exec convex deploy

@@ -6,7 +6,6 @@ import type { api } from '@convex/_generated/api';
 
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { type Preloaded, ConvexReactClient } from 'convex/react';
-import { createAtomStore } from 'jotai-x';
 
 import { env } from '@/env';
 import { authClient, useSession } from '@/lib/convex/auth-client';
@@ -17,16 +16,61 @@ const convex = new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL, {
   verbose: false,
 });
 
-export const { AuthProvider, useAuthStore, useAuthValue } = createAtomStore(
-  {
-    preloadedUser: null as unknown as Preloaded<typeof api.user.getCurrentUser>,
-    token: null as string | null,
-  },
-  {
-    effect: AuthEffect,
-    name: 'auth',
+type AuthState = {
+  preloadedUser: Preloaded<typeof api.user.getCurrentUser> | null;
+  token: string | null;
+};
+
+type AuthStore = {
+  set: <K extends keyof AuthState>(key: K, value: AuthState[K]) => void;
+  state: AuthState;
+};
+
+const AuthContext = React.createContext<AuthStore | null>(null);
+
+export function AuthProvider({
+  children,
+  preloadedUser,
+  token,
+}: {
+  children: ReactNode;
+  preloadedUser?: Preloaded<typeof api.user.getCurrentUser>;
+  token?: string | null;
+}) {
+  const [state, setState] = React.useState<AuthState>({
+    preloadedUser: preloadedUser ?? null,
+    token: token ?? null,
+  });
+
+  const set = React.useCallback(<K extends keyof AuthState>(key: K, value: AuthState[K]) => {
+    setState((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const value = React.useMemo<AuthStore>(() => ({ set, state }), [set, state]);
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <AuthEffect />
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuthStore() {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuthStore must be used within AuthProvider');
   }
-);
+  return context;
+}
+
+export function useAuthValue<K extends keyof AuthState>(key: K): AuthState[K] {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuthValue must be used within AuthProvider');
+  }
+  return context.state[key];
+}
 
 export function ConvexProvider({
   children,

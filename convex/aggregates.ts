@@ -1,37 +1,58 @@
-import { anyApi } from 'convex/server';
+import { TableAggregate } from '@convex-dev/aggregate';
 import { components } from './_generated/api';
-import { defineAggregate } from '@convex-dev/aggregate';
+import type { DataModel } from './_generated/dataModel';
 
-export const aggregateUsers = defineAggregate(components, {
-  api: anyApi,
-  name: 'aggregateUsers',
-  aggregateOptions: { kind: 'count' },
+// User count (global)
+export const aggregateUsers = new TableAggregate<{
+  Key: null;
+  DataModel: DataModel;
+  TableName: 'user';
+}>(components.aggregateUsers, {
+  sortKey: () => null,
 });
 
-export const aggregateDealsByOrg = defineAggregate(components, {
-  api: anyApi,
-  name: 'aggregateDealsByOrg',
-  aggregateOptions: { kind: 'count' },
-  group: { groupField: 'organizationId' },
+// Deals count per organization (namespace = organizationId)
+export const aggregateDealsByOrg = new TableAggregate<{
+  Key: number;
+  DataModel: DataModel;
+  TableName: 'deals';
+  Namespace: string;
+}>(components.aggregateDealsByOrg, {
+  namespace: (d) => d.organizationId,
+  sortKey: (d) => d._creationTime,
+  sumValue: (d) => d.value ?? 0,
 });
 
-export const aggregateDealsByStage = defineAggregate(components, {
-  api: anyApi,
-  name: 'aggregateDealsByStage',
-  aggregateOptions: { kind: 'count' },
-  group: { groupField: 'stage' },
+// Deals count per stage (namespace = organizationId, key = stage)
+export const aggregateDealsByStage = new TableAggregate<{
+  Key: string;
+  DataModel: DataModel;
+  TableName: 'deals';
+  Namespace: string;
+}>(components.aggregateDealsByStage, {
+  namespace: (d) => d.organizationId,
+  sortKey: (d) => d.stage,
+  sumValue: (d) => d.value ?? 0,
 });
 
-export const aggregateActivitiesByOrg = defineAggregate(components, {
-  api: anyApi,
-  name: 'aggregateActivitiesByOrg',
-  aggregateOptions: { kind: 'count' },
-  group: { groupField: 'organizationId' },
+// Activities count per organization
+export const aggregateActivitiesByOrg = new TableAggregate<{
+  Key: number;
+  DataModel: DataModel;
+  TableName: 'activities';
+  Namespace: string;
+}>(components.aggregateActivitiesByOrg, {
+  namespace: (d) => d.organizationId,
+  sortKey: (d) => d._creationTime,
 });
 
-export const aggregateCompaniesByOrg = defineAggregate(components, {
-  api: anyApi,
-  name: 'aggregateCompaniesByOrg',
-  aggregateOptions: { kind: 'count' },
-  group: { groupField: 'organizationId' },
+// Companies count per organization
+export const aggregateCompaniesByOrg = new TableAggregate<{
+  Key: number;
+  DataModel: DataModel;
+  TableName: 'companies';
+  Namespace: string;
+}>(components.aggregateCompaniesByOrg, {
+  namespace: (d) => d.organizationId,
+  sortKey: (d) => d._creationTime,
 });

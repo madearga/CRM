@@ -1,66 +1,69 @@
-import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
 
 import type { Id } from './_generated/dataModel';
 
 import { internal } from './_generated/api';
-import { createInternalMutation, createAuthAction } from './functions';
+import { createInternalMutation } from './functions';
 import { getEnv } from './helpers/getEnv';
 
-// Admin configuration - moved inside functions to avoid module-level execution
 const getAdminConfig = () => {
   const adminEmail = getEnv().ADMIN[0] || 'admin@example.com';
-
   return { adminEmail };
 };
 
-// Seed data
-const getUsersData = () => [
-  {
-    id: 'alice',
-    bio: 'Frontend Developer',
-    email: 'alice@example.com',
-    image: 'https://avatars.githubusercontent.com/u/2',
-    name: 'Alice Johnson',
-  },
-  {
-    id: 'bob',
-    bio: 'Backend Developer',
-    email: 'bob@example.com',
-    image: 'https://avatars.githubusercontent.com/u/3',
-    name: 'Bob Smith',
-  },
-  {
-    id: 'carol',
-    bio: 'UI/UX Designer',
-    email: 'carol@example.com',
-    image: 'https://avatars.githubusercontent.com/u/4',
-    name: 'Carol Williams',
-  },
-  {
-    id: 'dave',
-    bio: 'DevOps Engineer',
-    email: 'dave@example.com',
-    image: undefined,
-    name: 'Dave Brown',
-  },
+// Sample CRM data
+const SAMPLE_COMPANIES = [
+  { name: 'TechVentures Indonesia', website: 'https://techventures.id', industry: 'Technology', size: '11-50' as const, country: 'Indonesia', source: 'referral' as const, status: 'active' as const },
+  { name: 'Digital Nusantara', website: 'https://digitalnusantara.com', industry: 'Digital Marketing', size: '1-10' as const, country: 'Indonesia', source: 'linkedin' as const, status: 'active' as const },
+  { name: 'CloudFirst Solutions', website: 'https://cloudfirst.io', industry: 'Cloud Services', size: '51-200' as const, country: 'Singapore', source: 'website' as const, status: 'active' as const },
+  { name: 'Startup Garage Jakarta', website: 'https://startupgarage.id', industry: 'Incubator', size: '1-10' as const, country: 'Indonesia', source: 'event' as const, status: 'prospect' as const },
+  { name: 'PayEasy Asia', website: 'https://payeasy.asia', industry: 'Fintech', size: '201-500' as const, country: 'Malaysia', source: 'cold' as const, status: 'prospect' as const },
 ];
 
-// Main seed function that orchestrates everything
+const SAMPLE_CONTACTS = [
+  { firstName: 'Budi', lastName: 'Santoso', email: 'budi@techventures.id', jobTitle: 'CTO', phone: '+6281234567890', lifecycleStage: 'customer' as const, companyIndex: 0 },
+  { firstName: 'Sari', lastName: 'Dewi', email: 'sari@techventures.id', jobTitle: 'Product Manager', phone: '+6281234567891', lifecycleStage: 'customer' as const, companyIndex: 0 },
+  { firstName: 'Ahmad', lastName: 'Rizki', email: 'ahmad@digitalnusantara.com', jobTitle: 'CEO', phone: '+6281234567892', lifecycleStage: 'prospect' as const, companyIndex: 1 },
+  { firstName: 'Lisa', lastName: 'Tan', email: 'lisa@cloudfirst.io', jobTitle: 'VP Engineering', phone: '+6591234567', lifecycleStage: 'lead' as const, companyIndex: 2 },
+  { firstName: 'Dian', lastName: 'Putri', email: 'dian@cloudfirst.io', jobTitle: 'Solutions Architect', phone: '+6591234568', lifecycleStage: 'lead' as const, companyIndex: 2 },
+  { firstName: 'Reza', lastName: 'Firmansyah', email: 'reza@startupgarage.id', jobTitle: 'Managing Director', phone: '+6281234567893', lifecycleStage: 'prospect' as const, companyIndex: 3 },
+  { firstName: 'Wei', lastName: 'Chen', email: 'wei@payeasy.asia', jobTitle: 'Head of Partnerships', phone: '+60123456789', lifecycleStage: 'lead' as const, companyIndex: 4 },
+  { firstName: 'Ayu', lastName: 'Lestari', email: 'ayu@digitalnusantara.com', jobTitle: 'Marketing Lead', phone: '+6281234567894', lifecycleStage: 'prospect' as const, companyIndex: 1 },
+  { firstName: 'Hendro', lastName: 'Wibowo', email: 'hendro@startupgarage.id', jobTitle: 'Investment Analyst', phone: '+6281234567895', lifecycleStage: 'prospect' as const, companyIndex: 3 },
+  { firstName: 'Mei', lastName: 'Ling', email: 'mei@payeasy.asia', jobTitle: 'CTO', phone: '+60123456790', lifecycleStage: 'lead' as const, companyIndex: 4 },
+];
+
+const SAMPLE_DEALS = [
+  { title: 'TechVentures - Platform Development', value: 150000000, currency: 'IDR', stage: 'proposal' as const, probability: 60, companyIndex: 0, contactIndex: 0, daysAgo: 14 },
+  { title: 'TechVentures - Maintenance Contract', value: 50000000, currency: 'IDR', stage: 'new' as const, probability: 20, companyIndex: 0, contactIndex: 1, daysAgo: 3 },
+  { title: 'Digital Nusantara - Website Revamp', value: 75000000, currency: 'IDR', stage: 'contacted' as const, probability: 40, companyIndex: 1, contactIndex: 2, daysAgo: 7 },
+  { title: 'CloudFirst - API Integration', value: 5000, currency: 'IDR', stage: 'proposal' as const, probability: 70, companyIndex: 2, contactIndex: 3, daysAgo: 21 },
+  { title: 'CloudFirst - Consulting Package', value: 12000, currency: 'IDR', stage: 'won' as const, probability: 100, companyIndex: 2, contactIndex: 4, daysAgo: 45 },
+  { title: 'Startup Garage - Incubation Portal', value: 200000000, currency: 'IDR', stage: 'new' as const, probability: 10, companyIndex: 3, contactIndex: 5, daysAgo: 2 },
+  { title: 'PayEasy - Payment Gateway Module', value: 8000, currency: 'IDR', stage: 'contacted' as const, probability: 30, companyIndex: 4, contactIndex: 6, daysAgo: 10 },
+  { title: 'Digital Nusantara - SEO Campaign Tool', value: 30000000, currency: 'IDR', stage: 'lost' as const, probability: 0, companyIndex: 1, contactIndex: 7, daysAgo: 30, lostReason: 'Went with competitor - cheaper option' },
+  { title: 'Startup Garage - MVP Build', value: 100000000, currency: 'IDR', stage: 'proposal' as const, probability: 50, companyIndex: 3, contactIndex: 8, daysAgo: 5 },
+  { title: 'PayEasy - Dashboard Analytics', value: 15000, currency: 'IDR', stage: 'new' as const, probability: 15, companyIndex: 4, contactIndex: 9, daysAgo: 1 },
+  { title: 'TechVentures - Mobile App', value: 250000000, currency: 'IDR', stage: 'contacted' as const, probability: 35, companyIndex: 0, contactIndex: 0, daysAgo: 6 },
+  { title: 'CloudFirst - Training Workshop', value: 3000, currency: 'IDR', stage: 'won' as const, probability: 100, companyIndex: 2, contactIndex: 3, daysAgo: 60 },
+  { title: 'Digital Nusantara - Social Media Bot', value: 45000000, currency: 'IDR', stage: 'new' as const, probability: 5, companyIndex: 1, contactIndex: 2, daysAgo: 1 },
+  { title: 'PayEasy - Fraud Detection Module', value: 25000, currency: 'IDR', stage: 'lost' as const, probability: 0, companyIndex: 4, contactIndex: 9, daysAgo: 40, lostReason: 'Budget cut - postponed to next quarter' },
+  { title: 'Startup Garage - Demo Day Platform', value: 80000000, currency: 'IDR', stage: 'contacted' as const, probability: 45, companyIndex: 3, contactIndex: 5, daysAgo: 4 },
+];
+
+const ACTIVITY_TYPES = ['call', 'email', 'meeting', 'note'] as const;
+
+// Main seed function
 export const seed = createInternalMutation()({
   args: {},
   returns: z.null(),
   handler: async (ctx) => {
-    console.info('🌱 Starting seeding...');
+    console.info('🌱 Starting CRM seeding...');
 
     try {
-      // Step 1: Clean up existing seed data
       await ctx.runMutation(internal.seed.cleanupSeedData, {});
-
-      // Step 2: Seed users
-      await ctx.runMutation(internal.seed.seedUsers, {});
-
-      console.info('✅ Seeding finished');
+      await ctx.runMutation(internal.seed.seedCrmData, {});
+      console.info('✅ CRM seeding finished');
     } catch (error) {
       console.error('❌ Error while seeding:', error);
       throw error;
@@ -70,383 +73,143 @@ export const seed = createInternalMutation()({
   },
 });
 
-// Clean up existing seed data
+// Clean up existing CRM seed data
 export const cleanupSeedData = createInternalMutation()({
   args: {},
   returns: z.null(),
   handler: async (ctx) => {
-    console.info(
-      '🧹 Starting cleanup of seed data (preserving users and sessions)...'
-    );
+    console.info('🧹 Cleaning up existing CRM data...');
+
+    // Delete in reverse dependency order
+    const activities = await ctx.table('activities').take(1000);
+    for (const a of activities) await a.delete();
+
+    const auditLogs = await ctx.table('auditLogs').take(1000);
+    for (const a of auditLogs) await a.delete();
+
+    const deals = await ctx.table('deals').take(1000);
+    for (const d of deals) await d.delete();
+
+    const contacts = await ctx.table('contacts').take(1000);
+    for (const c of contacts) await c.delete();
+
+    const companies = await ctx.table('companies').take(1000);
+    for (const c of companies) await c.delete();
 
     console.info('🧹 Cleanup finished');
-
     return null;
   },
 });
 
-// Seed users
-export const seedUsers = createInternalMutation()({
+// Seed CRM data (companies, contacts, deals, activities)
+export const seedCrmData = createInternalMutation()({
   args: {},
-  returns: z.array(zid('user')),
+  returns: z.null(),
   handler: async (ctx) => {
-    console.info('👤 Creating users...');
-
-    const userIds: Id<'user'>[] = [];
-
-    // First, get the admin user if it exists
+    // Get admin user to use as owner
     const adminEmail = getAdminConfig().adminEmail;
     const adminUser = await ctx.table('user').get('email', adminEmail);
-
-    if (adminUser) {
-      userIds.push(adminUser._id);
-      console.info(`  ✅ Found admin user: ${adminEmail}`);
+    if (!adminUser) {
+      console.warn('⚠️ Admin user not found, skipping CRM seed');
+      return null;
     }
 
-    const usersData = getUsersData();
+    // Get first org for the admin user
+    const membership = await ctx
+      .table('member', 'organizationId_userId', (q) =>
+        q.eq('organizationId', adminUser.lastActiveOrganizationId!)
+      )
+      .first();
 
-    for (const userData of usersData) {
-      // Check if user exists by email
-      const existing = await ctx
-        .table('user')
-        .filter((q) => q.eq(q.field('email'), userData.email))
-        .unique();
-
-      if (existing) {
-        // Update existing user (preserve session-related fields)
-        const updateData: any = {
-          name: userData.name,
-        };
-
-        if (userData.bio !== undefined) {
-          updateData.bio = userData.bio;
-        }
-        if (userData.image !== undefined) {
-          updateData.image = userData.image;
-        }
-
-        await ctx.table('user').getX(existing._id).patch(updateData);
-        userIds.push(existing._id);
-        console.info(`  ✅ Updated user: ${userData.name}`);
-      } else {
-        // Create user directly in database for seeding
-        const timestamp = Date.now();
-        const userId = await ctx.table('user').insert({
-          email: userData.email,
-          emailVerified: true,
-          name: userData.name,
-          bio: userData.bio || undefined,
-          image: userData.image || undefined,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-
-        userIds.push(userId);
-        console.info(`  ✅ Created user: ${userData.name}`);
-      }
+    const orgId = membership?.organizationId ?? adminUser.lastActiveOrganizationId;
+    if (!orgId) {
+      console.warn('⚠️ No organization found, skipping CRM seed');
+      return null;
     }
 
-    console.info('👤 Created/updated users');
-
-    return userIds;
-  },
-});
-
-// Generate sample projects with todos for testing - AUTH ACTION
-export const generateSamples = createAuthAction()({
-  args: {
-    count: z.number().min(1).max(100).default(100),
-  },
-  returns: z.object({
-    created: z.number(),
-    todosCreated: z.number(),
-  }),
-  handler: async (ctx, args) => {
-    let totalCreated = 0;
-    let totalTodosCreated = 0;
-
-    // Process in batches of 5 projects at a time
-    const batchSize = 5;
-    const numBatches = Math.ceil(args.count / batchSize);
-
-    for (let i = 0; i < numBatches; i++) {
-      const batchCount = Math.min(batchSize, args.count - i * batchSize);
-
-      // Create projects in this batch using internal mutation
-      const batchResult = await ctx.runMutation(
-        internal.seed.generateSamplesBatch,
-        {
-          count: batchCount,
-          userId: ctx.user.id,
-          batchIndex: i,
-        }
-      );
-
-      totalCreated += batchResult.created;
-      totalTodosCreated += batchResult.todosCreated;
-    }
-
-    return {
-      created: totalCreated,
-      todosCreated: totalTodosCreated,
-    };
-  },
-});
-
-// Internal mutation to generate a small batch of samples
-export const generateSamplesBatch = createInternalMutation()({
-  args: {
-    count: z.number(),
-    userId: zid('user'),
-    batchIndex: z.number(),
-  },
-  returns: z.object({
-    created: z.number(),
-    todosCreated: z.number(),
-  }),
-  handler: async (ctx, args) => {
-    // First, ensure we have tags (create some if none exist)
-    const existingTags = await ctx
-      .table('tags', 'createdBy', (q) => q.eq('createdBy', args.userId))
-      .take(1);
-
-    if (existingTags.length === 0) {
-      // Create some basic tags one by one to avoid triggers
-      const basicTags = [
-        { name: 'Priority', color: '#EF4444' },
-        { name: 'In Progress', color: '#F59E0B' },
-        { name: 'Review', color: '#10B981' },
-        { name: 'Bug', color: '#DC2626' },
-        { name: 'Feature', color: '#3B82F6' },
-      ];
-
-      for (const tag of basicTags) {
-        await ctx.table('tags').insert({
-          name: tag.name,
-          color: tag.color,
-          createdBy: args.userId,
-        });
-      }
-    }
-
-    // Get user's tags for todo assignment (limit to prevent excessive data read)
-    const tags = await ctx
-      .table('tags', 'createdBy', (q) => q.eq('createdBy', args.userId))
-      .take(10); // Reduced from 50 to minimize memory usage
-
-    // Sample project names and descriptions
-    const projectTemplates = [
-      {
-        name: 'Website Redesign',
-        description:
-          'Complete overhaul of company website with modern design and improved UX',
-      },
-      {
-        name: 'Mobile App Development',
-        description: 'Native iOS and Android app for our e-commerce platform',
-      },
-      {
-        name: 'API Integration',
-        description:
-          'Integrate third-party APIs for payment processing and analytics',
-      },
-      {
-        name: 'Data Migration',
-        description:
-          'Migrate legacy database to new cloud-based infrastructure',
-      },
-      {
-        name: 'Security Audit',
-        description:
-          'Comprehensive security assessment and vulnerability testing',
-      },
-      {
-        name: 'Marketing Campaign',
-        description:
-          'Q4 marketing campaign across social media and email channels',
-      },
-      {
-        name: 'Customer Portal',
-        description:
-          'Self-service portal for customers to manage accounts and orders',
-      },
-      {
-        name: 'Analytics Dashboard',
-        description: 'Real-time analytics dashboard for business intelligence',
-      },
-      {
-        name: 'DevOps Pipeline',
-        description:
-          'Implement CI/CD pipeline with automated testing and deployment',
-      },
-      {
-        name: 'Content Management',
-        description:
-          'Build custom CMS for managing blog posts and documentation',
-      },
-      {
-        name: 'E-learning Platform',
-        description:
-          'Online learning platform with video courses and assessments',
-      },
-      {
-        name: 'Inventory System',
-        description: 'Real-time inventory tracking and management system',
-      },
-      {
-        name: 'HR Management',
-        description:
-          'Employee management system with leave tracking and payroll',
-      },
-      {
-        name: 'Social Network',
-        description: 'Internal social network for team collaboration',
-      },
-      {
-        name: 'Reporting Tool',
-        description: 'Automated report generation and distribution system',
-      },
-    ];
-
-    const prefixes = ['Project', 'Initiative', 'Phase', 'Sprint', 'Epic'];
-    const suffixes = [
-      'Alpha',
-      'Beta',
-      'v2',
-      '2024',
-      'Pro',
-      'Plus',
-      'Enterprise',
-    ];
-
-    let created = 0;
-    let todosCreated = 0;
-
-    // Todo templates for projects
-    const todoTemplates = [
-      'Set up project structure',
-      'Create initial documentation',
-      'Define project requirements',
-      'Schedule kickoff meeting',
-      'Assign team roles',
-      'Create development timeline',
-      'Set up CI/CD pipeline',
-      'Configure testing framework',
-      'Design system architecture',
-      'Implement core features',
-      'Write unit tests',
-      'Perform code review',
-      'Update progress report',
-      'Prepare demo presentation',
-      'Deploy to staging',
-    ];
-
-    // Pre-compute tag IDs for efficient selection
-    const tagIds = tags.map((t) => t._id);
-    const getRandomTags = (maxCount: number) => {
-      if (tagIds.length === 0) return [];
-      const count = Math.min(
-        Math.floor(Math.random() * (maxCount + 1)),
-        tagIds.length
-      );
-      const selectedIndices = new Set<number>();
-      while (selectedIndices.size < count) {
-        selectedIndices.add(Math.floor(Math.random() * tagIds.length));
-      }
-      return Array.from(selectedIndices).map((i) => tagIds[i]);
-    };
-
-    // Process projects and their todos one at a time to minimize memory usage
-    for (let i = 0; i < args.count; i++) {
-      // Use template or generate name
-      let name: string;
-      let description: string | undefined;
-
-      const projectIndex = args.batchIndex * 5 + i; // Global project index (updated for batch size 5)
-
-      if (projectIndex < projectTemplates.length * 2 && Math.random() > 0.3) {
-        // Use template with variations
-        const template =
-          projectTemplates[projectIndex % projectTemplates.length];
-        const usePrefix = Math.random() > 0.7;
-        const useSuffix = Math.random() > 0.7;
-
-        name = template.name;
-        if (usePrefix) {
-          const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-          name = `${prefix} ${name}`;
-        }
-        if (useSuffix) {
-          const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-          name = `${name} ${suffix}`;
-        }
-
-        description = Math.random() > 0.2 ? template.description : undefined;
-      } else {
-        // Generate generic name
-        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-        name = `${prefix} ${projectIndex + 1}`;
-        description =
-          Math.random() > 0.5
-            ? `Description for ${name}. This project aims to deliver value through innovation and collaboration.`
-            : undefined;
-      }
-
-      // Random properties
-      const isPublic = Math.random() > 0.7; // 30% public
-      const isArchived = Math.random() > 0.9; // 10% archived
-
-      const projectId = await ctx.table('projects').insert({
-        name,
-        description,
-        ownerId: args.userId,
-        isPublic,
-        archived: isArchived,
+    const organization = await ctx.table('organization').get(orgId);
+    if (organization) {
+      await ctx.table('organization').getX(orgId).patch({
+        settings: {
+          ...(organization.settings ?? {}),
+          currency: 'IDR',
+        },
       });
-
-      created++;
-
-      // Create 2-5 todos for each project immediately (reduced from 3-8 for safety)
-      // This way we process one project at a time, avoiding memory buildup
-      if (!isArchived) {
-        const todoCount = Math.floor(Math.random() * 4) + 2; // 2-5 todos per project
-        const priorities = ['low', 'medium', 'high'] as const;
-
-        for (let j = 0; j < todoCount; j++) {
-          const todoTitle =
-            todoTemplates[Math.floor(Math.random() * todoTemplates.length)];
-          const isCompleted = Math.random() > 0.7; // 30% completed
-          const priority =
-            priorities[Math.floor(Math.random() * priorities.length)];
-
-          // Use optimized tag selection (max 1 tag instead of 2)
-          const selectedTags = getRandomTags(1);
-
-          // Insert todo immediately to avoid accumulating in memory
-          await ctx.table('todos').insert({
-            title: `${todoTitle} - ${name}`,
-            description:
-              Math.random() > 0.7 ? undefined : `Task for ${name} project`, // Less descriptions
-            completed: isCompleted,
-            priority,
-            projectId,
-            userId: args.userId,
-            tags: selectedTags,
-            dueDate:
-              Math.random() > 0.7 // Less due dates (30% instead of 60%)
-                ? Date.now() +
-                  Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000) // 0-30 days instead of 60
-                : undefined,
-          });
-
-          todosCreated++;
-        }
-      }
     }
 
-    return { created, todosCreated };
+    // 1. Create companies
+    console.info('🏢 Creating companies...');
+    const companyIds: Id<'companies'>[] = [];
+    for (const company of SAMPLE_COMPANIES) {
+      const id = await ctx.table('companies').insert({
+        ...company,
+        organizationId: orgId,
+        ownerId: adminUser._id,
+      });
+      companyIds.push(id);
+    }
+    console.info(`  ✅ Created ${companyIds.length} companies`);
+
+    // 2. Create contacts
+    console.info('👤 Creating contacts...');
+    const contactIds: Id<'contacts'>[] = [];
+    for (const contact of SAMPLE_CONTACTS) {
+      const { companyIndex, ...contactData } = contact;
+      const fullName = [contactData.firstName, contactData.lastName].filter(Boolean).join(' ');
+      const id = await ctx.table('contacts').insert({
+        ...contactData,
+        fullName,
+        companyId: companyIds[companyIndex],
+        organizationId: orgId,
+        ownerId: adminUser._id,
+      });
+      contactIds.push(id);
+    }
+    console.info(`  ✅ Created ${contactIds.length} contacts`);
+
+    // 3. Create deals
+    console.info('💰 Creating deals...');
+    const dealIds: Id<'deals'>[] = [];
+    for (const deal of SAMPLE_DEALS) {
+      const { companyIndex, contactIndex, daysAgo, lostReason, ...dealData } = deal;
+      const now = Date.now();
+      const id = await ctx.table('deals').insert({
+        ...dealData,
+        companyId: companyIds[companyIndex],
+        primaryContactId: contactIds[contactIndex],
+        organizationId: orgId,
+        ownerId: adminUser._id,
+        expectedCloseDate: now + (30 - daysAgo) * 24 * 60 * 60 * 1000,
+        ...(dealData.stage === 'won' ? { wonAt: now - daysAgo * 24 * 60 * 60 * 1000 } : {}),
+        ...(dealData.stage === 'lost' ? { lostAt: now - daysAgo * 24 * 60 * 60 * 1000, lostReason } : {}),
+      });
+      dealIds.push(id);
+    }
+    console.info(`  ✅ Created ${dealIds.length} deals`);
+
+    // 4. Create activities
+    console.info('📋 Creating activities...');
+    let activityCount = 0;
+    for (let i = 0; i < dealIds.length; i++) {
+      const numActivities = Math.floor(Math.random() * 3) + 1;
+      for (let j = 0; j < numActivities; j++) {
+        const type = ACTIVITY_TYPES[Math.floor(Math.random() * ACTIVITY_TYPES.length)];
+        const daysAgo = Math.floor(Math.random() * 30);
+        await ctx.table('activities').insert({
+          title: `${type.charAt(0).toUpperCase() + type.slice(1)} with ${SAMPLE_CONTACTS[SAMPLE_DEALS[i].contactIndex]?.firstName || 'contact'}`,
+          type,
+          entityType: 'deal',
+          entityId: dealIds[i] as string,
+          organizationId: orgId,
+          createdBy: adminUser._id,
+          ...(type === 'meeting' ? { dueAt: Date.now() + (Math.random() > 0.5 ? 1 : -1) * daysAgo * 24 * 60 * 60 * 1000 } : {}),
+          ...(Math.random() > 0.5 ? { completedAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000 } : {}),
+        });
+        activityCount++;
+      }
+    }
+    console.info(`  ✅ Created ${activityCount} activities`);
+
+    return null;
   },
 });
-
-// Run the seed - this can be called from the Convex dashboard
-// npx convex run seed:seed

@@ -1,7 +1,7 @@
-import type { Id } from '@convex/_generated/dataModel';
+import type { Id } from './_generated/dataModel';
 
-import { hasPermission } from '@convex/authHelpers';
-import { listUserOrganizations } from '@convex/organizationHelpers';
+import { hasPermission } from './authHelpers';
+import { listUserOrganizations } from './organizationHelpers';
 import { asyncMap } from 'convex-helpers';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
@@ -18,6 +18,8 @@ const MEMBER_LIMIT = 5;
 // Default limit for listing operations to prevent unbounded queries
 const DEFAULT_LIST_LIMIT = 100;
 const DEFAULT_PLAN = 'free';
+const DEFAULT_ORG_CURRENCY = 'IDR' as const;
+const ORG_CURRENCIES = ['IDR', 'USD'] as const;
 
 // List all organizations for current user (excluding active organization)
 export const listOrganizations = createAuthQuery()({
@@ -127,6 +129,10 @@ export const createOrganization = createAuthMutation({
       });
     }
 
+    await ctx.table('organization').getX(org.id as Id<'organization'>).patch({
+      settings: { currency: DEFAULT_ORG_CURRENCY },
+    });
+
     // Set as active organization
     await setActiveOrganizationHandler(ctx, {
       organizationId: org.id as Id<'organization'>,
@@ -144,6 +150,7 @@ export const updateOrganization = createAuthMutation({
   rateLimit: 'organization/update',
 })({
   args: {
+    currency: z.enum(ORG_CURRENCIES).optional(),
     logo: z.string().url().optional(),
     name: z.string().min(1).max(100).optional(),
     slug: z.string().optional(),
@@ -187,14 +194,45 @@ export const updateOrganization = createAuthMutation({
       }
     }
 
-    await ctx
+    const organization = await ctx
       .table('organization')
-      .getX(ctx.user.activeOrganization.id as Id<'organization'>)
-      .patch({
-        logo: args.logo,
-        name: args.name,
-        ...(slug ? { slug } : {}),
-      });
+      .getX(ctx.user.activeOrganization.id as Id<'organization'>);
+
+    if (args.currency) {
+      const deals = await ctx
+        .table('deals', 'organizationId', (q) =>
+          q.eq('organizationId', ctx.user.activeOrganization!.id)
+        )
+        .take(5000);
+
+      const mixedCurrencyDeal = deals.find(
+        (deal) =>
+          !deal.archivedAt &&
+          deal.currency !== undefined &&
+          deal.currency.toUpperCase() !== args.currency
+      );
+
+      if (mixedCurrencyDeal) {
+        throw new ConvexError({
+          code: 'BAD_REQUEST',
+          message: `Cannot change organization currency to "${args.currency}" while deals still use a different currency.`,
+        });
+      }
+    }
+
+    await organization.patch({
+      logo: args.logo,
+      name: args.name,
+      ...(slug ? { slug } : {}),
+      ...(args.currency
+        ? {
+            settings: {
+              ...(organization.settings ?? {}),
+              currency: args.currency,
+            },
+          }
+        : {}),
+    });
 
     return null;
   },

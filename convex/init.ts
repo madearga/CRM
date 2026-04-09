@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { internal } from './_generated/api';
 import { createInternalMutation } from './functions';
 import { getEnv } from './helpers/getEnv';
-import { createUser } from '@convex/authHelpers';
+import { createUser } from './authHelpers';
 
 /**
  * Initialize the database on startup. This function runs automatically when

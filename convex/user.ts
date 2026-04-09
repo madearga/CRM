@@ -8,7 +8,7 @@ import {
   createPublicQuery,
 } from './functions';
 import { updateSettingsSchema } from './userShared';
-import { getAuth } from '@convex/auth';
+import { getAuth } from './auth';
 
 // Check if user is authenticated
 export const getIsAuthenticated = createPublicQuery({

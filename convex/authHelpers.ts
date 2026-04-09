@@ -1,10 +1,10 @@
-import type { MutationCtx, QueryCtx } from '@convex/_generated/server';
-import type { CtxWithTable, Ent, EntWriter } from '@convex/shared/types';
-import { getSession } from 'better-auth-convex';
-import { Doc, Id } from '@convex/_generated/dataModel';
+import type { MutationCtx, QueryCtx } from './_generated/server';
+import type { CtxWithTable, Ent, EntWriter } from './shared/types';
+import { authClient } from './auth';
+import { Doc, Id } from './_generated/dataModel';
 
-import type { AuthCtx } from '@convex/functions';
-import { getAuth } from '@convex/auth';
+import type { AuthCtx } from './functions';
+import { getAuth } from './auth';
 import { ConvexError } from 'convex/values';
 
 export type SessionUser = Omit<Doc<'user'>, '_creationTime' | '_id'> & {
@@ -21,8 +21,14 @@ export type SessionUser = Omit<Doc<'user'>, '_creationTime' | '_id'> & {
   plan?: string;
 };
 
-const getSessionData = async (ctx: CtxWithTable<MutationCtx>) => {
-  const session = await getSession(ctx);
+const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
+  const table = ctx.table as any;
+  const headers = await authClient.getHeaders(ctx as any);
+  const sessionPayload = await getAuth(ctx as any).api.getSession({
+    headers,
+  });
+
+  const session = sessionPayload?.session as Doc<'session'> | null | undefined;
 
   if (!session) {
     return null;
@@ -31,29 +37,7 @@ const getSessionData = async (ctx: CtxWithTable<MutationCtx>) => {
   const activeOrganizationId =
     session.activeOrganizationId as Id<'organization'> | null;
 
-  const [user, subscription] = await Promise.all([
-    ctx.table('user').get(session.userId),
-    (async () => {
-      if (!activeOrganizationId) {
-        return null;
-      }
-
-      // Get active subscription for the organization
-      const subscription = await ctx
-        .table('subscriptions')
-        .get('organizationId_status', activeOrganizationId, 'active');
-
-      if (!subscription) {
-        return null;
-      }
-
-
-      return {
-        ...subscription.doc(),
-        product: product ?? null,
-      };
-    })(),
-  ]);
+  const user = await table('user').get(session.userId as Id<'user'>);
 
   if (!user) {
     return null;
@@ -65,15 +49,18 @@ const getSessionData = async (ctx: CtxWithTable<MutationCtx>) => {
     }
 
     const [activeOrg, currentMember] = await Promise.all([
-      ctx.table('organization').getX(activeOrganizationId),
-      ctx
-        .table('member')
-        .get('organizationId_userId', activeOrganizationId, session.userId),
+      table('organization').getX(activeOrganizationId),
+      table('member', 'organizationId_userId', (q: any) =>
+          q
+            .eq('organizationId', activeOrganizationId)
+            .eq('userId', session.userId as Id<'user'>)
+        )
+        .first(),
     ]);
 
     return {
       ...activeOrg.doc(),
-      id: activeOrg._id,
+      id: activeOrg._id as Id<'organization'>,
       role: currentMember?.role || 'member',
     };
   })();
@@ -91,7 +78,7 @@ const getSessionData = async (ctx: CtxWithTable<MutationCtx>) => {
 export const getSessionUser = async (
   ctx: CtxWithTable<QueryCtx>
 ): Promise<(Ent<'user'> & SessionUser) | null> => {
-  const { activeOrganization, impersonatedBy, isAdmin, plan, session, user } =
+  const { activeOrganization, impersonatedBy, isAdmin, session, user } =
     (await getSessionData(ctx as any)) ?? ({} as never);
 
   if (!user) {
@@ -100,14 +87,13 @@ export const getSessionUser = async (
 
   return {
     ...user,
-    id: user._id,
+    id: user._id as Id<'user'>,
     activeOrganization,
     doc: user.doc,
     edge: user.edge,
     edgeX: user.edgeX,
     impersonatedBy,
     isAdmin,
-    plan,
     session,
   };
 };
@@ -115,7 +101,7 @@ export const getSessionUser = async (
 export const getSessionUserWriter = async (
   ctx: CtxWithTable<MutationCtx>
 ): Promise<(EntWriter<'user'> & SessionUser) | null> => {
-  const { activeOrganization, impersonatedBy, isAdmin, plan, session, user } =
+  const { activeOrganization, impersonatedBy, isAdmin, session, user } =
     (await getSessionData(ctx)) ?? ({} as never);
 
   if (!user) {
@@ -124,7 +110,7 @@ export const getSessionUserWriter = async (
 
   return {
     ...user,
-    id: user._id,
+    id: user._id as Id<'user'>,
     activeOrganization,
     delete: user.delete,
     doc: user.doc,
@@ -133,7 +119,6 @@ export const getSessionUserWriter = async (
     impersonatedBy,
     isAdmin,
     patch: user.patch,
-    plan,
     replace: user.replace,
     session,
   };

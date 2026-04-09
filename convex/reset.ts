@@ -1,7 +1,7 @@
-import type { TableNames } from '@convex/_generated/dataModel';
+import type { TableNames } from './_generated/dataModel';
 
-import { getEnv } from '@convex/helpers/getEnv';
-import schema from '@convex/schema';
+import { getEnv } from './helpers/getEnv';
+import schema from './schema';
 import { z } from 'zod';
 
 import { internal } from './_generated/api';

@@ -7,13 +7,11 @@ import type {
 
 import { getToken } from '@convex-dev/better-auth/nextjs';
 import { api } from '@convex/_generated/api';
+import { createAuth } from '@convex/auth';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 
-// Use a no-op function since the component handles auth internally
-const getAuth = () => undefined;
-
 export const getSessionToken = async (): Promise<string | undefined> => {
-  const token = await getToken(getAuth);
+  const token = await getToken(createAuth as any);
 
   return token;
 };

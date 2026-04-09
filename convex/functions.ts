@@ -1,6 +1,6 @@
  
-import { getAuth } from '@convex/auth';
-import { getHeaders } from 'better-auth-convex';
+import { getAuth } from './auth';
+import { authClient } from './auth';
 import { entsTableFactory } from 'convex-ents';
 import {
   customCtx,
@@ -129,7 +129,7 @@ async function withRequiredUserContext<Ctx extends MutationCtx | QueryCtx>(
     auth: {
       ...ctx.auth,
       ...getAuth(ctx),
-      headers: await getHeaders(ctx, user.session),
+      headers: await authClient.getHeaders(ctx),
     },
     user,
     userId: user.id,
@@ -146,7 +146,7 @@ async function withOptionalUserContext<Ctx extends MutationCtx | QueryCtx>(
       ? {
           ...ctx.auth,
           ...getAuth(ctx),
-          headers: await getHeaders(ctx, user.session),
+          headers: await authClient.getHeaders(ctx),
         }
       : ctx.auth,
     user,

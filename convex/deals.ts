@@ -1,0 +1,406 @@
+import { zid } from 'convex-helpers/server/zod';
+import { ConvexError } from 'convex/values';
+import { z } from 'zod';
+
+import { createAuthMutation, createAuthQuery } from './functions';
+
+const STAGES = ['new', 'contacted', 'proposal', 'won', 'lost'] as const;
+const CURRENCIES = ['IDR', 'USD'] as const;
+const DEFAULT_ORG_CURRENCY = 'IDR' as const;
+
+const stageEnum = z.enum(STAGES);
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  new: ['contacted', 'lost'],
+  contacted: ['proposal', 'lost'],
+  proposal: ['won', 'lost'],
+  won: ['new'],
+  lost: ['new'],
+};
+
+function validateStageTransition(from: string, to: string) {
+  const allowed = VALID_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new ConvexError({
+      code: 'BAD_REQUEST',
+      message: `Invalid stage transition from "${from}" to "${to}"`,
+    });
+  }
+}
+
+// List deals for current org, filter archived, optional stage filter
+export const list = createAuthQuery()({
+  args: {
+    stage: stageEnum.optional(),
+  },
+  returns: z.array(
+    z.object({
+      id: zid('deals'),
+      title: z.string(),
+      value: z.number().optional(),
+      currency: z.string().optional(),
+      probability: z.number().optional(),
+      expectedCloseDate: z.number().optional(),
+      stage: stageEnum,
+      companyId: zid('companies').optional(),
+      primaryContactId: zid('contacts').optional(),
+      ownerId: zid('user'),
+      createdAt: z.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const query = args.stage
+      ? ctx.table('deals', 'organizationId_stage', (q) =>
+          q.eq('organizationId', orgId).eq('stage', args.stage!)
+        )
+      : ctx.table('deals', 'organizationId', (q) => q.eq('organizationId', orgId));
+
+    const deals = await query.take(500);
+
+    return deals
+      .filter((deal) => !deal.archivedAt)
+      .map((deal) => ({
+        id: deal._id,
+        title: deal.title,
+        value: deal.value,
+        currency: deal.currency,
+        probability: deal.probability,
+        expectedCloseDate: deal.expectedCloseDate,
+        stage: deal.stage,
+        companyId: deal.companyId,
+        primaryContactId: deal.primaryContactId,
+        ownerId: deal.ownerId,
+        createdAt: deal._creationTime,
+      }));
+  },
+});
+
+// Get deals grouped by stage for kanban view
+export const listByStage = createAuthQuery()({
+  args: {},
+  returns: z.object({
+    new: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+    contacted: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+    proposal: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+    won: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+    lost: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+  }),
+  handler: async (ctx) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const allDeals = await ctx
+      .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(500);
+
+    const activeDeals = allDeals.filter((deal) => !deal.archivedAt);
+
+    const grouped: Record<string, { id: any; title: string; value?: number; probability?: number; ownerId: any }[]> = {
+      new: [],
+      contacted: [],
+      proposal: [],
+      won: [],
+      lost: [],
+    };
+
+    for (const deal of activeDeals) {
+      grouped[deal.stage].push({
+        id: deal._id,
+        title: deal.title,
+        value: deal.value,
+        probability: deal.probability,
+        ownerId: deal.ownerId,
+      });
+    }
+
+    return grouped as any;
+  },
+});
+
+// Get single deal with company name, contact name
+export const getById = createAuthQuery()({
+  args: {
+    id: zid('deals'),
+  },
+  returns: z.object({
+    id: zid('deals'),
+    title: z.string(),
+    value: z.number().optional(),
+    currency: z.string().optional(),
+    probability: z.number().optional(),
+    expectedCloseDate: z.number().optional(),
+    lostReason: z.string().optional(),
+    wonAt: z.number().optional(),
+    lostAt: z.number().optional(),
+    archivedAt: z.number().optional(),
+    stage: stageEnum,
+    organizationId: zid('organization'),
+    companyId: zid('companies').optional(),
+    companyName: z.string().nullish(),
+    primaryContactId: zid('contacts').optional(),
+    primaryContactName: z.string().nullish(),
+    ownerId: zid('user'),
+    createdAt: z.number(),
+  }),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const deal = await ctx.table('deals').get(args.id);
+    if (!deal || deal.organizationId !== orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    let companyName: string | null = null;
+    if (deal.companyId) {
+      const company = await ctx.table('companies').get(deal.companyId);
+      companyName = company?.name ?? null;
+    }
+
+    let primaryContactName: string | null = null;
+    if (deal.primaryContactId) {
+      const contact = await ctx.table('contacts').get(deal.primaryContactId);
+      primaryContactName = contact?.fullName ?? null;
+    }
+
+    return {
+      id: deal._id,
+      title: deal.title,
+      value: deal.value,
+      currency: deal.currency,
+      probability: deal.probability,
+      expectedCloseDate: deal.expectedCloseDate,
+      lostReason: deal.lostReason,
+      wonAt: deal.wonAt,
+      lostAt: deal.lostAt,
+      archivedAt: deal.archivedAt,
+      stage: deal.stage,
+      organizationId: deal.organizationId,
+      companyId: deal.companyId,
+      companyName,
+      primaryContactId: deal.primaryContactId,
+      primaryContactName,
+      ownerId: deal.ownerId,
+      createdAt: deal._creationTime,
+    };
+  },
+});
+
+// Create deal, default stage "new", set ownerId
+export const create = createAuthMutation()({
+  args: {
+    title: z.string().min(1).max(200),
+    value: z.number().nonnegative().optional(),
+    currency: z.string().max(3).optional(),
+    probability: z.number().min(0).max(100).optional(),
+    expectedCloseDate: z.number().optional(),
+    companyId: zid('companies').optional(),
+    primaryContactId: zid('contacts').optional(),
+  },
+  returns: zid('deals'),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const organization = await ctx.table('organization').get(orgId);
+    if (!organization) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Organization not found' });
+    }
+
+    const orgCurrency = organization.settings?.currency ?? DEFAULT_ORG_CURRENCY;
+    const requestedCurrency = (args.currency ?? orgCurrency).toUpperCase();
+
+    if (!CURRENCIES.includes(requestedCurrency as (typeof CURRENCIES)[number])) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: `Unsupported currency "${requestedCurrency}"`,
+      });
+    }
+
+    if (requestedCurrency !== orgCurrency) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: `Organization currency is "${orgCurrency}". Deals must use the same currency.`,
+      });
+    }
+
+    const id = await ctx.table('deals').insert({
+      title: args.title,
+      value: args.value,
+      currency: requestedCurrency,
+      probability: args.probability,
+      expectedCloseDate: args.expectedCloseDate,
+      stage: 'new',
+      organizationId: orgId,
+      companyId: args.companyId,
+      primaryContactId: args.primaryContactId,
+      ownerId: ctx.user._id,
+    });
+
+    return id;
+  },
+});
+
+// Update deal fields (not stage)
+export const update = createAuthMutation()({
+  args: {
+    id: zid('deals'),
+    title: z.string().min(1).max(200).optional(),
+    value: z.number().nonnegative().optional(),
+    currency: z.string().max(3).optional(),
+    probability: z.number().min(0).max(100).optional(),
+    expectedCloseDate: z.number().optional(),
+    companyId: zid('companies').optional(),
+    primaryContactId: zid('contacts').optional(),
+  },
+  returns: z.null(),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const deal = await ctx.table('deals').get(args.id);
+    if (!deal || deal.organizationId !== orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    const { id: _, ...updates } = args;
+
+    if (updates.currency !== undefined) {
+      const organization = await ctx.table('organization').get(orgId);
+      if (!organization) {
+        throw new ConvexError({ code: 'NOT_FOUND', message: 'Organization not found' });
+      }
+
+      const orgCurrency = organization.settings?.currency ?? DEFAULT_ORG_CURRENCY;
+      const requestedCurrency = updates.currency.toUpperCase();
+
+      if (!CURRENCIES.includes(requestedCurrency as (typeof CURRENCIES)[number])) {
+        throw new ConvexError({
+          code: 'BAD_REQUEST',
+          message: `Unsupported currency "${requestedCurrency}"`,
+        });
+      }
+
+      if (requestedCurrency !== orgCurrency) {
+        throw new ConvexError({
+          code: 'BAD_REQUEST',
+          message: `Organization currency is "${orgCurrency}". Deals must use the same currency.`,
+        });
+      }
+
+      updates.currency = requestedCurrency;
+    }
+
+    await ctx.table('deals').getX(args.id).patch(updates);
+
+    return null;
+  },
+});
+
+// Update deal stage with state machine validation
+export const updateStage = createAuthMutation()({
+  args: {
+    id: zid('deals'),
+    stage: stageEnum,
+    lostReason: z.string().optional(),
+  },
+  returns: z.null(),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const deal = await ctx.table('deals').get(args.id);
+    if (!deal || deal.organizationId !== orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    validateStageTransition(deal.stage, args.stage);
+
+    const now = Date.now();
+    const patch: Record<string, any> = { stage: args.stage };
+
+    if (args.stage === 'won') {
+      patch.wonAt = now;
+      patch.probability = 100;
+    } else if (args.stage === 'lost') {
+      if (!args.lostReason) {
+        throw new ConvexError({
+          code: 'BAD_REQUEST',
+          message: 'lostReason is required when moving to "lost" stage',
+        });
+      }
+      patch.lostAt = now;
+      patch.lostReason = args.lostReason;
+    } else if (args.stage === 'new' && (deal.stage === 'won' || deal.stage === 'lost')) {
+      // Reopen: clear won/lost fields
+      patch.wonAt = undefined;
+      patch.lostAt = undefined;
+      patch.lostReason = undefined;
+    }
+
+    await ctx.table('deals').getX(args.id).patch(patch);
+
+    return null;
+  },
+});
+
+// Soft delete (archive)
+export const archive = createAuthMutation()({
+  args: {
+    id: zid('deals'),
+  },
+  returns: z.null(),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const deal = await ctx.table('deals').get(args.id);
+    if (!deal || deal.organizationId !== orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    await ctx.table('deals').getX(args.id).patch({ archivedAt: Date.now() });
+
+    return null;
+  },
+});
+
+// Unarchive (restore)
+export const restore = createAuthMutation()({
+  args: {
+    id: zid('deals'),
+  },
+  returns: z.null(),
+  handler: async (ctx, args) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+    }
+
+    const deal = await ctx.table('deals').get(args.id);
+    if (!deal || deal.organizationId !== orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    await ctx.table('deals').getX(args.id).patch({ archivedAt: undefined });
+
+    return null;
+  },
+});
