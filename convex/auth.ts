@@ -71,34 +71,9 @@ export const authClient = createClient<DataModel, typeof schema>(
 
 export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
   const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const githubClientId = process.env.GITHUB_CLIENT_ID;
-  const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const socialProviders: Record<string, any> = {};
-
-  if (githubClientId && githubClientSecret) {
-    socialProviders.github = {
-      clientId: githubClientId,
-      clientSecret: githubClientSecret,
-      mapProfileToUser: async (profile: any) => {
-        return {
-          // Better Auth standard fields
-          email: profile.email,
-          image: profile.avatar_url,
-          name: profile.name || profile.login,
-          // Additional fields that will be available in onCreateUser
-          bio: profile.bio || undefined,
-          firstName: profile.name?.split(' ')[0] || undefined,
-          github: profile.login,
-          lastName: profile.name?.split(' ').slice(1).join(' ') || undefined,
-          location: profile.location || undefined,
-          username: profile.login,
-          x: profile.twitter_username || undefined,
-        };
-      },
-    };
-  }
 
   if (googleClientId && googleClientSecret) {
     socialProviders.google = {
@@ -173,10 +148,7 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
           required: false,
           type: 'string',
         },
-        github: {
-          required: false,
-          type: 'string',
-        },
+
         lastName: {
           required: false,
           type: 'string',

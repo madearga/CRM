@@ -4,7 +4,7 @@ export type RouteSchemas = {
   home: {};
   loginProvider: {
     params: {
-      provider: 'github' | 'google';
+      provider: 'google';
     };
     search?: {
       callbackUrl?: string;

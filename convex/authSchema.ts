@@ -21,7 +21,6 @@ export const tables = {
     userId: v.optional(v.union(v.null(), v.string())),
     bio: v.optional(v.union(v.null(), v.string())),
     firstName: v.optional(v.union(v.null(), v.string())),
-    github: v.optional(v.union(v.null(), v.string())),
     lastName: v.optional(v.union(v.null(), v.string())),
     linkedin: v.optional(v.union(v.null(), v.string())),
     location: v.optional(v.union(v.null(), v.string())),

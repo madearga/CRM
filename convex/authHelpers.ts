@@ -130,7 +130,6 @@ export const createUser = async (
     email: string;
     name: string;
     bio?: string | null;
-    github?: string | null;
     image?: string | null;
     location?: string | null;
     role?: 'admin' | 'user';
