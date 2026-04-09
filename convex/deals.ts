@@ -12,8 +12,8 @@ const stageEnum = z.enum(STAGES);
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   new: ['contacted', 'lost'],
-  contacted: ['proposal', 'lost'],
-  proposal: ['won', 'lost'],
+  contacted: ['proposal', 'new', 'lost'],
+  proposal: ['won', 'contacted', 'lost'],
   won: ['new'],
   lost: ['new'],
 };
