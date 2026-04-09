@@ -131,7 +131,7 @@ export function CreateDealDialog({
               </SelectTrigger>
               <SelectContent>
                 {(companies as any[])?.map((company: any) => (
-                  <SelectItem key={company._id} value={company._id}>
+                  <SelectItem key={company.id} value={company.id}>
                     {company.name}
                   </SelectItem>
                 ))}
@@ -147,8 +147,8 @@ export function CreateDealDialog({
               </SelectTrigger>
               <SelectContent>
                 {(contacts as any[])?.map((contact: any) => (
-                  <SelectItem key={contact._id} value={contact._id}>
-                    {contact.name ?? contact.email}
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.fullName ?? contact.email}
                   </SelectItem>
                 ))}
               </SelectContent>

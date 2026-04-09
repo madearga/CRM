@@ -24,7 +24,7 @@ const STAGES = [
 type StageId = (typeof STAGES)[number]['id'];
 
 interface Deal {
-  _id: string;
+  id: string;
   title: string;
   value?: number;
   currency?: string;
@@ -165,8 +165,8 @@ export default function DealsPage() {
                       >
                         {deals.map((deal, index) => (
                           <Draggable
-                            key={deal._id}
-                            draggableId={deal._id}
+                            key={deal.id}
+                            draggableId={deal.id}
                             index={index}
                           >
                             {(provided, snapshot) => (
