@@ -179,6 +179,7 @@ export const seedCrmData = createInternalMutation()({
         primaryContactId: contactIds[contactIndex],
         organizationId: orgId,
         ownerId: adminUser._id,
+        stageEnteredAt: now - daysAgo * 24 * 60 * 60 * 1000,
         expectedCloseDate: now + (30 - daysAgo) * 24 * 60 * 60 * 1000,
         ...(dealData.stage === 'won' ? { wonAt: now - daysAgo * 24 * 60 * 60 * 1000 } : {}),
         ...(dealData.stage === 'lost' ? { lostAt: now - daysAgo * 24 * 60 * 60 * 1000, lostReason } : {}),

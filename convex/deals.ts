@@ -84,11 +84,11 @@ export const list = createAuthQuery()({
 export const listByStage = createAuthQuery()({
   args: {},
   returns: z.object({
-    new: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
-    contacted: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
-    proposal: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
-    won: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
-    lost: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), ownerId: zid('user') })),
+    new: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
+    contacted: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
+    proposal: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
+    won: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
+    lost: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
   }),
   handler: async (ctx) => {
     const orgId = ctx.user.activeOrganization?.id;
@@ -102,7 +102,7 @@ export const listByStage = createAuthQuery()({
 
     const activeDeals = allDeals.filter((deal) => !deal.archivedAt);
 
-    const grouped: Record<string, { id: any; title: string; value?: number; probability?: number; ownerId: any }[]> = {
+    const grouped: Record<string, { id: any; title: string; value?: number; probability?: number; stageEnteredAt?: number; ownerId: any }[]> = {
       new: [],
       contacted: [],
       proposal: [],
@@ -116,6 +116,7 @@ export const listByStage = createAuthQuery()({
         title: deal.title,
         value: deal.value,
         probability: deal.probability,
+        stageEnteredAt: deal.stageEnteredAt,
         ownerId: deal.ownerId,
       });
     }
@@ -242,6 +243,7 @@ export const create = createAuthMutation()({
       probability: args.probability,
       expectedCloseDate: args.expectedCloseDate,
       stage: 'new',
+      stageEnteredAt: Date.now(),
       organizationId: orgId,
       companyId: args.companyId,
       primaryContactId: args.primaryContactId,
@@ -332,7 +334,7 @@ export const updateStage = createAuthMutation()({
     validateStageTransition(deal.stage, args.stage);
 
     const now = Date.now();
-    const patch: Record<string, any> = { stage: args.stage };
+    const patch: Record<string, any> = { stage: args.stage, stageEnteredAt: now };
 
     if (args.stage === 'won') {
       patch.wonAt = now;

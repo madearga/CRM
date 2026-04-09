@@ -10,8 +10,11 @@ import {
   Phone,
   TrendingUp,
   Activity,
+  AlertTriangle,
+  Plus,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useState } from 'react';
 
 import { api } from '@convex/_generated/api';
 import { useAuthQuery } from '@/lib/convex/hooks';
@@ -23,7 +26,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { QuickAddDealDialog } from './quick-add-deal-dialog';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('id-ID', {
@@ -41,9 +46,9 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 const STAGE_BADGE_VARIANTS: Record<string, string> = {
-  new: 'bg-slate-100 text-slate-700',
-  contacted: 'bg-blue-100 text-blue-700',
-  proposal: 'bg-amber-100 text-amber-700',
+  new: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
+  contacted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  proposal: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   won: 'bg-green-100 text-green-700',
   lost: 'bg-red-100 text-red-700',
 };
@@ -76,6 +81,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { data, isLoading } = useAuthQuery(api.dashboard.overview, {});
 
   if (isLoading) {
@@ -97,7 +103,13 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <Button size="sm" onClick={() => setShowQuickAdd(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          Quick Add Deal
+        </Button>
+      </div>
 
       {/* Pipeline Value */}
       <Card>
@@ -186,6 +198,41 @@ export default function DashboardPage() {
 
       {/* Recent & Upcoming Activities */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Aging Deals */}
+        {data.agingDeals && data.agingDeals.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="h-5 w-5" />
+                Deals Needing Attention
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {data.agingDeals.slice(0, 5).map((deal) => (
+                  <li key={deal.id} className="flex items-start gap-3 text-sm">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-amber-400" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{deal.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <Badge variant="outline" className="mr-1 text-xs capitalize">
+                          {deal.stage}
+                        </Badge>
+                        {deal.daysInStage}d in stage
+                      </p>
+                    </div>
+                    {deal.value != null && (
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {formatCurrency(deal.value)}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Recent Activities */}
         <Card>
           <CardHeader>
@@ -256,6 +303,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <QuickAddDealDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} />
     </div>
   );
 }

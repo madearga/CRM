@@ -250,6 +250,7 @@ const schema = defineEntSchema(
       lostReason: v.optional(v.string()),
       wonAt: v.optional(v.number()),
       lostAt: v.optional(v.number()),
+      stageEnteredAt: v.optional(v.number()),
       archivedAt: v.optional(v.number()),
     })
       .field(

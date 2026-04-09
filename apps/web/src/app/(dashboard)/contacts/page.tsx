@@ -38,10 +38,10 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 const LIFECYCLE_COLORS: Record<string, string> = {
-  lead: 'bg-slate-100 text-slate-700',
-  prospect: 'bg-blue-100 text-blue-700',
-  customer: 'bg-green-100 text-green-700',
-  churned: 'bg-red-100 text-red-700',
+  lead: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
+  prospect: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  customer: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  churned: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export default function ContactsPage() {

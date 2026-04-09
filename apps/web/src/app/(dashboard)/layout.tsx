@@ -8,13 +8,17 @@ import {
   Handshake,
   LayoutDashboard,
   LogOut,
+  Moon,
   Settings,
+  Sun,
   Users,
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
+import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
+import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -56,6 +60,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const user = useCurrentUser();
+  const { theme, setTheme } = useTheme();
 
   return (
     <SidebarProvider>
@@ -118,6 +123,12 @@ export default function DashboardLayout({
               </div>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                {theme === 'dark' ? <Sun /> : <Moon />}
+                <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton onClick={() => signOut()}>
                 <LogOut />
                 <span>Sign out</span>
@@ -135,6 +146,7 @@ export default function DashboardLayout({
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
+      <KeyboardShortcuts />
     </SidebarProvider>
   );
 }

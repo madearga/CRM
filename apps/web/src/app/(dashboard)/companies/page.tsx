@@ -38,9 +38,9 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  inactive: 'bg-red-100 text-red-700',
-  prospect: 'bg-blue-100 text-blue-700',
+  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  inactive: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  prospect: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
 export default function CompaniesPage() {
@@ -250,7 +250,7 @@ export default function CompaniesPage() {
                       <span className="text-muted-foreground">—</span>
                     )}
                     {company.archivedAt && (
-                      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
+                      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
                         archived
                       </Badge>
                     )}

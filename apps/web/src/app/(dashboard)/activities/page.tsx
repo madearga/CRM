@@ -242,7 +242,7 @@ export default function ActivitiesPage() {
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs capitalize">{activity.type}</Badge>
                       {activity.completedAt ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">done</Badge>
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs">done</Badge>
                       ) : (
                         <Button variant="ghost" size="sm" onClick={() => handleComplete(activity._id)}>
                           <Check className="h-3 w-3" />

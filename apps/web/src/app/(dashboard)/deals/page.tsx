@@ -14,11 +14,11 @@ import { CreateDealDialog } from './create-deal-dialog';
 import { LostReasonDialog } from './lost-reason-dialog';
 
 const STAGES = [
-  { id: 'new', label: 'New', bg: 'bg-slate-50', border: 'border-slate-200', badge: 'bg-slate-200 text-slate-800' },
-  { id: 'contacted', label: 'Contacted', bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-200 text-blue-800' },
-  { id: 'proposal', label: 'Proposal', bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-200 text-amber-800' },
-  { id: 'won', label: 'Won', bg: 'bg-green-50', border: 'border-green-200', badge: 'bg-green-200 text-green-800' },
-  { id: 'lost', label: 'Lost', bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-200 text-red-800' },
+  { id: 'new', label: 'New', bg: 'bg-slate-50 dark:bg-slate-900/50', border: 'border-slate-200 dark:border-slate-700', badge: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200' },
+  { id: 'contacted', label: 'Contacted', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', badge: 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200' },
+  { id: 'proposal', label: 'Proposal', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', badge: 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200' },
+  { id: 'won', label: 'Won', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', badge: 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' },
+  { id: 'lost', label: 'Lost', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', badge: 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200' },
 ] as const;
 
 type StageId = (typeof STAGES)[number]['id'];
@@ -29,6 +29,16 @@ interface Deal {
   value?: number;
   currency?: string;
   probability?: number;
+  stageEnteredAt?: number;
+  ownerId: string;
+}
+
+function formatStageDuration(stageEnteredAt?: number): string | null {
+  if (!stageEnteredAt) return null;
+  const days = Math.floor((Date.now() - stageEnteredAt) / 86_400_000);
+  if (days === 0) return 'today';
+  if (days === 1) return '1d';
+  return `${days}d`;
 }
 
 function formatCurrency(value: number, currency: string = 'IDR') {
@@ -195,11 +205,25 @@ export default function DealsPage() {
                                     ) : (
                                       <span>—</span>
                                     )}
-                                    {deal.probability != null && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        {deal.probability}%
-                                      </Badge>
-                                    )}
+                                    <div className="flex items-center gap-1">
+                                      {deal.probability != null && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {deal.probability}%
+                                        </Badge>
+                                      )}
+                                      {formatStageDuration(deal.stageEnteredAt) && (
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-xs ${
+                                            (Date.now() - (deal.stageEnteredAt ?? 0)) / 86_400_000 > 14
+                                              ? 'border-amber-300 text-amber-600'
+                                              : ''
+                                          }`}
+                                        >
+                                          {formatStageDuration(deal.stageEnteredAt)}
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
