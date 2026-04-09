@@ -16,8 +16,8 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     adminClient(),
     organizationClient({
-      ac: ac as any,
-      roles: roles as any,
+      ac,
+      roles,
     }),
     // polarClient(),
     convexClient(),

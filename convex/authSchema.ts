@@ -20,14 +20,6 @@ export const tables = {
     banExpires: v.optional(v.union(v.null(), v.number())),
     userId: v.optional(v.union(v.null(), v.string())),
     username: v.optional(v.union(v.null(), v.string())),
-    bio: v.optional(v.union(v.null(), v.string())),
-    firstName: v.optional(v.union(v.null(), v.string())),
-    lastName: v.optional(v.union(v.null(), v.string())),
-    linkedin: v.optional(v.union(v.null(), v.string())),
-    location: v.optional(v.union(v.null(), v.string())),
-    website: v.optional(v.union(v.null(), v.string())),
-    x: v.optional(v.union(v.null(), v.string())),
-    deletedAt: v.optional(v.number()),
   })
     .index("email_name", ["email","name"])
     .index("name", ["name"])

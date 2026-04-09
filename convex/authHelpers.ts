@@ -24,7 +24,7 @@ export type SessionUser = Omit<Doc<'user'>, '_creationTime' | '_id'> & {
 const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
   const table = ctx.table as any;
   const headers = await authClient.getHeaders(ctx as any);
-  const sessionPayload = await (getAuth(ctx as any).api as any).getSession({
+  const sessionPayload = await getAuth(ctx as any).api.getSession({
     headers,
   });
 
@@ -156,19 +156,19 @@ export const hasPermission = async (
   shouldThrow = true
 ) => {
   try {
-    const canUpdate = await (ctx.auth as any).api.organization?.checkRolePermission?.({
+    const canUpdate = await ctx.auth.api.hasPermission({
       body,
       headers: ctx.auth.headers,
     });
 
-    if (shouldThrow && !canUpdate?.success) {
+    if (shouldThrow && !canUpdate.success) {
       throw new ConvexError({
         code: 'FORBIDDEN',
         message: 'Insufficient permissions for this action',
       });
     }
 
-    return canUpdate?.success ?? false;
+    return canUpdate.success;
   } catch (e) {
     if (e instanceof ConvexError) throw e;
     if (shouldThrow) {

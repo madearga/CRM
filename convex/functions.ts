@@ -1,6 +1,5 @@
  
-import { getAuth } from './auth';
-import { authClient } from './auth';
+import { authClient, getAuth } from './auth';
 import { entsTableFactory } from 'convex-ents';
 import {
   customCtx,
@@ -53,7 +52,7 @@ export type PublicCtx<Ctx extends MutationCtx | QueryCtx = QueryCtx> =
 
 export type AuthCtx<Ctx extends MutationCtx | QueryCtx = QueryCtx> =
   CtxWithTable<Ctx> & {
-    auth: Auth & { headers: Headers; api: any };
+    auth: Auth & ReturnType<typeof getAuth> & { headers: Headers };
     user: CtxUser<Ctx>;
     userId: Id<'user'>;
   };
@@ -128,8 +127,7 @@ async function withRequiredUserContext<Ctx extends MutationCtx | QueryCtx>(
     ...ctx,
     auth: {
       ...ctx.auth,
-      ...(getAuth(ctx) as any),
-      api: (getAuth(ctx) as any).api as any,
+      ...getAuth(ctx),
       headers: await authClient.getHeaders(ctx),
     },
     user,
@@ -146,8 +144,7 @@ async function withOptionalUserContext<Ctx extends MutationCtx | QueryCtx>(
     auth: user
       ? {
           ...ctx.auth,
-          ...(getAuth(ctx) as any),
-          api: (getAuth(ctx) as any).api as any,
+          ...getAuth(ctx),
           headers: await authClient.getHeaders(ctx),
         }
       : ctx.auth,
