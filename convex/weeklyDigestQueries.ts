@@ -1,4 +1,5 @@
 import { zid } from 'convex-helpers/server/zod';
+import type { Id } from './_generated/dataModel';
 import { z } from 'zod';
 
 import { createInternalQuery } from './functions';
@@ -20,7 +21,7 @@ export const listDigestTargets = createInternalQuery()({
     const organizations = await ctx.table('organization').take(500);
     const targets: {
       currency: string;
-      organizationId: string;
+      organizationId: string & { __tableName: "organization"; };
       organizationName: string;
       recipientEmails: string[];
     }[] = [];
@@ -45,7 +46,7 @@ export const listDigestTargets = createInternalQuery()({
       }
 
       const recipientEmails = new Set<string>();
-      for (const userId of uniqueUserIds) {
+      for (const userId of (uniqueUserIds as any as Id<"user">[])) {
         const user = await ctx.table('user').get(userId);
         if (user?.email) {
           recipientEmails.add(user.email);

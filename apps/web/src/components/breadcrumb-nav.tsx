@@ -4,14 +4,13 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Home,
-  FolderOpen,
-  Tags,
   LogOut,
   LogIn,
-  CheckSquare,
-  RotateCcw,
-  TestTube2,
   Building2,
+  Users,
+  Handshake,
+  Activity,
+  Settings,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -22,31 +21,22 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import {
-  useCurrentUser,
-  useAuthMutation,
-  usePublicQuery,
-  useAuthAction,
-} from '@/lib/convex/hooks';
+import { useCurrentUser } from '@/lib/convex/hooks';
 import { signOut } from '@/lib/convex/auth-client';
-import { api } from '@convex/_generated/api';
-import { toast } from 'sonner';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
+
+const NAV_ITEMS = [
+  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/companies', label: 'Companies', icon: Building2 },
+  { href: '/contacts', label: 'Contacts', icon: Users },
+  { href: '/deals', label: 'Deals', icon: Handshake },
+  { href: '/activities', label: 'Activities', icon: Activity },
+  { href: '/settings', label: 'Settings', icon: Settings },
+] as const;
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
-  const generateSamplesAction = useAuthAction(api.seed.generateSamples);
-
-  // Check if there's any data (projects)
-  const { data: projectsData } = usePublicQuery(
-    api.projects.list,
-    { paginationOpts: { numItems: 1, cursor: null } },
-    {
-      placeholderData: { page: [], isDone: true, continueCursor: '' },
-    }
-  );
-  const hasData = projectsData && projectsData.page.length > 0;
 
   // Parse the pathname into segments
   const segments = pathname.split('/').filter(Boolean);
@@ -56,23 +46,21 @@ export function BreadcrumbNav() {
 
   // Always add home
   if (pathname === '/') {
-    // On home page, show as current page
     breadcrumbItems.push(
       <BreadcrumbItem key="home">
         <BreadcrumbPage className="flex items-center gap-1">
           <Home className="h-4 w-4" />
-          <span>Home</span>
+          <span>Dashboard</span>
         </BreadcrumbPage>
       </BreadcrumbItem>
     );
   } else {
-    // On other pages, show as link
     breadcrumbItems.push(
       <BreadcrumbItem key="home">
         <BreadcrumbLink asChild>
           <Link href="/" className="flex items-center gap-1">
             <Home className="h-4 w-4" />
-            <span>Home</span>
+            <span>Dashboard</span>
           </Link>
         </BreadcrumbLink>
       </BreadcrumbItem>
@@ -90,16 +78,9 @@ export function BreadcrumbNav() {
     const href = '/' + segments.slice(0, index + 1).join('/');
 
     // Format segment name
-    let displayName = segment;
-
-    // Handle special cases
-    if (segment === 'projects') displayName = 'Projects';
-    else if (segment === 'tags') displayName = 'Tags';
-    else if (segment === 'login') displayName = 'Login';
-    else if (segment === 'register') displayName = 'Register';
-    // For dynamic segments (like project IDs), you might want to fetch the actual name
-    // For now, we'll just show "Detail" for ID-like segments
-    else if (segment.match(/^[a-zA-Z0-9]+$/)) displayName = 'Detail';
+    let displayName = segment.charAt(0).toUpperCase() + segment.slice(1);
+    const navItem = NAV_ITEMS.find((item) => item.href === href);
+    if (navItem) displayName = navItem.label;
 
     if (isLast) {
       breadcrumbItems.push(
@@ -132,41 +113,24 @@ export function BreadcrumbNav() {
 
           {/* Center - Quick Links */}
           <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <CheckSquare className="h-4 w-4" />
-              Todos
-            </Link>
-            <div className="h-4 w-px bg-border" />
-            <Link
-              href="/projects"
-              className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <FolderOpen className="h-4 w-4" />
-              Projects
-            </Link>
-            <div className="h-4 w-px bg-border" />
-            <Link
-              href="/tags"
-              className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Tags className="h-4 w-4" />
-              Tags
-            </Link>
-            {user?.activeOrganization?.slug && (
-              <>
-                <div className="h-4 w-px bg-border" />
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
                 <Link
-                  href={`/org/${user.activeOrganization.slug}`}
-                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${
+                    isActive
+                      ? 'text-foreground'
+                      : 'text-muted-foreground'
+                  }`}
                 >
-                  <Building2 className="h-4 w-4" />
-                  Organization
+                  <Icon className="h-4 w-4" />
+                  {item.label}
                 </Link>
-              </>
-            )}
+              );
+            })}
           </div>
 
           {/* Right side - Organization Switcher & Auth */}
@@ -174,28 +138,6 @@ export function BreadcrumbNav() {
             {user && user.id ? (
               <>
                 <OrganizationSwitcher />
-                {hasData ? null : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      toast.promise(
-                        generateSamplesAction.mutateAsync({ count: 100 }),
-                        {
-                          loading: 'Generating sample projects with todos...',
-                          success: (result) =>
-                            `Created ${result.created} projects with ${result.todosCreated} todos!`,
-                          error: (e) =>
-                            e.data?.message ?? 'Failed to generate samples',
-                        }
-                      );
-                    }}
-                    disabled={generateSamplesAction.isPending}
-                  >
-                    <TestTube2 className="h-4 w-4" />
-                    Add Samples
-                  </Button>
-                )}
                 <Button variant="outline" size="sm" onClick={() => signOut()}>
                   <LogOut className="h-4 w-4" />
                   Sign out

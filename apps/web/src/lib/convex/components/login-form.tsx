@@ -17,6 +17,7 @@ export function SignForm() {
   let [callbackUrl] = useQueryState('callbackUrl');
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const hasGoogleAuth = Boolean(env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
   if (!callbackUrl && !authRoutes.includes(pathname)) {
     callbackUrl = encodeURL(pathname, searchParams.toString());
@@ -46,15 +47,17 @@ export function SignForm() {
 
   return (
     <div className={cn('mx-auto grid max-w-[268px] gap-3')}>
-      <Button
-        size="lg"
-        variant="outline"
-        className="w-full"
-        onClick={handleGoogleSignIn}
-      >
-        <GoogleIcon />
-        Continue with Google
-      </Button>
+      {hasGoogleAuth ? (
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full"
+          onClick={handleGoogleSignIn}
+        >
+          <GoogleIcon />
+          Continue with Google
+        </Button>
+      ) : null}
 
       <Button
         size="lg"

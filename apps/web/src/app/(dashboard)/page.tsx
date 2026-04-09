@@ -1,0 +1,261 @@
+'use client';
+
+import {
+  ArrowRightLeft,
+  Building2,
+  Calendar,
+  FileText,
+  Handshake,
+  Mail,
+  Phone,
+  TrendingUp,
+  Activity,
+} from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
+
+import { api } from '@convex/_generated/api';
+import { useAuthQuery } from '@/lib/convex/hooks';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(value);
+
+const STAGE_COLORS: Record<string, string> = {
+  new: 'bg-slate-400',
+  contacted: 'bg-blue-400',
+  proposal: 'bg-amber-400',
+  won: 'bg-green-400',
+  lost: 'bg-red-400',
+};
+
+const STAGE_BADGE_VARIANTS: Record<string, string> = {
+  new: 'bg-slate-100 text-slate-700',
+  contacted: 'bg-blue-100 text-blue-700',
+  proposal: 'bg-amber-100 text-amber-700',
+  won: 'bg-green-100 text-green-700',
+  lost: 'bg-red-100 text-red-700',
+};
+
+const ACTIVITY_ICONS: Record<string, typeof Phone> = {
+  call: Phone,
+  email: Mail,
+  meeting: Calendar,
+  note: FileText,
+  status_change: ArrowRightLeft,
+};
+
+function DashboardSkeleton() {
+  return (
+    <div className="container mx-auto space-y-6 px-4 py-6">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-36 w-full rounded-xl" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+      </div>
+      <Skeleton className="h-48 rounded-xl" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  const { data, isLoading } = useAuthQuery(api.dashboard.overview, {});
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (!data) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="mt-2 text-muted-foreground">
+          No data yet. Start by creating deals, companies, and activities.
+        </p>
+      </div>
+    );
+  }
+
+  const maxCount = Math.max(...data.dealsByStage.map((s) => s.count), 1);
+
+  return (
+    <div className="container mx-auto space-y-6 px-4 py-6">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+
+      {/* Pipeline Value */}
+      <Card>
+        <CardHeader>
+          <CardDescription className="flex items-center gap-1.5">
+            <TrendingUp className="h-4 w-4" />
+            Pipeline Value
+          </CardDescription>
+          <CardTitle className="font-mono text-4xl">
+            {formatCurrency(data.pipelineValue)}
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-1.5">
+              <Handshake className="h-4 w-4" />
+              Total Deals
+            </CardDescription>
+            <CardTitle className="text-2xl">{data.totalDeals}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-1.5">
+              <Building2 className="h-4 w-4" />
+              Total Companies
+            </CardDescription>
+            <CardTitle className="text-2xl">{data.totalCompanies}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-1.5">
+              <Activity className="h-4 w-4" />
+              Total Activities
+            </CardDescription>
+            <CardTitle className="text-2xl">{data.totalActivities}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Pipeline by Stage */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pipeline by Stage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {data.dealsByStage.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No deals yet</p>
+          ) : (
+            data.dealsByStage.map((stage) => (
+              <div key={stage.stage} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className={STAGE_BADGE_VARIANTS[stage.stage]}
+                    >
+                      {stage.stage}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      {stage.count} {stage.count === 1 ? 'deal' : 'deals'}
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {formatCurrency(stage.value)}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full transition-all ${STAGE_COLORS[stage.stage] ?? 'bg-primary'}`}
+                    style={{
+                      width: `${(stage.count / maxCount) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent & Upcoming Activities */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Recent Activities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recent activities
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {data.recentActivities.map((activity) => {
+                  const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
+                  return (
+                    <li
+                      key={activity.id}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(activity.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Activities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Activities</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.upcomingActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No upcoming activities
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {data.upcomingActivities.map((activity) => {
+                  const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
+                  return (
+                    <li
+                      key={activity.id}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(activity.dueAt), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -82,19 +82,19 @@ export const cleanupSeedData = createInternalMutation()({
 
     // Delete in reverse dependency order
     const activities = await ctx.table('activities').take(1000);
-    for (const a of activities) await a.delete();
+    for (const a of activities) await ctx.db.delete(a._id);
 
     const auditLogs = await ctx.table('auditLogs').take(1000);
-    for (const a of auditLogs) await a.delete();
+    for (const a of auditLogs) await ctx.db.delete(a._id);
 
     const deals = await ctx.table('deals').take(1000);
-    for (const d of deals) await d.delete();
+    for (const d of deals) await ctx.db.delete(d._id);
 
     const contacts = await ctx.table('contacts').take(1000);
-    for (const c of contacts) await c.delete();
+    for (const c of contacts) await ctx.db.delete(c._id);
 
     const companies = await ctx.table('companies').take(1000);
-    for (const c of companies) await c.delete();
+    for (const c of companies) await ctx.db.delete(c._id);
 
     console.info('🧹 Cleanup finished');
     return null;

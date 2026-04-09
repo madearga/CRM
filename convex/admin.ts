@@ -257,7 +257,6 @@ export const getDashboardStats = createAuthQuery({
     // Get exact user count using aggregate - O(log n) performance!
     const totalUsers = await aggregateUsers.count(ctx, {
       bounds: {} as any,
-      namespace: 'global',
     });
 
     // Estimate total admins based on sample

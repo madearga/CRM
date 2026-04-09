@@ -228,7 +228,7 @@ const schema = defineEntSchema(
     })
       .field('email', v.string(), { index: true })
       .field('organizationId', v.id('organization'), { index: true })
-      .field('companyId', v.optional(v.id('companies')), { index: true })
+      .field('companyId', v.optional(v.id('companies')))
       .edge('owner', { to: 'user', field: 'ownerId' })
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .edges('deals', { to: 'deals', ref: 'primaryContactId' })
@@ -264,8 +264,8 @@ const schema = defineEntSchema(
         { index: true }
       )
       .field('organizationId', v.id('organization'), { index: true })
-      .field('companyId', v.optional(v.id('companies')), { index: true })
-      .field('primaryContactId', v.optional(v.id('contacts')), { index: true })
+      .field('companyId', v.optional(v.id('companies')))
+      .field('primaryContactId', v.optional(v.id('contacts')))
       .edge('owner', { to: 'user', field: 'ownerId' })
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .edge('primaryContact', {

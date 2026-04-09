@@ -40,7 +40,6 @@ export default function OrganizationInviteEmail({
   return (
     <Html>
       <Head />
-      <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={headerTitle}>

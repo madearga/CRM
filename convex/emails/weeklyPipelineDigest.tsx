@@ -47,7 +47,6 @@ export default function WeeklyPipelineDigestEmail({
   return (
     <Html>
       <Head />
-      <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={title}>Weekly Pipeline Digest</Heading>

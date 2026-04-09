@@ -14,6 +14,7 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_CONVEX_SITE_URL: z.string(),
     NEXT_PUBLIC_CONVEX_URL: z.string(),
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
     NEXT_PUBLIC_SITE_URL: z.string().optional(),
   },
   /**
@@ -31,6 +32,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT,
     NEXT_PUBLIC_CONVEX_SITE_URL: process.env.NEXT_PUBLIC_CONVEX_SITE_URL,
     NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     NEXT_PUBLIC_SITE_URL:
       process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.VERCEL_URL

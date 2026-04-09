@@ -8,7 +8,7 @@ import {
   createApi,
 } from '@convex-dev/better-auth';
 
-import { api, internal } from './_generated/api';
+import { api, components, internal } from './_generated/api';
 import {
   ActionCtx,
   MutationCtx,
@@ -21,9 +21,16 @@ import { createPersonalOrganization } from './organizationHelpers';
 import { getEnv } from './helpers/getEnv';
 import { DataModel } from './_generated/dataModel';
 
-const authFunctions: AuthFunctions = internal.auth as any;
+const authFunctions: AuthFunctions = {
+  onCreate: internal.auth.onCreate as any,
+  onDelete: internal.auth.onDelete as any,
+  onUpdate: internal.auth.onUpdate as any,
+};
 
-export const authClient = createClient<DataModel, typeof schema>(authFunctions as any, {
+export const authClient = createClient<DataModel, typeof schema>(
+  components.betterAuth as any,
+  {
+  authFunctions: authFunctions as any,
   local: { schema: schema as any },
   triggers: {
     user: {
@@ -59,17 +66,66 @@ export const authClient = createClient<DataModel, typeof schema>(authFunctions a
       },
     },
   } as any,
-});
+} as any
+);
 
 export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
-  const baseURL = process.env.NEXT_PUBLIC_SITE_URL!;
+  const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const githubClientId = process.env.GITHUB_CLIENT_ID;
+  const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const socialProviders: Record<string, any> = {};
+
+  if (githubClientId && githubClientSecret) {
+    socialProviders.github = {
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
+      mapProfileToUser: async (profile: any) => {
+        return {
+          // Better Auth standard fields
+          email: profile.email,
+          image: profile.avatar_url,
+          name: profile.name || profile.login,
+          // Additional fields that will be available in onCreateUser
+          bio: profile.bio || undefined,
+          firstName: profile.name?.split(' ')[0] || undefined,
+          github: profile.login,
+          lastName: profile.name?.split(' ').slice(1).join(' ') || undefined,
+          location: profile.location || undefined,
+          username: profile.login,
+          x: profile.twitter_username || undefined,
+        };
+      },
+    };
+  }
+
+  if (googleClientId && googleClientSecret) {
+    socialProviders.google = {
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      mapProfileToUser: async (profile: any) => {
+        return {
+          // Better Auth standard fields
+          email: profile.email,
+          image: profile.picture,
+          name: profile.name,
+          // Additional fields that will be available in onCreateUser
+          firstName: profile.given_name || undefined,
+          lastName: profile.family_name || undefined,
+        };
+      },
+    };
+  }
+
+  const trustedProviders = Object.keys(socialProviders);
 
   return betterAuth({
     account: {
       accountLinking: {
         enabled: true,
         updateUserInfoOnLink: true,
-        trustedProviders: ['google', 'github'],
+        trustedProviders,
       },
     },
     baseURL,
@@ -94,21 +150,9 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
             },
           },
         },
-        sendInvitationEmail: async (data) => {
-          // Send invitation email via Resend
-          await (ctx as ActionCtx).scheduler.runAfter(
-            0,
-            api.emails.sendOrganizationInviteEmail,
-            {
-              acceptUrl: `${process.env.NEXT_PUBLIC_SITE_URL!}/w/${data.organization.slug}?invite=${data.id}`,
-              invitationId: data.id,
-              inviterEmail: data.inviter.user.email,
-              inviterName: data.inviter.user.name || 'Team Admin',
-              organizationName: data.organization.name,
-              role: data.role,
-              to: data.email,
-            }
-          );
+        sendInvitationEmail: optionsOnly ? undefined : async (data) => {
+          // TODO: Send invitation email via Resend (Phase 3)
+          console.log('Invitation email would be sent to:', data.email);
         },
       }),
       convex(),
@@ -117,43 +161,7 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
       expiresIn: 60 * 60 * 24 * 30, // 30 days
       updateAge: 60 * 60 * 24 * 15, // 15 days
     },
-    socialProviders: {
-      github: {
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-        mapProfileToUser: async (profile) => {
-          return {
-            // Better Auth standard fields
-            email: profile.email,
-            image: profile.avatar_url,
-            name: profile.name || profile.login,
-            // Additional fields that will be available in onCreateUser
-            bio: profile.bio || undefined,
-            firstName: profile.name?.split(' ')[0] || undefined,
-            github: profile.login,
-            lastName: profile.name?.split(' ').slice(1).join(' ') || undefined,
-            location: profile.location || undefined,
-            username: profile.login,
-            x: profile.twitter_username || undefined,
-          };
-        },
-      },
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        mapProfileToUser: async (profile) => {
-          return {
-            // Better Auth standard fields
-            email: profile.email,
-            image: profile.picture,
-            name: profile.name,
-            // Additional fields that will be available in onCreateUser
-            firstName: profile.given_name || undefined,
-            lastName: profile.family_name || undefined,
-          };
-        },
-      },
-    },
+    socialProviders,
     telemetry: { enabled: false },
     user: {
       additionalFields: {
@@ -201,7 +209,7 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
         enabled: false,
       },
     },
-    database: authClient.adapter(ctx),
+    ...(optionsOnly ? {} : { database: authClient.adapter(ctx) }),
   });
 };
 

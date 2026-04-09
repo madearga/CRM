@@ -55,7 +55,7 @@ export const listOrganizations = createAuthQuery()({
     const canCreateOrganization = true;
 
     // Filter out active organization from the list to return (but keep all orgs for permission check above)
-    const filteredOrgs = orgs.filter((org) => org._id !== activeOrgId);
+    const filteredOrgs = orgs.filter((org): org is NonNullable<typeof org> => org != null && org._id !== activeOrgId);
 
     // Enrich organizations with plan data
     const enrichedOrgs = filteredOrgs.map((org) => ({
