@@ -21,7 +21,7 @@ export function SignForm() {
 
   const resolvedCallback = callbackUrl
     ? decodeURIComponent(callbackUrl)
-    : pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
+    : '/';
 
   const handleGoogleSignIn = () => {
     signIn.social({

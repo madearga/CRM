@@ -1,6 +1,6 @@
 import { convex } from '@convex-dev/better-auth/plugins';
 import { betterAuth } from 'better-auth';
-import { admin, organization } from 'better-auth/plugins';
+import { organization } from 'better-auth/plugins';
 import { ac, roles } from './authPermissions';
 import {
   type AuthFunctions,
@@ -34,34 +34,63 @@ export const authClient = createClient<DataModel>(
     triggers: {
       user: {
         onCreate: async (ctx, user) => {
-          const adminEmails = getEnv().ADMIN;
-          if (adminEmails?.includes(user.email) && user.role !== 'admin') {
-            const table: any = entsTableFactory(ctx as any, entDefinitions);
-            await table('user').getX(user._id as any).patch({ role: 'admin' });
+          // NOTE: user._id is a COMPONENT table ID, not a main table ID.
+          // We must find/create the user in main tables by email.
+          const table: any = entsTableFactory(ctx as any, entDefinitions);
+
+          // Find user in main table by email
+          let mainUser = await table('user')
+            .filter((q: any) => q.eq(q.field('email'), user.email))
+            .first();
+
+          if (!mainUser) {
+            // Create user in main table
+            const id = await table('user').insert({
+              email: user.email,
+              name: user.name,
+              image: user.image || undefined,
+              emailVerified: user.emailVerified ?? false,
+              role: 'user',
+              createdAt: user.createdAt || Date.now(),
+              updatedAt: user.updatedAt || Date.now(),
+            });
+            mainUser = await table('user').getX(id);
           }
 
-          await createPersonalOrganization(ctx as any, {
-            email: user.email,
-            image: user.image || null,
-            name: user.name,
-            userId: user._id as any,
-          });
+          // Check admin role
+          const adminEmails = getEnv().ADMIN;
+          if (adminEmails?.includes(user.email) && mainUser.role !== 'admin') {
+            await table('user').getX(mainUser._id).patch({ role: 'admin' });
+          }
+
+          // Create personal organization if not exists
+          if (!mainUser.personalOrganizationId) {
+            const slug = `personal-${String(mainUser._id).slice(-8)}`;
+            const orgId = await table('organization').insert({
+              logo: user.image || undefined,
+              monthlyCredits: 0,
+              name: `${user.name}'s Organization`,
+              slug,
+              createdAt: Date.now(),
+            });
+            await table('member').insert({
+              createdAt: Date.now(),
+              role: 'owner',
+              organizationId: orgId,
+              userId: mainUser._id,
+            });
+            await table('user').getX(mainUser._id).patch({
+              lastActiveOrganizationId: orgId,
+              personalOrganizationId: orgId,
+            });
+          }
         },
       },
       session: {
         onCreate: async (ctx, session) => {
-          const table: any = entsTableFactory(ctx as any, entDefinitions);
-
-          if (!session.activeOrganizationId) {
-            const user = await table('user').getX(session.userId as any);
-
-            await table('session')
-              .getX(session._id as any)
-              .patch({
-                activeOrganizationId:
-                  user.lastActiveOrganizationId || user.personalOrganizationId,
-              });
-          }
+          // Session trigger skipped — activeOrganizationId is set client-side
+          // after login via dashboard. The component adapter updateOne
+          // validator doesn't support activeOrganizationId field.
         },
       },
     } as any,
@@ -100,7 +129,6 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
       'http://localhost:3005',
     ].filter(Boolean),
     plugins: [
-      admin(),
       organization({
         ac,
         roles,

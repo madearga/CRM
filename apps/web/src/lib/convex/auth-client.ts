@@ -3,9 +3,7 @@ import type { auth } from '@convex/auth';
 import { convexClient } from '@convex-dev/better-auth/client/plugins';
 import { ac, roles } from '@convex/authPermissions';
 
-// import { polarClient } from '@polar-sh/better-auth';
 import {
-  adminClient,
   inferAdditionalFields,
   organizationClient,
 } from 'better-auth/client/plugins';
@@ -14,12 +12,10 @@ import { createAuthClient } from 'better-auth/react';
 export const authClient = createAuthClient({
   plugins: [
     inferAdditionalFields<typeof auth>(),
-    adminClient(),
     organizationClient({
       ac,
       roles,
     }),
-    // polarClient(),
     convexClient(),
   ],
 });

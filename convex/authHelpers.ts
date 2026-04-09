@@ -37,11 +37,21 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
   const activeOrganizationId =
     session.activeOrganizationId as Id<'organization'> | null;
 
-  const user = await table('user').get(session.userId as Id<'user'>);
+  // session.userId is a COMPONENT table ID — find user in main table by email
+  const componentUser = sessionPayload?.user;
+  if (!componentUser?.email) {
+    return null;
+  }
+
+  const user = await table('user')
+    .filter((q: any) => q.eq(q.field('email'), componentUser.email))
+    .first();
 
   if (!user) {
     return null;
   }
+
+  const mainUserId = user._id as Id<'user'>;
 
   const activeOrganization = await (async () => {
     if (!activeOrganizationId) {
@@ -53,7 +63,7 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
       table('member', 'organizationId_userId', (q: any) =>
           q
             .eq('organizationId', activeOrganizationId)
-            .eq('userId', session.userId as Id<'user'>)
+            .eq('userId', mainUserId)
         )
         .first(),
     ]);
