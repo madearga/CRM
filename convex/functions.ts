@@ -53,7 +53,7 @@ export type PublicCtx<Ctx extends MutationCtx | QueryCtx = QueryCtx> =
 
 export type AuthCtx<Ctx extends MutationCtx | QueryCtx = QueryCtx> =
   CtxWithTable<Ctx> & {
-    auth: Auth & ReturnType<typeof getAuth> & { headers: Headers };
+    auth: Auth & { headers: Headers; api: any };
     user: CtxUser<Ctx>;
     userId: Id<'user'>;
   };
@@ -128,7 +128,8 @@ async function withRequiredUserContext<Ctx extends MutationCtx | QueryCtx>(
     ...ctx,
     auth: {
       ...ctx.auth,
-      ...getAuth(ctx),
+      ...(getAuth(ctx) as any),
+      api: (getAuth(ctx) as any).api as any,
       headers: await authClient.getHeaders(ctx),
     },
     user,
@@ -145,7 +146,8 @@ async function withOptionalUserContext<Ctx extends MutationCtx | QueryCtx>(
     auth: user
       ? {
           ...ctx.auth,
-          ...getAuth(ctx),
+          ...(getAuth(ctx) as any),
+          api: (getAuth(ctx) as any).api as any,
           headers: await authClient.getHeaders(ctx),
         }
       : ctx.auth,

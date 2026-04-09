@@ -5,7 +5,6 @@ import { ac, roles } from './authPermissions';
 import {
   type AuthFunctions,
   createClient,
-  createApi,
 } from '@convex-dev/better-auth';
 
 import { api, components, internal } from './_generated/api';
@@ -17,6 +16,8 @@ import {
 } from './_generated/server';
 import { entsTableFactory } from 'convex-ents';
 import schema, { entDefinitions } from './schema';
+import authSchema from './betterAuth/schema';
+import { createAuthOptions } from './authOptions';
 import { createPersonalOrganization } from './organizationHelpers';
 import { getEnv } from './helpers/getEnv';
 import { DataModel } from './_generated/dataModel';
@@ -27,160 +28,56 @@ const authFunctions: AuthFunctions = {
   onUpdate: internal.auth.onUpdate as any,
 };
 
-export const authClient = createClient<DataModel, typeof schema>(
+export const authClient = createClient<DataModel, typeof authSchema>(
   components.betterAuth as any,
   {
-  authFunctions: authFunctions as any,
-  local: { schema: schema as any },
-  triggers: {
-    user: {
-      onCreate: async (ctx, user) => {
-        const adminEmails = getEnv().ADMIN;
-        if (adminEmails?.includes(user.email) && user.role !== 'admin') {
+    authFunctions: authFunctions as any,
+    local: { schema: authSchema as any },
+    triggers: {
+      user: {
+        onCreate: async (ctx, user) => {
+          const adminEmails = getEnv().ADMIN;
+          if (adminEmails?.includes(user.email) && user.role !== 'admin') {
+            const table: any = entsTableFactory(ctx as any, entDefinitions);
+            await table('user').getX(user._id as any).patch({ role: 'admin' });
+          }
+
+          await createPersonalOrganization(ctx as any, {
+            email: user.email,
+            image: user.image || null,
+            name: user.name,
+            userId: user._id as any,
+          });
+        },
+      },
+      session: {
+        onCreate: async (ctx, session) => {
           const table: any = entsTableFactory(ctx as any, entDefinitions);
-          await table('user').getX(user._id as any).patch({ role: 'admin' });
-        }
 
-        await createPersonalOrganization(ctx as any, {
-          email: user.email,
-          image: user.image || null,
-          name: user.name,
-          userId: user._id as any,
-        });
+          if (!session.activeOrganizationId) {
+            const user = await table('user').getX(session.userId as any);
+
+            await table('session')
+              .getX(session._id as any)
+              .patch({
+                activeOrganizationId:
+                  user.lastActiveOrganizationId || user.personalOrganizationId,
+              });
+          }
+        },
       },
-    },
-    session: {
-      onCreate: async (ctx, session) => {
-        const table: any = entsTableFactory(ctx as any, entDefinitions);
-
-        if (!session.activeOrganizationId) {
-          const user = await table('user').getX(session.userId as any);
-
-          await table('session')
-            .getX(session._id as any)
-            .patch({
-              activeOrganizationId:
-                user.lastActiveOrganizationId || user.personalOrganizationId,
-            });
-        }
-      },
-    },
-  } as any,
-} as any
+    } as any,
+  } as any
 );
 
+// ============================================================
+// createAuth — runtime auth instance
+// ============================================================
+
 export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
-  const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const socialProviders: Record<string, any> = {};
-
-  if (googleClientId && googleClientSecret) {
-    socialProviders.google = {
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-      mapProfileToUser: async (profile: any) => {
-        return {
-          // Better Auth standard fields
-          email: profile.email,
-          image: profile.picture,
-          name: profile.name,
-          // Additional fields that will be available in onCreateUser
-          firstName: profile.given_name || undefined,
-          lastName: profile.family_name || undefined,
-        };
-      },
-    };
-  }
-
-  const trustedProviders = Object.keys(socialProviders);
-
   return betterAuth({
-    account: {
-      accountLinking: {
-        enabled: true,
-        updateUserInfoOnLink: true,
-        trustedProviders,
-      },
-    },
-    baseURL,
+    ...createAuthOptions(),
     logger: { disabled: optionsOnly },
-    plugins: [
-      admin(),
-      organization({
-        ac,
-        roles,
-        allowUserToCreateOrganization: true, // Will gate with
-        creatorRole: 'owner',
-        invitationExpiresIn: 24 * 60 * 60 * 7, // 7 days
-        membershipLimit: 100,
-        organizationLimit: 3,
-        schema: {
-          organization: {
-            additionalFields: {
-              monthlyCredits: {
-                required: true,
-                type: 'number',
-              },
-            },
-          },
-        },
-        sendInvitationEmail: optionsOnly ? undefined : async (data) => {
-          // TODO: Send invitation email via Resend (Phase 3)
-          console.log('Invitation email would be sent to:', data.email);
-        },
-      }),
-      convex(),
-    ],
-    session: {
-      expiresIn: 60 * 60 * 24 * 30, // 30 days
-      updateAge: 60 * 60 * 24 * 15, // 15 days
-    },
-    socialProviders,
-    telemetry: { enabled: false },
-    user: {
-      additionalFields: {
-        bio: {
-          required: false,
-          type: 'string',
-        },
-        firstName: {
-          required: false,
-          type: 'string',
-        },
-
-        lastName: {
-          required: false,
-          type: 'string',
-        },
-        linkedin: {
-          required: false,
-          type: 'string',
-        },
-        location: {
-          required: false,
-          type: 'string',
-        },
-        username: {
-          required: false,
-          type: 'string',
-        },
-        website: {
-          required: false,
-          type: 'string',
-        },
-        x: {
-          required: false,
-          type: 'string',
-        },
-      },
-      changeEmail: {
-        enabled: false,
-      },
-      deleteUser: {
-        enabled: false,
-      },
-    },
     ...(optionsOnly ? {} : { database: authClient.adapter(ctx) }),
   });
 };
@@ -193,16 +90,6 @@ export const getAuth = <Ctx extends QueryCtx | MutationCtx>(ctx: Ctx) => {
     database: authClient.adapter(ctx as any),
   });
 };
-
-export const {
-  create,
-  deleteMany,
-  deleteOne,
-  findMany,
-  findOne,
-  updateMany,
-  updateOne,
-} = createApi(schema as any, createAuth as any);
 
 const triggerApi = authClient.triggersApi();
 

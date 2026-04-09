@@ -24,7 +24,7 @@ export type SessionUser = Omit<Doc<'user'>, '_creationTime' | '_id'> & {
 const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
   const table = ctx.table as any;
   const headers = await authClient.getHeaders(ctx as any);
-  const sessionPayload = await getAuth(ctx as any).api.getSession({
+  const sessionPayload = await (getAuth(ctx as any).api as any).getSession({
     headers,
   });
 
@@ -129,45 +129,54 @@ export const createUser = async (
   args: {
     email: string;
     name: string;
-    bio?: string | null;
     image?: string | null;
-    location?: string | null;
     role?: 'admin' | 'user';
   }
 ) => {
-  const { user } = await getAuth(ctx).api.createUser({
-    body: {
-      email: args.email,
-      name: args.name,
-      password: Math.random().toString(36).slice(-12),
-      role: args.role,
-      data: {
-        bio: args.bio,
-        image: args.image,
-        location: args.location,
-      },
-    },
+  const now = Date.now();
+  const id = await ctx.db.insert('user', {
+    email: args.email,
+    name: args.name,
+    image: args.image ?? undefined,
+    role: args.role,
+    emailVerified: false,
+    createdAt: now,
+    updatedAt: now,
   });
 
-  return user.id as Id<'user'>;
+  return id as Id<'user'>;
 };
 
 export const hasPermission = async (
   ctx: AuthCtx,
-  body: Parameters<typeof ctx.auth.api.hasPermission>[0]['body'],
+  body: {
+    permissions: Record<string, string[]>;
+    role?: string;
+  },
   shouldThrow = true
 ) => {
-  const canUpdate = await ctx.auth.api.hasPermission({
-    body,
-    headers: ctx.auth.headers,
-  });
-
-  if (shouldThrow && !canUpdate.success) {
-    throw new ConvexError({
-      code: 'FORBIDDEN',
-      message: 'Insufficient permissions for this action',
+  try {
+    const canUpdate = await (ctx.auth as any).api.organization?.checkRolePermission?.({
+      body,
+      headers: ctx.auth.headers,
     });
-  }
 
-  return canUpdate.success;
+    if (shouldThrow && !canUpdate?.success) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'Insufficient permissions for this action',
+      });
+    }
+
+    return canUpdate?.success ?? false;
+  } catch (e) {
+    if (e instanceof ConvexError) throw e;
+    if (shouldThrow) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'Insufficient permissions for this action',
+      });
+    }
+    return false;
+  }
 };

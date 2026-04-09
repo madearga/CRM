@@ -110,13 +110,13 @@ function ConvexProviderInner({
 
 function AuthEffect() {
   const { data, isPending } = useSession();
-  const authStore = useAuthStore();
+  const { set } = useAuthStore();
 
   React.useEffect(() => {
     if (!isPending) {
-      authStore.set('token', data?.session.token ?? null);
+      set('token', data?.session.token ?? null);
     }
-  }, [data, authStore, isPending]);
+  }, [data, set, isPending]);
 
   return null;
 }

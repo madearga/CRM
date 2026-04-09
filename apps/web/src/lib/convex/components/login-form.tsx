@@ -21,7 +21,7 @@ export function SignForm() {
 
   const resolvedCallback = callbackUrl
     ? decodeURIComponent(callbackUrl)
-    : encodeURL(pathname, searchParams.toString());
+    : pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
 
   const handleGoogleSignIn = () => {
     signIn.social({
@@ -57,19 +57,6 @@ export function SignForm() {
     </div>
   );
 }
-
-const encodeURL = (pathname: string, search?: string) => {
-  let url = pathname;
-
-  if (search) {
-    if (!search.startsWith('?')) {
-      search = `?${search}`;
-    }
-    url += search;
-  }
-
-  return encodeURIComponent(url);
-};
 
 function GoogleIcon(props: LucideProps) {
   return (

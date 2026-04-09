@@ -119,15 +119,17 @@ const schema = defineEntSchema(
       banned: v.optional(v.union(v.null(), v.boolean())),
       banReason: v.optional(v.union(v.null(), v.string())),
       banExpires: v.optional(v.union(v.null(), v.number())),
+      username: v.optional(v.union(v.null(), v.string())),
+      deletedAt: v.optional(v.number()),
+      // Better Auth additionalFields (input: false, set via triggers/profile)
       bio: v.optional(v.union(v.null(), v.string())),
       firstName: v.optional(v.union(v.null(), v.string())),
       lastName: v.optional(v.union(v.null(), v.string())),
       linkedin: v.optional(v.union(v.null(), v.string())),
       location: v.optional(v.union(v.null(), v.string())),
-      username: v.optional(v.union(v.null(), v.string())),
       website: v.optional(v.union(v.null(), v.string())),
       x: v.optional(v.union(v.null(), v.string())),
-      deletedAt: v.optional(v.number()),
+      userId: v.optional(v.union(v.null(), v.string())),
     })
       .field('email', v.string(), { unique: true })
       .edges('sessions', { to: 'session', ref: 'userId' })
@@ -152,7 +154,8 @@ const schema = defineEntSchema(
       // No edges for activities — they're queried manually
       .index('email_name', ['email', 'name'])
       .index('name', ['name'])
-      .index('username', ['username']),
+      .index('username', ['username'])
+      .index('userId', ['userId']),
 
     // --------------------
     // CRM Tables (Phase 1)

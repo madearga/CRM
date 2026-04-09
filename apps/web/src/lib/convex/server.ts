@@ -5,15 +5,16 @@ import type {
   FunctionReturnType,
 } from 'convex/server';
 
-import { getToken } from '@convex-dev/better-auth/nextjs';
+import { convexBetterAuthNextJs } from '@convex-dev/better-auth/nextjs';
 import { api } from '@convex/_generated/api';
-import { createAuth } from '@convex/auth';
 import { fetchMutation, fetchQuery } from 'convex/nextjs';
 
-export const getSessionToken = async (): Promise<string | undefined> => {
-  const token = await getToken(createAuth as any);
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
+const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL!;
+const auth = convexBetterAuthNextJs({ convexUrl, convexSiteUrl });
 
-  return token;
+export const getSessionToken = async (): Promise<string | undefined> => {
+  return auth.getToken();
 };
 
 export const isAuth = async () => {
