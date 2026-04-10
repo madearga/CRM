@@ -108,11 +108,10 @@ export default function DealsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Deals</h1>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+          <Plus className="mr-1 h-4 w-4" />
           Add Deal
         </Button>
       </div>
@@ -122,7 +121,7 @@ export default function DealsPage() {
           {STAGES.map((stage) => (
             <div
               key={stage.id}
-              className={`min-w-[280px] flex-1 rounded-lg border p-4 ${stage.bg} ${stage.border}`}
+              className={`flex min-w-[280px] flex-1 flex-col rounded-lg border p-4 ${stage.bg} ${stage.border}`}
             >
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold">{stage.label}</h3>
@@ -151,7 +150,7 @@ export default function DealsPage() {
               return (
                 <div
                   key={stage.id}
-                  className={`min-w-[280px] flex-1 rounded-lg border p-4 ${stage.bg} ${stage.border}`}
+                  className={`flex min-w-[280px] flex-1 flex-col rounded-lg border p-4 ${stage.bg} ${stage.border}`}
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="font-semibold">{stage.label}</h3>
@@ -167,11 +166,12 @@ export default function DealsPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[120px] space-y-2 rounded-md transition-colors ${
+                        className={`min-h-[120px] flex-1 space-y-2 overflow-y-auto rounded-md transition-colors ${
                           snapshot.isDraggingOver
-                            ? 'bg-white/50'
+                            ? 'bg-black/5 dark:bg-white/10'
                             : ''
                         }`}
+                        style={{ maxHeight: 'calc(100vh - 260px)' }}
                       >
                         {deals.map((deal, index) => (
                           <Draggable
@@ -184,7 +184,7 @@ export default function DealsPage() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`cursor-grab border bg-white shadow-sm transition-shadow ${
+                                className={`cursor-grab border bg-white shadow-sm transition-shadow dark:bg-slate-800/90 ${
                                   snapshot.isDragging
                                     ? 'shadow-lg'
                                     : 'hover:shadow-md'

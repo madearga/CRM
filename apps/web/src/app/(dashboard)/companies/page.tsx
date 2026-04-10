@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Plus, Search, Archive, RotateCcw } from 'lucide-react';
+import { Building2, Globe, Plus, Search, Archive, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -108,7 +108,6 @@ export default function CompaniesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Companies</h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -222,7 +221,7 @@ export default function CompaniesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Company</TableHead>
                 <TableHead>Industry</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Source</TableHead>
@@ -232,11 +231,24 @@ export default function CompaniesPage() {
             </TableHeader>
             <TableBody>
               {companies.map((company) => (
-                <TableRow key={company.id} className={company.archivedAt ? 'opacity-60' : ''}>
+                <TableRow key={company.id} className={`cursor-pointer transition-colors hover:bg-muted/50 ${company.archivedAt ? 'opacity-60' : ''}`}>
                   <TableCell>
-                    <Link href={`/companies/${company.id}`} className="font-medium hover:underline">
-                      {company.name}
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                        <Building2 className="size-4" />
+                      </div>
+                      <div>
+                        <Link href={`/companies/${company.id}`} className="font-medium hover:underline">
+                          {company.name}
+                        </Link>
+                        {company.website && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Globe className="h-3 w-3" />
+                            {company.website.replace(/^https?:\/\//, '')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{company.industry ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{company.country ?? '—'}</TableCell>

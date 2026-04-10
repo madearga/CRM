@@ -8,35 +8,21 @@ import { components } from '../_generated/api';
 
 // Define rate limits matching the existing Upstash configuration
 export const rateLimiter = new RateLimiter(components.rateLimiter as any, {
-  // Project limits
-  'project/create:free': { kind: 'fixed window', period: MINUTE, rate: 5 },
-  'project/create:premium': { kind: 'fixed window', period: MINUTE, rate: 20 },
+  // CRM rate limits
+  'company/create:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
+  'company/create:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
 
-  'project/update:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
-  'project/update:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
+  'contact/create:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
+  'contact/create:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
 
-  'project/member:free': { kind: 'fixed window', period: MINUTE, rate: 10 },
-  'project/member:premium': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'deal/create:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
+  'deal/create:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
 
-  // Tag limits
-  'tag/create:free': { kind: 'fixed window', period: MINUTE, rate: 10 },
-  'tag/create:premium': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'deal/updateStage:free': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'deal/updateStage:premium': { kind: 'fixed window', period: MINUTE, rate: 100 },
 
-  'tag/delete:free': { kind: 'fixed window', period: MINUTE, rate: 10 },
-  'tag/delete:premium': { kind: 'fixed window', period: MINUTE, rate: 30 },
-
-  'tag/update:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
-  'tag/update:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
-
-  // Todo limits
-  'todo/create:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
-  'todo/create:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
-
-  'todo/update:free': { kind: 'fixed window', period: MINUTE, rate: 30 },
-  'todo/update:premium': { kind: 'fixed window', period: MINUTE, rate: 100 },
-
-  'todo/delete:free': { kind: 'fixed window', period: MINUTE, rate: 20 },
-  'todo/delete:premium': { kind: 'fixed window', period: MINUTE, rate: 60 },
+  'activity/create:free': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'activity/create:premium': { kind: 'fixed window', period: MINUTE, rate: 100 },
 
   // Organization limits
   'organization/create:free': { kind: 'fixed window', period: HOUR, rate: 3 },

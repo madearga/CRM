@@ -45,12 +45,12 @@ const ACTIVITY_ICONS: Record<string, typeof Phone> = {
   status_change: ArrowRightLeft,
 };
 
-const ACTIVITY_COLORS: Record<string, string> = {
-  call: 'bg-blue-400',
-  email: 'bg-purple-400',
-  meeting: 'bg-amber-400',
-  note: 'bg-slate-400',
-  status_change: 'bg-green-400',
+const ACTIVITY_BG_COLORS: Record<string, string> = {
+  call: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+  email: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400',
+  meeting: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
+  note: 'bg-slate-100 text-slate-600 dark:bg-slate-800/40 dark:text-slate-400',
+  status_change: 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400',
 };
 
 export default function ActivitiesPage() {
@@ -109,8 +109,7 @@ export default function ActivitiesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Activities</h2>
+      <div className="flex items-center justify-end">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -187,8 +186,10 @@ export default function ActivitiesPage() {
               {upcomingActivities.map((activity: any) => {
                 const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                 return (
-                  <div key={activity._id} className="flex items-start gap-3 rounded-md border p-3">
-                    <div className={`mt-0.5 h-2 w-2 rounded-full ${ACTIVITY_COLORS[activity.type] ?? 'bg-gray-400'}`} />
+                  <div key={activity._id} className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                    <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${ACTIVITY_BG_COLORS[activity.type] ?? 'bg-gray-400/20'}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.title}</p>
                       <p className="text-xs text-muted-foreground">
@@ -228,8 +229,10 @@ export default function ActivitiesPage() {
               {recentActivities.map((activity: any) => {
                 const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                 return (
-                  <div key={activity._id} className="flex items-start gap-3 rounded-md border p-3">
-                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div key={activity._id} className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                    <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${ACTIVITY_BG_COLORS[activity.type] ?? 'bg-gray-400/20'}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.title}</p>
                       {activity.description && (

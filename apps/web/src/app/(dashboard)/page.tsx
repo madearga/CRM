@@ -91,7 +91,6 @@ export default function DashboardPage() {
   if (!data) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="mt-2 text-muted-foreground">
           No data yet. Start by creating deals, companies, and activities.
         </p>
@@ -103,8 +102,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-end">
         <Button size="sm" onClick={() => setShowQuickAdd(true)}>
           <Plus className="mr-1 h-4 w-4" />
           Quick Add Deal
@@ -126,32 +124,50 @@ export default function DashboardPage() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
+        <Card className="transition-shadow hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="flex items-center gap-1.5">
               <Handshake className="h-4 w-4" />
               Total Deals
             </CardDescription>
-            <CardTitle className="text-2xl">{data.totalDeals}</CardTitle>
+            <Handshake className="h-5 w-5 text-muted-foreground/40" />
           </CardHeader>
+          <CardContent className="pt-0">
+            <CardTitle className="text-3xl">{data.totalDeals}</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatCurrency(data.pipelineValue)} pipeline
+            </p>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
+        <Card className="transition-shadow hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="flex items-center gap-1.5">
               <Building2 className="h-4 w-4" />
               Total Companies
             </CardDescription>
-            <CardTitle className="text-2xl">{data.totalCompanies}</CardTitle>
+            <Building2 className="h-5 w-5 text-muted-foreground/40" />
           </CardHeader>
+          <CardContent className="pt-0">
+            <CardTitle className="text-3xl">{data.totalCompanies}</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {data.totalCompanies > 0 ? 'Active accounts' : 'Get started'}
+            </p>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
+        <Card className="transition-shadow hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="flex items-center gap-1.5">
               <Activity className="h-4 w-4" />
               Total Activities
             </CardDescription>
-            <CardTitle className="text-2xl">{data.totalActivities}</CardTitle>
+            <Activity className="h-5 w-5 text-muted-foreground/40" />
           </CardHeader>
+          <CardContent className="pt-0">
+            <CardTitle className="text-3xl">{data.totalActivities}</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {data.recentActivities.length} this week
+            </p>
+          </CardContent>
         </Card>
       </div>
 

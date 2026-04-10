@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, Plus, Search, Archive, RotateCcw, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -107,8 +108,7 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Contacts</h2>
+      <div className="flex items-center justify-end">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -204,7 +204,7 @@ export default function ContactsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Stage</TableHead>
@@ -214,14 +214,28 @@ export default function ContactsPage() {
             </TableHeader>
             <TableBody>
               {contacts.map((contact: any) => (
-                <TableRow key={contact.id}>
+                <TableRow key={contact.id} className="cursor-pointer transition-colors hover:bg-muted/50">
                   <TableCell>
-                    <Link href={`/contacts/${contact.id}`} className="font-medium hover:underline">
-                      {contact.fullName}
-                    </Link>
-                    {contact.jobTitle && (
-                      <p className="text-xs text-muted-foreground">{contact.jobTitle}</p>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <Avatar className="size-9">
+                        <AvatarImage src={contact.image ?? undefined} />
+                        <AvatarFallback className="text-xs">
+                          {contact.fullName
+                            ?.split(' ')
+                            .map((n: string) => n[0])
+                            .join('')
+                            .toUpperCase() ?? '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Link href={`/contacts/${contact.id}`} className="font-medium hover:underline">
+                          {contact.fullName}
+                        </Link>
+                        {contact.jobTitle && (
+                          <p className="text-xs text-muted-foreground">{contact.jobTitle}</p>
+                        )}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-muted-foreground">
