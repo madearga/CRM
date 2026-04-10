@@ -1,7 +1,7 @@
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
-import { createAuthMutation, createAuthQuery } from './functions';
+import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
 
 const DEFAULT_LIST_LIMIT = 100;
 
@@ -9,72 +9,77 @@ const sizeEnum = z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000
 const sourceEnum = z.enum(['referral', 'website', 'linkedin', 'cold', 'event', 'other']);
 const statusEnum = z.enum(['active', 'inactive', 'prospect']);
 
-// List companies for current org, filter out archived by default, support search
-export const list = createAuthQuery()({
+// List companies for current org, filter out archived by default, support search (paginated)
+export const list = createOrgPaginatedQuery()({
   args: {
     includeArchived: z.boolean().optional(),
     search: z.string().optional(),
   },
-  returns: z.array(
-    z.object({
-      id: zid('companies'),
-      name: z.string(),
-      website: z.string().optional(),
-      industry: z.string().optional(),
-      size: sizeEnum.optional(),
-      status: statusEnum.optional(),
-      country: z.string().optional(),
-      source: sourceEnum.optional(),
-      tags: z.array(z.string()).optional(),
-      archivedAt: z.number().optional(),
-      ownerId: zid('user'),
-      createdAt: z.number(),
-    })
-  ),
+  returns: z.object({
+    page: z.array(
+      z.object({
+        id: zid('companies'),
+        name: z.string(),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        size: sizeEnum.optional(),
+        status: statusEnum.optional(),
+        country: z.string().optional(),
+        source: sourceEnum.optional(),
+        tags: z.array(z.string()).optional(),
+        archivedAt: z.number().optional(),
+        ownerId: zid('user'),
+        createdAt: z.number(),
+      })
+    ),
+    continueCursor: z.string(),
+    isDone: z.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
-    let companies;
+    let result;
 
     if (args.search) {
-      companies = await ctx
+      result = await ctx
         .table('companies')
         .search('search_companies', (q) =>
           q.search('name', args.search!).eq('organizationId', orgId)
         )
-        .take(DEFAULT_LIST_LIMIT);
+        .paginate(args.paginationOpts);
     } else {
-      companies = await ctx
+      result = await ctx
         .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
-        .take(DEFAULT_LIST_LIMIT);
+        .paginate(args.paginationOpts);
     }
 
-    const filtered = args.includeArchived
-      ? companies
-      : companies.filter((c) => !c.archivedAt);
+    const page = args.includeArchived
+      ? result.page
+      : result.page.filter((c) => !c.archivedAt);
 
-    return filtered.map((c) => ({
-      id: c._id,
-      name: c.name,
-      website: c.website,
-      industry: c.industry,
-      size: c.size,
-      status: c.status,
-      country: c.country,
-      source: c.source,
-      tags: c.tags,
-      archivedAt: c.archivedAt,
-      ownerId: c.ownerId,
-      createdAt: c._creationTime,
-    }));
+    return {
+      page: page.map((c) => ({
+        id: c._id,
+        name: c.name,
+        website: c.website,
+        industry: c.industry,
+        size: c.size,
+        status: c.status,
+        country: c.country,
+        source: c.source,
+        tags: c.tags,
+        archivedAt: c.archivedAt,
+        ownerId: c.ownerId,
+        createdAt: c._creationTime,
+      })),
+      continueCursor: result.continueCursor,
+      isDone: result.isDone,
+    };
   },
 });
 
 // Get single company by ID with related contacts/deals counts
-export const getById = createAuthQuery()({
+export const getById = createOrgQuery()({
   args: {
     id: zid('companies'),
   },
@@ -100,10 +105,7 @@ export const getById = createAuthQuery()({
     })
     .nullable(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const company = await ctx.table('companies').get(args.id);
     if (!company || company.organizationId !== orgId) {
@@ -144,7 +146,7 @@ export const getById = createAuthQuery()({
 });
 
 // Create company (requires activeOrganization), sets ownerId to current user
-export const create = createAuthMutation()({
+export const create = createOrgMutation()({
   args: {
     name: z.string().min(1).max(200),
     website: z.string().optional(),
@@ -161,10 +163,7 @@ export const create = createAuthMutation()({
     id: zid('companies'),
   }),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     // Duplicate detection: check if same name exists in org
     const existing = await ctx
@@ -200,7 +199,7 @@ export const create = createAuthMutation()({
 });
 
 // Update company fields
-export const update = createAuthMutation()({
+export const update = createOrgMutation()({
   args: {
     id: zid('companies'),
     name: z.string().min(1).max(200).optional(),
@@ -216,10 +215,7 @@ export const update = createAuthMutation()({
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const company = await ctx.table('companies').getX(args.id);
     if (company.organizationId !== orgId) {
@@ -250,16 +246,13 @@ export const update = createAuthMutation()({
 });
 
 // Soft delete (set archivedAt), block if active deals exist
-export const archive = createAuthMutation()({
+export const archive = createOrgMutation()({
   args: {
     id: zid('companies'),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const company = await ctx.table('companies').getX(args.id);
     if (company.organizationId !== orgId) {
@@ -296,16 +289,13 @@ export const archive = createAuthMutation()({
 });
 
 // Unarchive (clear archivedAt)
-export const restore = createAuthMutation()({
+export const restore = createOrgMutation()({
   args: {
     id: zid('companies'),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const company = await ctx.table('companies').getX(args.id);
     if (company.organizationId !== orgId) {

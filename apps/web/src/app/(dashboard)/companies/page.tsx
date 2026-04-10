@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
+import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,10 +56,10 @@ export default function CompaniesPage() {
     source: undefined as string | undefined,
   });
 
-  const { data: companies, isLoading } = useAuthQuery(api.companies.list, {
+  const { data: companies, isLoading } = useAuthPaginatedQuery(api.companies.list, {
     search: search || undefined,
     includeArchived: showArchived,
-  });
+  }, { initialNumItems: 50 });
 
   const createCompany = useAuthMutation(api.companies.create);
   const archiveCompany = useAuthMutation(api.companies.archive);

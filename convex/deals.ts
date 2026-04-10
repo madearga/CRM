@@ -2,25 +2,21 @@ import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
 
-import { createAuthMutation, createAuthQuery } from './functions';
+import {
+  type DealStage,
+  isValidTransition as domainIsValidTransition,
+  DEAL_STAGES,
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+} from '@crm/domain';
+import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
 
-const STAGES = ['new', 'contacted', 'proposal', 'won', 'lost'] as const;
-const CURRENCIES = ['IDR', 'USD'] as const;
-const DEFAULT_ORG_CURRENCY = 'IDR' as const;
+const DEFAULT_ORG_CURRENCY = DEFAULT_CURRENCY;
 
-const stageEnum = z.enum(STAGES);
+const stageEnum = z.enum(DEAL_STAGES);
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  new: ['contacted', 'lost'],
-  contacted: ['proposal', 'new', 'lost'],
-  proposal: ['won', 'contacted', 'lost'],
-  won: ['new'],
-  lost: ['new'],
-};
-
-function validateStageTransition(from: string, to: string) {
-  const allowed = VALID_TRANSITIONS[from];
-  if (!allowed || !allowed.includes(to)) {
+function validateStageTransition(from: DealStage, to: DealStage) {
+  if (!domainIsValidTransition(from, to)) {
     throw new ConvexError({
       code: 'BAD_REQUEST',
       message: `Invalid stage transition from "${from}" to "${to}"`,
@@ -28,31 +24,32 @@ function validateStageTransition(from: string, to: string) {
   }
 }
 
-// List deals for current org, filter archived, optional stage filter
-export const list = createAuthQuery()({
+// List deals for current org, filter archived, optional stage filter (paginated)
+export const list = createOrgPaginatedQuery()({
   args: {
     stage: stageEnum.optional(),
   },
-  returns: z.array(
-    z.object({
-      id: zid('deals'),
-      title: z.string(),
-      value: z.number().optional(),
-      currency: z.string().optional(),
-      probability: z.number().optional(),
-      expectedCloseDate: z.number().optional(),
-      stage: stageEnum,
-      companyId: zid('companies').optional(),
-      primaryContactId: zid('contacts').optional(),
-      ownerId: zid('user'),
-      createdAt: z.number(),
-    })
-  ),
+  returns: z.object({
+    page: z.array(
+      z.object({
+        id: zid('deals'),
+        title: z.string(),
+        value: z.number().optional(),
+        currency: z.string().optional(),
+        probability: z.number().optional(),
+        expectedCloseDate: z.number().optional(),
+        stage: stageEnum,
+        companyId: zid('companies').optional(),
+        primaryContactId: zid('contacts').optional(),
+        ownerId: zid('user'),
+        createdAt: z.number(),
+      })
+    ),
+    continueCursor: z.string(),
+    isDone: z.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const query = args.stage
       ? ctx.table('deals', 'organizationId_stage', (q) =>
@@ -60,11 +57,12 @@ export const list = createAuthQuery()({
         )
       : ctx.table('deals', 'organizationId', (q) => q.eq('organizationId', orgId));
 
-    const deals = await query.take(500);
+    const result = await query
+      .filter((q) => q.eq(q.field('archivedAt'), undefined))
+      .paginate(args.paginationOpts);
 
-    return deals
-      .filter((deal) => !deal.archivedAt)
-      .map((deal) => ({
+    return {
+      page: result.page.map((deal) => ({
         id: deal._id,
         title: deal.title,
         value: deal.value,
@@ -76,12 +74,15 @@ export const list = createAuthQuery()({
         primaryContactId: deal.primaryContactId,
         ownerId: deal.ownerId,
         createdAt: deal._creationTime,
-      }));
+      })),
+      continueCursor: result.continueCursor,
+      isDone: result.isDone,
+    };
   },
 });
 
 // Get deals grouped by stage for kanban view
-export const listByStage = createAuthQuery()({
+export const listByStage = createOrgQuery()({
   args: {},
   returns: z.object({
     new: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
@@ -91,10 +92,7 @@ export const listByStage = createAuthQuery()({
     lost: z.array(z.object({ id: zid('deals'), title: z.string(), value: z.number().optional(), probability: z.number().optional(), stageEnteredAt: z.number().optional(), ownerId: zid('user') })),
   }),
   handler: async (ctx) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const allDeals = await ctx
       .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
@@ -126,7 +124,7 @@ export const listByStage = createAuthQuery()({
 });
 
 // Get single deal with company name, contact name
-export const getById = createAuthQuery()({
+export const getById = createOrgQuery()({
   args: {
     id: zid('deals'),
   },
@@ -151,10 +149,7 @@ export const getById = createAuthQuery()({
     createdAt: z.number(),
   }),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const deal = await ctx.table('deals').get(args.id);
     if (!deal || deal.organizationId !== orgId) {
@@ -197,7 +192,7 @@ export const getById = createAuthQuery()({
 });
 
 // Create deal, default stage "new", set ownerId
-export const create = createAuthMutation()({
+export const create = createOrgMutation()({
   args: {
     title: z.string().min(1).max(200),
     value: z.number().nonnegative().optional(),
@@ -209,10 +204,7 @@ export const create = createAuthMutation()({
   },
   returns: zid('deals'),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const organization = await ctx.table('organization').get(orgId);
     if (!organization) {
@@ -255,7 +247,7 @@ export const create = createAuthMutation()({
 });
 
 // Update deal fields (not stage)
-export const update = createAuthMutation()({
+export const update = createOrgMutation()({
   args: {
     id: zid('deals'),
     title: z.string().min(1).max(200).optional(),
@@ -268,10 +260,7 @@ export const update = createAuthMutation()({
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const deal = await ctx.table('deals').get(args.id);
     if (!deal || deal.organizationId !== orgId) {
@@ -313,7 +302,7 @@ export const update = createAuthMutation()({
 });
 
 // Update deal stage with state machine validation
-export const updateStage = createAuthMutation()({
+export const updateStage = createOrgMutation()({
   args: {
     id: zid('deals'),
     stage: stageEnum,
@@ -321,10 +310,7 @@ export const updateStage = createAuthMutation()({
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const deal = await ctx.table('deals').get(args.id);
     if (!deal || deal.organizationId !== orgId) {
@@ -362,16 +348,13 @@ export const updateStage = createAuthMutation()({
 });
 
 // Soft delete (archive)
-export const archive = createAuthMutation()({
+export const archive = createOrgMutation()({
   args: {
     id: zid('deals'),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const deal = await ctx.table('deals').get(args.id);
     if (!deal || deal.organizationId !== orgId) {
@@ -385,16 +368,13 @@ export const archive = createAuthMutation()({
 });
 
 // Unarchive (restore)
-export const restore = createAuthMutation()({
+export const restore = createOrgMutation()({
   args: {
     id: zid('deals'),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const deal = await ctx.table('deals').get(args.id);
     if (!deal || deal.organizationId !== orgId) {

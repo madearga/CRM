@@ -7,4 +7,9 @@ export default defineConfig({
     environment: 'node',
     include: ['convex/__tests__/**/*.test.ts'],
   },
+  resolve: {
+    alias: {
+      '@crm/domain': path.resolve(__dirname, 'packages/domain/src/index.ts'),
+    },
+  },
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuthMutation, useAuthQuery } from '@/lib/convex/hooks';
+import { useAuthMutation, useAuthPaginatedQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import {
   Dialog,
@@ -38,8 +38,8 @@ export function CreateDealDialog({
   const [companyId, setCompanyId] = useState('');
   const [primaryContactId, setPrimaryContactId] = useState('');
 
-  const { data: companies } = useAuthQuery(api.companies.list, {});
-  const { data: contacts } = useAuthQuery(api.contacts.list, {});
+  const { data: companies } = useAuthPaginatedQuery(api.companies.list, {}, { initialNumItems: 50 });
+  const { data: contacts } = useAuthPaginatedQuery(api.contacts.list, {}, { initialNumItems: 50 });
 
   const createDeal = useAuthMutation(api.deals.create, {
     onSuccess: () => {

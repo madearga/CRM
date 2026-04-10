@@ -225,6 +225,10 @@ const schema = defineEntSchema(
       tags: v.optional(v.array(v.string())),
       notes: v.optional(v.string()),
       archivedAt: v.optional(v.number()),
+      // Denormalized field: updated via trigger when an activity is created/updated
+      // for this contact (entityType='contact', entityId=contact._id).
+      // Eliminates the N+1 query in contacts.list.
+      lastActivityAt: v.optional(v.number()),
     })
       .field('email', v.string(), { index: true })
       .field('organizationId', v.id('organization'), { index: true })

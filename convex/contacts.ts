@@ -2,28 +2,75 @@ import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
 
-import { createAuthMutation, createAuthQuery } from './functions';
+import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
 
 const DEFAULT_LIST_LIMIT = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LAST_TOUCH_GREEN_DAYS = 7;
 
-// List contacts for current org
-export const list = createAuthQuery()({
+const lifecycleStageEnum = z.enum(['lead', 'prospect', 'customer', 'churned']);
+const lastTouchStatusEnum = z.enum(['green', 'red']);
+
+const contactListReturnSchema = z.array(
+  z.object({
+    id: zid('contacts'),
+    companyId: zid('companies').optional(),
+    createdAt: z.number(),
+    email: z.string(),
+    firstName: z.string().optional(),
+    fullName: z.string(),
+    jobTitle: z.string().optional(),
+    lastName: z.string().optional(),
+    lastTouchedAt: z.number().nullable(),
+    lastTouchedDays: z.number().nullable(),
+    lastTouchStatus: lastTouchStatusEnum,
+    lifecycleStage: lifecycleStageEnum.optional(),
+    ownerId: zid('user'),
+    phone: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  })
+);
+
+const contactDetailReturnSchema = z.object({
+  id: zid('contacts'),
+  archivedAt: z.number().optional(),
+  companyId: zid('companies').optional(),
+  companyName: z.string().nullable(),
+  createdAt: z.number(),
+  dealCount: z.number(),
+  email: z.string(),
+  firstName: z.string().optional(),
+  fullName: z.string(),
+  jobTitle: z.string().optional(),
+  lastName: z.string().optional(),
+  lastTouchedAt: z.number().nullable(),
+  lastTouchedDays: z.number().nullable(),
+  lastTouchStatus: lastTouchStatusEnum,
+  lifecycleStage: lifecycleStageEnum.optional(),
+  notes: z.string().optional(),
+  ownerId: zid('user'),
+  phone: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+// List contacts for current org (paginated)
+export const list = createOrgPaginatedQuery()({
   args: {
     companyId: zid('companies').optional(),
     search: z.string().optional(),
   },
+  returns: z.object({
+    page: contactListReturnSchema,
+    continueCursor: z.string(),
+    isDone: z.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
-    let contacts;
+    let result;
 
     if (args.search) {
-      contacts = await ctx
+      result = await ctx
         .table('contacts')
         .search('search_contacts', (q) => {
           let query = q.search('fullName', args.search!).eq('organizationId', orgId);
@@ -33,36 +80,28 @@ export const list = createAuthQuery()({
           return query;
         })
         .filter((q) => q.eq(q.field('archivedAt'), undefined))
-        .take(DEFAULT_LIST_LIMIT);
+        .paginate(args.paginationOpts);
     } else if (args.companyId) {
-      contacts = await ctx
+      result = await ctx
         .table('contacts', 'organizationId_companyId', (q) =>
           q.eq('organizationId', orgId).eq('companyId', args.companyId!)
         )
         .filter((q) => q.eq(q.field('archivedAt'), undefined))
-        .take(DEFAULT_LIST_LIMIT);
+        .paginate(args.paginationOpts);
     } else {
-      contacts = await ctx
+      result = await ctx
         .table('contacts', 'organizationId', (q) => q.eq('organizationId', orgId))
         .filter((q) => q.eq(q.field('archivedAt'), undefined))
-        .take(DEFAULT_LIST_LIMIT);
+        .paginate(args.paginationOpts);
     }
 
     const now = Date.now();
 
-    return await Promise.all(
-      contacts.map(async (contact) => {
-        const lastTouch = await ctx
-          .table('activities', 'organizationId_entityType_entityId', (q) =>
-            q
-              .eq('organizationId', orgId)
-              .eq('entityType', 'contact')
-              .eq('entityId', contact._id)
-          )
-          .order('desc')
-          .first();
-
-        const lastTouchedAt = lastTouch?._creationTime ?? null;
+    // Uses denormalized lastActivityAt field (updated via trigger in triggers.ts)
+    // instead of N+1 activity queries per contact.
+    return {
+      page: result.page.map((contact) => {
+        const lastTouchedAt = contact.lastActivityAt ?? null;
         const lastTouchedDays =
           lastTouchedAt === null ? null : Math.floor((now - lastTouchedAt) / DAY_MS);
 
@@ -77,32 +116,33 @@ export const list = createAuthQuery()({
           lastName: contact.lastName,
           lastTouchedAt,
           lastTouchedDays,
-          lastTouchStatus:
+          lastTouchStatus: (
             lastTouchedDays === null
               ? 'red'
               : lastTouchedDays <= LAST_TOUCH_GREEN_DAYS
                 ? 'green'
-                : 'red',
+                : 'red'
+          ) as 'green' | 'red',
           lifecycleStage: contact.lifecycleStage,
           ownerId: contact.ownerId,
           phone: contact.phone,
           tags: contact.tags,
         };
-      })
-    );
+      }),
+      continueCursor: result.continueCursor,
+      isDone: result.isDone,
+    };
   },
 });
 
 // Get single contact with company name and deal count
-export const getById = createAuthQuery()({
+export const getById = createOrgQuery()({
   args: {
     id: zid('contacts'),
   },
+  returns: contactDetailReturnSchema,
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const contact = await ctx.table('contacts').get(args.id);
     if (!contact || contact.organizationId !== orgId) {
@@ -117,19 +157,11 @@ export const getById = createAuthQuery()({
       .table('deals', 'primaryContactId', (q) => q.eq('primaryContactId', contact._id))
       .filter((q) => q.eq(q.field('organizationId'), orgId));
 
-    const lastTouch = await ctx
-      .table('activities', 'organizationId_entityType_entityId', (q) =>
-        q
-          .eq('organizationId', orgId)
-          .eq('entityType', 'contact')
-          .eq('entityId', contact._id)
-      )
-      .order('desc')
-      .first();
-
-    const lastTouchedAt = lastTouch?._creationTime ?? null;
+    // Uses denormalized lastActivityAt field (updated via trigger in triggers.ts)
+    const now = Date.now();
+    const lastTouchedAt = contact.lastActivityAt ?? null;
     const lastTouchedDays =
-      lastTouchedAt === null ? null : Math.floor((Date.now() - lastTouchedAt) / DAY_MS);
+      lastTouchedAt === null ? null : Math.floor((now - lastTouchedAt) / DAY_MS);
 
     return {
       id: contact._id,
@@ -145,12 +177,13 @@ export const getById = createAuthQuery()({
       lastName: contact.lastName,
       lastTouchedAt,
       lastTouchedDays,
-      lastTouchStatus:
+      lastTouchStatus: (
         lastTouchedDays === null
           ? 'red'
           : lastTouchedDays <= LAST_TOUCH_GREEN_DAYS
             ? 'green'
-            : 'red',
+            : 'red'
+      ) as 'green' | 'red',
       lifecycleStage: contact.lifecycleStage,
       notes: contact.notes,
       ownerId: contact.ownerId,
@@ -161,7 +194,7 @@ export const getById = createAuthQuery()({
 });
 
 // Create contact with duplicate email detection
-export const create = createAuthMutation()({
+export const create = createOrgMutation()({
   args: {
     companyId: zid('companies').optional(),
     email: z.string().email(),
@@ -174,10 +207,7 @@ export const create = createAuthMutation()({
     tags: z.array(z.string()).optional(),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     // Check duplicate email in same org
     const existing = await ctx
@@ -213,7 +243,7 @@ export const create = createAuthMutation()({
 });
 
 // Update contact fields
-export const update = createAuthMutation()({
+export const update = createOrgMutation()({
   args: {
     companyId: zid('companies').optional(),
     email: z.string().email().optional(),
@@ -227,10 +257,7 @@ export const update = createAuthMutation()({
     tags: z.array(z.string()).optional(),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const contact = await ctx.table('contacts').getX(args.id);
     if (contact.organizationId !== orgId) {
@@ -271,15 +298,12 @@ export const update = createAuthMutation()({
 });
 
 // Soft delete (archive)
-export const archive = createAuthMutation()({
+export const archive = createOrgMutation()({
   args: {
     id: zid('contacts'),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const contact = await ctx.table('contacts').getX(args.id);
     if (contact.organizationId !== orgId) {
@@ -293,15 +317,12 @@ export const archive = createAuthMutation()({
 });
 
 // Restore archived contact
-export const restore = createAuthMutation()({
+export const restore = createOrgMutation()({
   args: {
     id: zid('contacts'),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
-    }
+    const { orgId } = ctx;
 
     const contact = await ctx.table('contacts').getX(args.id);
     if (contact.organizationId !== orgId) {

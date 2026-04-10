@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
+import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,9 +57,9 @@ export default function ContactsPage() {
     lifecycleStage: undefined as string | undefined,
   });
 
-  const { data: contacts, isLoading } = useAuthQuery(api.contacts.list, {
+  const { data: contacts, isLoading } = useAuthPaginatedQuery(api.contacts.list, {
     search: search || undefined,
-  });
+  }, { initialNumItems: 50 });
 
   const createContact = useAuthMutation(api.contacts.create);
   const archiveContact = useAuthMutation(api.contacts.archive);

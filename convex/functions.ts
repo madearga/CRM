@@ -353,6 +353,100 @@ export const createInternalMutation = ({
     })
   );
 
+// Org-scoped query: auto-injects orgId, throws if no active org
+export const createOrgQuery = ({
+  devOnly,
+  role,
+}: { devOnly?: boolean; role?: 'admin' } = {}) =>
+  zCustomQuery(
+    query,
+    customCtx(async (_ctx) => {
+      checkDevOnly(devOnly);
+
+      const ctx = getCtxWithTable(_ctx);
+      const user = requireUser(await getSessionUser(ctx));
+
+      if (role) {
+        roleGuard(role, user);
+      }
+
+      const authedCtx = await withRequiredUserContext(ctx, user);
+      const orgId = user.activeOrganization?.id;
+      if (!orgId) {
+        throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+      }
+
+      return { ...authedCtx, orgId };
+    })
+  );
+
+// Org-scoped mutation: auto-injects orgId, throws if no active org
+export const createOrgMutation = ({
+  devOnly,
+  rateLimit,
+  role,
+}: {
+  devOnly?: boolean;
+  rateLimit?: string | null;
+  role?: 'admin';
+} = {}) =>
+  zCustomMutation(
+    mutation,
+    customCtx(async (_ctx) => {
+      checkDevOnly(devOnly);
+
+      const ctx = getCtxWithTable(_ctx);
+      const user = requireUser(
+        await getSessionUserWriter(ctx),
+        MUTATION_AUTH_REQUIRED_ERROR
+      );
+
+      if (role) {
+        roleGuard(role, user);
+      }
+
+      await applyRateLimit(ctx, rateLimit, user);
+
+      const authedCtx = await withRequiredUserContext(ctx, user);
+      const orgId = user.activeOrganization?.id;
+      if (!orgId) {
+        throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+      }
+
+      return { ...authedCtx, orgId };
+    })
+  );
+
+// Org-scoped paginated query: auto-injects orgId + paginationOpts, throws if no active org
+export const createOrgPaginatedQuery = ({
+  devOnly,
+  role,
+}: { devOnly?: boolean; role?: 'admin' } = {}) =>
+  zCustomQuery(query, {
+    args: { paginationOpts: paginationOptsValidator },
+    input: async (_ctx, args) => {
+      checkDevOnly(devOnly);
+
+      const ctx = getCtxWithTable(_ctx);
+      const user = requireUser(await getSessionUser(ctx));
+
+      if (role) {
+        roleGuard(role, user);
+      }
+
+      const authedCtx = await withRequiredUserContext(ctx, user);
+      const orgId = user.activeOrganization?.id;
+      if (!orgId) {
+        throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+      }
+
+      return {
+        args,
+        ctx: { ...authedCtx, orgId },
+      };
+    },
+  });
+
 // Protected mutation that adds user and userId to context
 export const createAuthMutation = ({
   devOnly,

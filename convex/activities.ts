@@ -2,7 +2,7 @@ import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
 
-import { createAuthMutation, createAuthQuery } from './functions';
+import { createOrgMutation, createOrgQuery } from './functions';
 
 const activityTypeSchema = z.enum([
   'call',
@@ -16,19 +16,13 @@ const entityTypeSchema = z.enum(['company', 'contact', 'deal']);
 
 // List activities for a specific entity, ordered by creation time desc.
 // Activities are never soft-deleted and always show regardless of archive status.
-export const activitiesForEntity = createAuthQuery()({
+export const activitiesForEntity = createOrgQuery()({
   args: {
     entityType: entityTypeSchema,
     entityId: z.string(),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({
-        code: 'UNAUTHORIZED',
-        message: 'No active organization',
-      });
-    }
+    const { orgId } = ctx;
 
     return await ctx
       .table('activities', 'organizationId_entityType_entityId', (q) =>
@@ -42,16 +36,10 @@ export const activitiesForEntity = createAuthQuery()({
 export const listByEntity = activitiesForEntity;
 
 // List recent activities for the current org (dashboard).
-export const listRecent = createAuthQuery()({
+export const listRecent = createOrgQuery()({
   args: {},
   handler: async (ctx) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({
-        code: 'UNAUTHORIZED',
-        message: 'No active organization',
-      });
-    }
+    const { orgId } = ctx;
 
     return await ctx
       .table('activities', 'organizationId_createdAt', (q) =>
@@ -63,16 +51,10 @@ export const listRecent = createAuthQuery()({
 });
 
 // List upcoming activities (dueAt in future, not completed) for the current user.
-export const listUpcoming = createAuthQuery()({
+export const listUpcoming = createOrgQuery()({
   args: {},
   handler: async (ctx) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({
-        code: 'UNAUTHORIZED',
-        message: 'No active organization',
-      });
-    }
+    const { orgId } = ctx;
 
     const now = Date.now();
 
@@ -85,7 +67,7 @@ export const listUpcoming = createAuthQuery()({
 });
 
 // Create a new activity.
-export const create = createAuthMutation()({
+export const create = createOrgMutation()({
   args: {
     title: z.string().min(1),
     description: z.string().optional(),
@@ -97,13 +79,7 @@ export const create = createAuthMutation()({
     metadata: z.record(z.string(), z.any()).optional(),
   },
   handler: async (ctx, args) => {
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId) {
-      throw new ConvexError({
-        code: 'UNAUTHORIZED',
-        message: 'No active organization',
-      });
-    }
+    const { orgId } = ctx;
 
     return await ctx.table('activities').insert({
       title: args.title,
@@ -121,15 +97,16 @@ export const create = createAuthMutation()({
 });
 
 // Mark an activity as completed.
-export const complete = createAuthMutation()({
+export const complete = createOrgMutation()({
   args: {
     id: zid('activities'),
   },
   handler: async (ctx, args) => {
+    const { orgId } = ctx;
+
     const activity = await ctx.table('activities').getX(args.id);
 
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId || activity.organizationId !== orgId) {
+    if (activity.organizationId !== orgId) {
       throw new ConvexError({
         code: 'UNAUTHORIZED',
         message: 'No active organization',
@@ -141,7 +118,7 @@ export const complete = createAuthMutation()({
 });
 
 // Update an activity's fields.
-export const update = createAuthMutation()({
+export const update = createOrgMutation()({
   args: {
     id: zid('activities'),
     title: z.string().min(1).optional(),
@@ -152,10 +129,11 @@ export const update = createAuthMutation()({
     metadata: z.record(z.string(), z.any()).optional(),
   },
   handler: async (ctx, args) => {
+    const { orgId } = ctx;
+
     const activity = await ctx.table('activities').getX(args.id);
 
-    const orgId = ctx.user.activeOrganization?.id;
-    if (!orgId || activity.organizationId !== orgId) {
+    if (activity.organizationId !== orgId) {
       throw new ConvexError({
         code: 'UNAUTHORIZED',
         message: 'No active organization',
