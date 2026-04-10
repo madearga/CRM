@@ -34,16 +34,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Globe, Plus, Search, Archive, RotateCcw, X, Trash2 } from 'lucide-react';
+import { Building2, Globe, Plus, Search, Archive, RotateCcw, X } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
+import { STATUS_COLORS } from '@/lib/constants';
 import { toast } from 'sonner';
 import Link from 'next/link';
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  inactive: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  prospect: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
 
 export default function CompaniesPage() {
   const [search, setSearch] = useState('');
@@ -129,25 +124,33 @@ export default function CompaniesPage() {
   };
 
   const handleBulkArchive = async () => {
-    const count = selectedIds.size;
-    try {
-      await Promise.all([...selectedIds].map((id) => archiveCompany.mutateAsync({ id: id as any })));
+    const ids = [...selectedIds];
+    const count = ids.length;
+    const results = await Promise.allSettled(
+      ids.map((id) => archiveCompany.mutateAsync({ id: id as any }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed === 0) {
       toast.success(`${count} ${count === 1 ? 'company' : 'companies'} archived`);
-      setSelectedIds(new Set());
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed to archive');
+    } else {
+      toast.error(`Archived ${count - failed}/${count}. ${failed} failed.`);
     }
+    setSelectedIds(new Set());
   };
 
   const handleBulkRestore = async () => {
-    const count = selectedIds.size;
-    try {
-      await Promise.all([...selectedIds].map((id) => restoreCompany.mutateAsync({ id: id as any })));
+    const ids = [...selectedIds];
+    const count = ids.length;
+    const results = await Promise.allSettled(
+      ids.map((id) => restoreCompany.mutateAsync({ id: id as any }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed === 0) {
       toast.success(`${count} ${count === 1 ? 'company' : 'companies'} restored`);
-      setSelectedIds(new Set());
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed to restore');
+    } else {
+      toast.error(`Restored ${count - failed}/${count}. ${failed} failed.`);
     }
+    setSelectedIds(new Set());
   };
 
   return (

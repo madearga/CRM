@@ -7,17 +7,27 @@ import type { AuthCtx } from './functions';
 import { getAuth } from './auth';
 import { ConvexError } from 'convex/values';
 
+interface EntsTable {
+  (name: 'user'): {
+    filter: (fn: (q: any) => any) => { first: () => Promise<any | null> };
+    getX: (id: any) => any;
+    insert: (data: any) => Promise<any>;
+    get: (id: any) => Promise<any | null>;
+  };
+  (name: string): any;
+}
+
 /**
  * Shared helper to find a main-table user by email.
  * Used by both user.onCreate and session.onCreate triggers in auth.ts
  * to avoid duplicating the lookup logic.
  */
 export async function findMainUserByEmail(
-  table: any,
+  table: EntsTable,
   email: string
 ): Promise<any | null> {
   return await table('user')
-    .filter((q: any) => q.eq(q.field('email'), email))
+    .filter((q) => q.eq(q.field('email'), email))
     .first();
 }
 

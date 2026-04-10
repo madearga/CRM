@@ -15,11 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   ArrowLeft,
   Building2,
-  Calendar,
   Handshake,
   Percent,
   User,
-  Trophy,
   XCircle,
   Clock,
   Archive,
@@ -28,17 +26,8 @@ import {
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { toast } from 'sonner';
-
-const STAGE_COLORS: Record<string, string> = {
-  new: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
-  contacted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  proposal: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  won: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  lost: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
-
-const formatCurrency = (value: number, currency: string = 'IDR') =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency }).format(value);
+import { STAGE_COLORS } from '@/lib/constants';
+import { formatCurrency } from '@/lib/format';
 
 export default function DealDetailPage() {
   const params = useParams();

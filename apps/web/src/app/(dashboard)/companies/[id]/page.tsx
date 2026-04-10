@@ -12,12 +12,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  inactive: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  prospect: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
+import { STATUS_COLORS } from '@/lib/constants';
 
 export default function CompanyDetailPage() {
   const params = useParams();

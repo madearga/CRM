@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/format';
 import { CreateDealDialog } from './create-deal-dialog';
 import { LostReasonDialog } from './lost-reason-dialog';
 
@@ -40,10 +41,6 @@ function formatStageDuration(stageEnteredAt?: number): string | null {
   if (days === 0) return 'today';
   if (days === 1) return '1d';
   return `${days}d`;
-}
-
-function formatCurrency(value: number, currency: string = 'IDR') {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency }).format(value);
 }
 
 export default function DealsPage() {

@@ -144,6 +144,7 @@ export const authClient = createClient<DataModel>(
           // session._id is a COMPONENT table ID. We must use ctx.db.patch (raw Convex)
           // instead of entsTableFactory because the session lives in the component's table,
           // not our main table.
+          if (!session._id) return;
           try {
             await (ctx as any).db.patch(session._id, {
               activeOrganizationId: orgId,

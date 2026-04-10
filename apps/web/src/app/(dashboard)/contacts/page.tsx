@@ -36,16 +36,10 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/empty-state';
-import { Users, Plus, Search, Archive, RotateCcw, Mail, Phone, X } from 'lucide-react';
+import { LIFECYCLE_COLORS } from '@/lib/constants';
+import { Users, Plus, Search, Archive, Mail, Phone, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-
-const LIFECYCLE_COLORS: Record<string, string> = {
-  lead: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
-  prospect: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  customer: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  churned: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
 
 export default function ContactsPage() {
   const [search, setSearch] = useState('');
@@ -130,14 +124,18 @@ export default function ContactsPage() {
   };
 
   const handleBulkArchive = async () => {
-    const count = selectedIds.size;
-    try {
-      await Promise.all([...selectedIds].map((id) => archiveContact.mutateAsync({ id: id as any })));
+    const ids = [...selectedIds];
+    const count = ids.length;
+    const results = await Promise.allSettled(
+      ids.map((id) => archiveContact.mutateAsync({ id: id as any }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed === 0) {
       toast.success(`${count} ${count === 1 ? 'contact' : 'contacts'} archived`);
-      setSelectedIds(new Set());
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed to archive');
+    } else {
+      toast.error(`Archived ${count - failed}/${count}. ${failed} failed.`);
     }
+    setSelectedIds(new Set());
   };
 
   return (

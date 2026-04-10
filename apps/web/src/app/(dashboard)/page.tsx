@@ -39,37 +39,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuickAddDealDialog } from './quick-add-deal-dialog';
+import { STAGE_CHART_COLORS, STAGE_BAR_COLORS as STAGE_COLORS, STAGE_COLORS as STAGE_BADGE_COLORS } from '@/lib/constants';
+import { formatCurrency } from '@/lib/format';
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0,
-  }).format(value);
-
-const STAGE_COLORS: Record<string, string> = {
-  new: 'bg-slate-400',
-  contacted: 'bg-blue-400',
-  proposal: 'bg-amber-400',
-  won: 'bg-green-400',
-  lost: 'bg-red-400',
-};
-
-const STAGE_CHART_COLORS: Record<string, string> = {
-  new: '#94a3b8',
-  contacted: '#60a5fa',
-  proposal: '#fbbf24',
-  won: '#4ade80',
-  lost: '#f87171',
-};
-
-const STAGE_BADGE_VARIANTS: Record<string, string> = {
-  new: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
-  contacted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  proposal: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  won: 'bg-green-100 text-green-700',
-  lost: 'bg-red-100 text-red-700',
-};
+const STAGE_BADGE_VARIANTS = STAGE_BADGE_COLORS;
 
 const ACTIVITY_ICONS: Record<string, typeof Phone> = {
   call: Phone,
