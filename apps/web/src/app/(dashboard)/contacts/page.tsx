@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -12,18 +12,22 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Users, Plus, Search, Archive, X } from 'lucide-react';
+import { Users, Plus, Search } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
+import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
+import { FloatingSelectionBar } from '@/components/floating-selection-bar';
 import { getColumns, type ContactRow } from './columns';
 import { useContactsParams } from '@/hooks/use-contacts-params';
+import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function ContactsPage() {
   const router = useRouter();
   const { q: search, setSearch } = useContactsParams();
+  const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
+  const selectedIds = selections.contacts;
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newContact, setNewContact] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     jobTitle: '', companyId: undefined as string | undefined,
@@ -48,22 +52,16 @@ export default function ContactsPage() {
 
   const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
 
-  const toggleOne = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback(() => {
-    setSelectedIds((prev) => {
-      const allSelected = allIds.every((id) => prev.has(id));
-      return allSelected ? new Set() : new Set(allIds);
-    });
-  }, [allIds]);
-
-  const columns = useMemo(() => getColumns({ selectedIds, toggleOne, allIds, toggleAll }), [selectedIds, toggleOne, allIds, toggleAll]);
+  const columns = useMemo(
+    () => getColumns({
+      selectedIds,
+      toggleOne: (id: string) => toggleOne("contacts", id),
+      allIds,
+      toggleAll: () => toggleAll("contacts", allIds),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, allIds],
+  );
 
   const handleCreate = async () => {
     if (!newContact.email.trim()) { toast.error('Email is required'); return; }
@@ -85,7 +83,7 @@ export default function ContactsPage() {
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed === 0) toast.success(`${ids.length} ${ids.length === 1 ? 'contact' : 'contacts'} archived`);
     else toast.error(`Archived ${ids.length - failed}/${ids.length}. ${failed} failed.`);
-    setSelectedIds(new Set());
+    clearSelection("contacts");
   };
 
   return (
@@ -126,17 +124,6 @@ export default function ContactsPage() {
         <Input placeholder="Search contacts..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {/* Bulk Actions */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} selected</span>
-          <div className="h-4 w-px bg-border" />
-          <Button variant="outline" size="sm" onClick={handleBulkArchive}><Archive className="mr-1 h-3.5 w-3.5" />Archive</Button>
-          <div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}><X className="mr-1 h-3.5 w-3.5" />Clear</Button>
-        </div>
-      )}
-
       {/* Table */}
       {isLoading ? (
         <DataTableSkeleton columns={[
@@ -144,11 +131,12 @@ export default function ContactsPage() {
           { type: "text", width: "w-28" }, { type: "text", width: "w-20" },
           { type: "badge" }, { type: "text", width: "w-16" }, { type: "icon" },
         ]} />
+      ) : search && !rows.length ? (
+        <NoResults searchQuery={search} onClear={() => setSearch('')} />
       ) : !rows.length ? (
         <EmptyState
           icon={<Users className="size-7" />} title="No contacts yet"
           description="Start building your network by adding contacts."
-          action={<Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Add your first contact</Button>}
         />
       ) : (
         <DataTable
@@ -158,6 +146,13 @@ export default function ContactsPage() {
           rowClassName={(row) => selectedIds.has(row.id) ? 'bg-muted/30' : undefined}
         />
       )}
+
+      {/* Floating Selection Bar */}
+      <FloatingSelectionBar
+        count={selectedIds.size}
+        onClear={() => clearSelection("contacts")}
+        onArchive={handleBulkArchive}
+      />
     </div>
   );
 }

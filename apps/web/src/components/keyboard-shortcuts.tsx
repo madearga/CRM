@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 
 const SHORTCUTS = [
+  { keys: ['⌘', 'K'], action: 'Open search', href: null },
   { keys: ['C'], action: 'Go to Companies', href: '/companies' },
   { keys: ['D'], action: 'Go to Deals', href: '/deals' },
   { keys: ['N'], action: 'Go to Contacts', href: '/contacts' },

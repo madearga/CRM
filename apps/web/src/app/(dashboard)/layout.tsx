@@ -18,6 +18,7 @@ import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
+import { CommandPalette } from '@/components/command-palette';
 import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -147,6 +148,7 @@ export default function DashboardLayout({
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
       <KeyboardShortcuts />
+      <CommandPalette />
     </SidebarProvider>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -12,18 +12,22 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Building2, Plus, Search, Archive, RotateCcw, X } from 'lucide-react';
+import { Building2, Plus, Search } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
+import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
+import { FloatingSelectionBar } from '@/components/floating-selection-bar';
 import { getColumns, type CompanyRow } from './columns';
 import { useCompaniesParams } from '@/hooks/use-companies-params';
+import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function CompaniesPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useCompaniesParams();
+  const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
+  const selectedIds = selections.companies;
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newCompany, setNewCompany] = useState({
     name: '', website: '', industry: '', size: undefined as string | undefined,
     country: '', source: undefined as string | undefined,
@@ -48,22 +52,16 @@ export default function CompaniesPage() {
 
   const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
 
-  const toggleOne = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback(() => {
-    setSelectedIds((prev) => {
-      const allSelected = allIds.every((id) => prev.has(id));
-      return allSelected ? new Set() : new Set(allIds);
-    });
-  }, [allIds]);
-
-  const columns = useMemo(() => getColumns({ selectedIds, toggleOne, allIds, toggleAll }), [selectedIds, toggleOne, allIds, toggleAll]);
+  const columns = useMemo(
+    () => getColumns({
+      selectedIds,
+      toggleOne: (id: string) => toggleOne("companies", id),
+      allIds,
+      toggleAll: () => toggleAll("companies", allIds),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, allIds],
+  );
 
   const handleCreate = async () => {
     if (!newCompany.name.trim()) { toast.error('Company name is required'); return; }
@@ -85,7 +83,7 @@ export default function CompaniesPage() {
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed === 0) toast.success(`${ids.length} ${ids.length === 1 ? 'company' : 'companies'} archived`);
     else toast.error(`Archived ${ids.length - failed}/${ids.length}. ${failed} failed.`);
-    setSelectedIds(new Set());
+    clearSelection("companies");
   };
 
   const handleBulkRestore = async () => {
@@ -94,7 +92,7 @@ export default function CompaniesPage() {
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed === 0) toast.success(`${ids.length} ${ids.length === 1 ? 'company' : 'companies'} restored`);
     else toast.error(`Restored ${ids.length - failed}/${ids.length}. ${failed} failed.`);
-    setSelectedIds(new Set());
+    clearSelection("companies");
   };
 
   return (
@@ -149,18 +147,6 @@ export default function CompaniesPage() {
         </Button>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} selected</span>
-          <div className="h-4 w-px bg-border" />
-          <Button variant="outline" size="sm" onClick={handleBulkArchive}><Archive className="mr-1 h-3.5 w-3.5" />Archive</Button>
-          {showArchived && <Button variant="outline" size="sm" onClick={handleBulkRestore}><RotateCcw className="mr-1 h-3.5 w-3.5" />Restore</Button>}
-          <div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}><X className="mr-1 h-3.5 w-3.5" />Clear</Button>
-        </div>
-      )}
-
       {/* Table */}
       {isLoading ? (
         <DataTableSkeleton columns={[
@@ -168,11 +154,12 @@ export default function CompaniesPage() {
           { type: "text", width: "w-20" }, { type: "text", width: "w-16" },
           { type: "text", width: "w-16" }, { type: "badge" }, { type: "icon" },
         ]} />
+      ) : search && !rows.length ? (
+        <NoResults searchQuery={search} onClear={() => setSearch('')} />
       ) : !rows.length ? (
         <EmptyState
           icon={<Building2 className="size-7" />} title="No companies yet"
           description="Add your first company to start building your CRM pipeline."
-          action={<Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Add your first company</Button>}
         />
       ) : (
         <DataTable
@@ -182,6 +169,16 @@ export default function CompaniesPage() {
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}
+
+      {/* Floating Selection Bar */}
+      <FloatingSelectionBar
+        count={selectedIds.size}
+        onClear={() => clearSelection("companies")}
+        onArchive={handleBulkArchive}
+        onRestore={handleBulkRestore}
+        showRestore={showArchived}
+        isArchiving={archiveCompany.isPending}
+      />
     </div>
   );
 }
