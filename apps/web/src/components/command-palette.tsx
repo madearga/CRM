@@ -53,6 +53,11 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // Reset query on close
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
+
   const runCommand = useCallback(
     (command: () => void) => {
       setOpen(false);

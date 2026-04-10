@@ -1,24 +1,22 @@
 import { create } from "zustand";
 
-type TableId = "companies" | "contacts";
-
 interface TableState {
-  selections: Record<TableId, Set<string>>;
-  toggleOne: (tableId: TableId, id: string) => void;
-  toggleAll: (tableId: TableId, allIds: string[]) => void;
-  clearSelection: (tableId: TableId) => void;
-  getSelectedIds: (tableId: TableId) => Set<string>;
+  selections: Record<string, Set<string>>;
+  toggleOne: (tableId: string, id: string) => void;
+  toggleAll: (tableId: string, allIds: string[]) => void;
+  clearSelection: (tableId: string) => void;
 }
 
-export const useTableStore = create<TableState>((set, get) => ({
-  selections: {
-    companies: new Set(),
-    contacts: new Set(),
-  },
+const getOrCreate = (state: TableState, tableId: string): Set<string> =>
+  state.selections[tableId] ?? new Set();
+
+export const useTableStore = create<TableState>((set) => ({
+  selections: {},
 
   toggleOne: (tableId, id) =>
     set((state) => {
-      const next = new Set(state.selections[tableId]);
+      const current = getOrCreate(state, tableId);
+      const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return {
@@ -28,7 +26,7 @@ export const useTableStore = create<TableState>((set, get) => ({
 
   toggleAll: (tableId, allIds) =>
     set((state) => {
-      const current = state.selections[tableId];
+      const current = getOrCreate(state, tableId);
       const allSelected = allIds.length > 0 && allIds.every((id) => current.has(id));
       return {
         selections: {
@@ -42,6 +40,4 @@ export const useTableStore = create<TableState>((set, get) => ({
     set((state) => ({
       selections: { ...state.selections, [tableId]: new Set() },
     })),
-
-  getSelectedIds: (tableId) => get().selections[tableId],
 }));

@@ -26,7 +26,7 @@ export default function CompaniesPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useCompaniesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.companies;
+  const selectedIds = selections.companies ?? new Set();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCompany, setNewCompany] = useState({
     name: '', website: '', industry: '', size: undefined as string | undefined,
@@ -160,6 +160,7 @@ export default function CompaniesPage() {
         <EmptyState
           icon={<Building2 className="size-7" />} title="No companies yet"
           description="Add your first company to start building your CRM pipeline."
+          action={<Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Add your first company</Button>}
         />
       ) : (
         <DataTable

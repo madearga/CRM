@@ -47,17 +47,17 @@ export const globalSearch = createOrgQuery()({
 
     return {
       companies: companies.map((c: any) => ({
-        id: c._id || c.id,
+        id: c._id,
         name: c.name,
         industry: c.industry,
       })),
       contacts: contacts.map((c: any) => ({
-        id: c._id || c.id,
+        id: c._id,
         fullName: c.fullName,
         email: c.email,
       })),
       deals: deals.map((d: any) => ({
-        id: d._id || d.id,
+        id: d._id,
         title: d.title,
         stage: d.stage,
       })),

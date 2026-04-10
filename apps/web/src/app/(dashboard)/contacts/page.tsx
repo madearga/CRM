@@ -26,7 +26,7 @@ export default function ContactsPage() {
   const router = useRouter();
   const { q: search, setSearch } = useContactsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.contacts;
+  const selectedIds = selections.contacts ?? new Set();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newContact, setNewContact] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -137,6 +137,7 @@ export default function ContactsPage() {
         <EmptyState
           icon={<Users className="size-7" />} title="No contacts yet"
           description="Start building your network by adding contacts."
+          action={<Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Add your first contact</Button>}
         />
       ) : (
         <DataTable
