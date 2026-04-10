@@ -140,11 +140,12 @@ export const authClient = createClient<DataModel>(
 
           if (!orgId) return;
 
-          // Set activeOrganizationId on the session via Better Auth API
-          // We can't use ctx.auth.api here (no headers in trigger context),
-          // so we update the session document directly.
+          // Set activeOrganizationId on the session document.
+          // session._id is a COMPONENT table ID. We must use ctx.db.patch (raw Convex)
+          // instead of entsTableFactory because the session lives in the component's table,
+          // not our main table.
           try {
-            await table('session').getX(session._id as any).patch({
+            await (ctx as any).db.patch(session._id, {
               activeOrganizationId: orgId,
             });
           } catch (err) {
