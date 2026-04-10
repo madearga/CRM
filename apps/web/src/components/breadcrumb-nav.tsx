@@ -135,7 +135,7 @@ export function BreadcrumbNav() {
 
           {/* Right side - Organization Switcher & Auth */}
           <div className="flex items-center gap-2">
-            {user && user.id ? (
+            {user && user.id && user.id !== '0' ? (
               <>
                 <OrganizationSwitcher />
                 <Button variant="outline" size="sm" onClick={() => signOut()}>
@@ -143,6 +143,9 @@ export function BreadcrumbNav() {
                   Sign out
                 </Button>
               </>
+            ) : user?.id === '0' ? (
+              // Loading state — show placeholder
+              <div className="h-8 w-24 animate-pulse rounded-md bg-muted" />
             ) : (
               <Link href="/login">
                 <Button variant="outline" size="sm">

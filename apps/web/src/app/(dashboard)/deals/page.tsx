@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { CreateDealDialog } from './create-deal-dialog';
 import { LostReasonDialog } from './lost-reason-dialog';
 
@@ -191,9 +192,11 @@ export default function DealsPage() {
                                 }`}
                               >
                                 <CardContent className="p-3">
-                                  <p className="font-medium leading-snug">
-                                    {deal.title}
-                                  </p>
+                                  <Link href={`/deals/${deal.id}`} className="block">
+                                    <p className="font-medium leading-snug hover:text-indigo-600 dark:hover:text-indigo-400">
+                                      {deal.title}
+                                    </p>
+                                  </Link>
                                   <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
                                     {deal.value != null ? (
                                       <span>

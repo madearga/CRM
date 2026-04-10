@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -33,7 +34,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Globe, Plus, Search, Archive, RotateCcw } from 'lucide-react';
+import { Building2, Globe, Plus, Search, Archive, RotateCcw, X, Trash2 } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -47,6 +49,7 @@ export default function CompaniesPage() {
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newCompany, setNewCompany] = useState({
     name: '',
     website: '',
@@ -64,6 +67,26 @@ export default function CompaniesPage() {
   const createCompany = useAuthMutation(api.companies.create);
   const archiveCompany = useAuthMutation(api.companies.archive);
   const restoreCompany = useAuthMutation(api.companies.restore);
+
+  const allIds = companies?.map((c) => c.id) ?? [];
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+
+  const toggleAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }, [allIds, allSelected]);
+
+  const toggleOne = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleCreate = async () => {
     if (!newCompany.name.trim()) {
@@ -100,6 +123,28 @@ export default function CompaniesPage() {
     try {
       await restoreCompany.mutateAsync({ id: id as any });
       toast.success('Company restored');
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to restore');
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    const count = selectedIds.size;
+    try {
+      await Promise.all([...selectedIds].map((id) => archiveCompany.mutateAsync({ id: id as any })));
+      toast.success(`${count} ${count === 1 ? 'company' : 'companies'} archived`);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to archive');
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    const count = selectedIds.size;
+    try {
+      await Promise.all([...selectedIds].map((id) => restoreCompany.mutateAsync({ id: id as any })));
+      toast.success(`${count} ${count === 1 ? 'company' : 'companies'} restored`);
+      setSelectedIds(new Set());
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to restore');
     }
@@ -198,6 +243,31 @@ export default function CompaniesPage() {
         </Button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="outline" size="sm" onClick={handleBulkArchive}>
+            <Archive className="mr-1 h-3.5 w-3.5" />
+            Archive
+          </Button>
+          {showArchived && (
+            <Button variant="outline" size="sm" onClick={handleBulkRestore}>
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              Restore
+            </Button>
+          )}
+          <div className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            <X className="mr-1 h-3.5 w-3.5" />
+            Clear
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       {isLoading ? (
         <div className="space-y-2">
@@ -207,13 +277,18 @@ export default function CompaniesPage() {
         </div>
       ) : !companies?.length ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Building2 className="h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-3 text-sm text-muted-foreground">No companies yet</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add your first company
-            </Button>
+          <CardContent>
+            <EmptyState
+              icon={<Building2 className="size-7" />}
+              title="No companies yet"
+              description="Add your first company to start building your CRM pipeline."
+              action={
+                <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add your first company
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (
@@ -221,6 +296,13 @@ export default function CompaniesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Industry</TableHead>
                 <TableHead>Country</TableHead>
@@ -231,7 +313,14 @@ export default function CompaniesPage() {
             </TableHeader>
             <TableBody>
               {companies.map((company) => (
-                <TableRow key={company.id} className={`cursor-pointer transition-colors hover:bg-muted/50 ${company.archivedAt ? 'opacity-60' : ''}`}>
+                <TableRow key={company.id} className={`cursor-pointer transition-colors hover:bg-muted/50 ${company.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(company.id) ? 'bg-muted/30' : ''}`}>
+                  <TableCell className="pr-0">
+                    <Checkbox
+                      checked={selectedIds.has(company.id)}
+                      onCheckedChange={() => toggleOne(company.id)}
+                      aria-label={`Select ${company.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">

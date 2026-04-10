@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -34,7 +35,8 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Plus, Search, Archive, RotateCcw, Mail, Phone } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { Users, Plus, Search, Archive, RotateCcw, Mail, Phone, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -48,6 +50,7 @@ const LIFECYCLE_COLORS: Record<string, string> = {
 export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newContact, setNewContact] = useState({
     firstName: '',
     lastName: '',
@@ -65,6 +68,26 @@ export default function ContactsPage() {
   const createContact = useAuthMutation(api.contacts.create);
   const archiveContact = useAuthMutation(api.contacts.archive);
   const restoreContact = useAuthMutation(api.contacts.restore);
+
+  const allIds = contacts?.map((c: any) => c.id as string) ?? [];
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+
+  const toggleAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }, [allIds, allSelected]);
+
+  const toggleOne = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleCreate = async () => {
     if (!newContact.email.trim()) {
@@ -103,6 +126,17 @@ export default function ContactsPage() {
       toast.success('Contact restored');
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to restore');
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    const count = selectedIds.size;
+    try {
+      await Promise.all([...selectedIds].map((id) => archiveContact.mutateAsync({ id: id as any })));
+      toast.success(`${count} ${count === 1 ? 'contact' : 'contacts'} archived`);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to archive');
     }
   };
 
@@ -181,6 +215,25 @@ export default function ContactsPage() {
         />
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="outline" size="sm" onClick={handleBulkArchive}>
+            <Archive className="mr-1 h-3.5 w-3.5" />
+            Archive
+          </Button>
+          <div className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            <X className="mr-1 h-3.5 w-3.5" />
+            Clear
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       {isLoading ? (
         <div className="space-y-2">
@@ -190,13 +243,18 @@ export default function ContactsPage() {
         </div>
       ) : !contacts?.length ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-3 text-sm text-muted-foreground">No contacts yet</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add your first contact
-            </Button>
+          <CardContent>
+            <EmptyState
+              icon={<Users className="size-7" />}
+              title="No contacts yet"
+              description="Start building your network by adding contacts."
+              action={
+                <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add your first contact
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (
@@ -204,6 +262,13 @@ export default function ContactsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
@@ -214,7 +279,14 @@ export default function ContactsPage() {
             </TableHeader>
             <TableBody>
               {contacts.map((contact: any) => (
-                <TableRow key={contact.id} className="cursor-pointer transition-colors hover:bg-muted/50">
+                <TableRow key={contact.id} className={`cursor-pointer transition-colors hover:bg-muted/50 ${selectedIds.has(contact.id) ? 'bg-muted/30' : ''}`}>
+                  <TableCell className="pr-0">
+                    <Checkbox
+                      checked={selectedIds.has(contact.id)}
+                      onCheckedChange={() => toggleOne(contact.id)}
+                      aria-label={`Select ${contact.fullName}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="size-9">

@@ -23,17 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Activity,
-  Plus,
-  Phone,
-  Mail,
-  Calendar,
-  FileText,
-  ArrowRightLeft,
-  Check,
-  Clock,
-} from 'lucide-react';
+import { Activity, Plus, Phone, Mail, Calendar, FileText, ArrowRightLeft, Check, Clock, Inbox } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -176,11 +167,12 @@ export default function ActivitiesPage() {
               ))}
             </div>
           ) : !upcomingActivities?.length ? (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">No upcoming activities</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={<Clock className="size-6" />}
+              title="All caught up"
+              description="No upcoming activities scheduled."
+              className="py-8"
+            />
           ) : (
             <div className="space-y-2">
               {upcomingActivities.map((activity: any) => {
@@ -219,11 +211,12 @@ export default function ActivitiesPage() {
               ))}
             </div>
           ) : !recentActivities?.length ? (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">No recent activities</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={<Inbox className="size-6" />}
+              title="No recent activity"
+              description="Activities you log will appear here."
+              className="py-8"
+            />
           ) : (
             <div className="space-y-2">
               {recentActivities.map((activity: any) => {

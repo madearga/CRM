@@ -15,6 +15,16 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 
 import { api } from '@convex/_generated/api';
 import { useAuthQuery } from '@/lib/convex/hooks';
@@ -43,6 +53,14 @@ const STAGE_COLORS: Record<string, string> = {
   proposal: 'bg-amber-400',
   won: 'bg-green-400',
   lost: 'bg-red-400',
+};
+
+const STAGE_CHART_COLORS: Record<string, string> = {
+  new: '#94a3b8',
+  contacted: '#60a5fa',
+  proposal: '#fbbf24',
+  won: '#4ade80',
+  lost: '#f87171',
 };
 
 const STAGE_BADGE_VARIANTS: Record<string, string> = {
@@ -97,8 +115,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const maxCount = Math.max(...data.dealsByStage.map((s) => s.count), 1);
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
@@ -176,38 +192,60 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Pipeline by Stage</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {data.dealsByStage.length === 0 ? (
             <p className="text-sm text-muted-foreground">No deals yet</p>
           ) : (
-            data.dealsByStage.map((stage) => (
-              <div key={stage.stage} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className={STAGE_BADGE_VARIANTS[stage.stage]}
-                    >
-                      {stage.stage}
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      {stage.count} {stage.count === 1 ? 'deal' : 'deals'}
-                    </span>
-                  </div>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {formatCurrency(stage.value)}
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full transition-all ${STAGE_COLORS[stage.stage] ?? 'bg-primary'}`}
-                    style={{
-                      width: `${(stage.count / maxCount) * 100}%`,
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.dealsByStage.map((s) => ({
+                    stage: s.stage.charAt(0).toUpperCase() + s.stage.slice(1),
+                    count: s.count,
+                    value: s.value,
+                  }))}
+                  margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="stage" className="text-xs" tick={{ fontSize: 12 }} />
+                  <YAxis className="text-xs" tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value: number, name: string) =>
+                      name === 'value' ? formatCurrency(value) : [value, 'Deals']
+                    }
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid hsl(var(--border))',
+                      background: 'hsl(var(--card))',
                     }}
                   />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Deals">
+                    {data.dealsByStage.map((stage) => (
+                      <Cell
+                        key={stage.stage}
+                        fill={STAGE_CHART_COLORS[stage.stage] ?? '#6366f1'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {/* Value summary */}
+          {data.dealsByStage.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+              {data.dealsByStage.map((stage) => (
+                <div key={stage.stage} className="rounded-lg border p-2 text-center">
+                  <div
+                    className={`mx-auto mb-1 h-1.5 w-8 rounded-full ${STAGE_COLORS[stage.stage] ?? 'bg-primary'}`}
+                  />
+                  <p className="text-xs font-medium capitalize">{stage.stage}</p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {formatCurrency(stage.value)}
+                  </p>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
