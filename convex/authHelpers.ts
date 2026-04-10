@@ -7,6 +7,20 @@ import type { AuthCtx } from './functions';
 import { getAuth } from './auth';
 import { ConvexError } from 'convex/values';
 
+/**
+ * Shared helper to find a main-table user by email.
+ * Used by both user.onCreate and session.onCreate triggers in auth.ts
+ * to avoid duplicating the lookup logic.
+ */
+export async function findMainUserByEmail(
+  table: any,
+  email: string
+): Promise<any | null> {
+  return await table('user')
+    .filter((q: any) => q.eq(q.field('email'), email))
+    .first();
+}
+
 export type SessionUser = Omit<Doc<'user'>, '_creationTime' | '_id'> & {
   id: Id<'user'>;
   activeOrganization:
@@ -34,7 +48,10 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
     return null;
   }
 
-  const activeOrganizationId =
+  // session.activeOrganizationId is set by Better Auth's organization plugin.
+  // It may be null if the session was created before the trigger fix.
+  // We'll fallback to the user's personalOrganizationId below.
+  const sessionOrgId =
     session.activeOrganizationId as Id<'organization'> | null;
 
   // session.userId is a COMPONENT table ID — find user in main table by email
@@ -52,6 +69,14 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
   }
 
   const mainUserId = user._id as Id<'user'>;
+
+  // Fallback: if session doesn't have activeOrganizationId, use the user's
+  // personal org or last active org. This handles sessions created before
+  // the session.onCreate trigger fix.
+  const activeOrganizationId =
+    sessionOrgId ??
+    user.personalOrganizationId ??
+    user.lastActiveOrganizationId;
 
   const activeOrganization = await (async () => {
     if (!activeOrganizationId) {
