@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Building2, Globe, Plus, Search, Archive, RotateCcw, X } from 'lucide-react';
+import { Building2, Plus, Search, Archive, RotateCcw, X } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
 import { getColumns, type CompanyRow } from './columns';
@@ -46,6 +46,8 @@ export default function CompaniesPage() {
     [companies],
   );
 
+  const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
+
   const toggleOne = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -54,7 +56,14 @@ export default function CompaniesPage() {
     });
   }, []);
 
-  const columns = useMemo(() => getColumns({ selectedIds, toggleOne }), [selectedIds, toggleOne]);
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allSelected = allIds.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  }, [allIds]);
+
+  const columns = useMemo(() => getColumns({ selectedIds, toggleOne, allIds, toggleAll }), [selectedIds, toggleOne, allIds, toggleAll]);
 
   const handleCreate = async () => {
     if (!newCompany.name.trim()) { toast.error('Company name is required'); return; }

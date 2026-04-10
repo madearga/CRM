@@ -61,18 +61,25 @@ StatusCell.displayName = "StatusCell";
 export function getColumns({
   selectedIds,
   toggleOne,
+  allIds,
+  toggleAll,
 }: {
   selectedIds: Set<string>;
   toggleOne: (id: string) => void;
+  allIds: string[];
+  toggleAll: () => void;
 }): ColumnDef<CompanyRow>[] {
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = !allSelected && allIds.some((id) => selectedIds.has(id));
+
   return [
     {
       id: "select",
       size: 40,
-      header: ({ table }) => (
+      header: () => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          checked={allSelected || (someSelected && "indeterminate")}
+          onCheckedChange={() => toggleAll()}
           aria-label="Select all"
         />
       ),

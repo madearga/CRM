@@ -46,6 +46,8 @@ export default function ContactsPage() {
     [contacts],
   );
 
+  const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
+
   const toggleOne = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -54,7 +56,14 @@ export default function ContactsPage() {
     });
   }, []);
 
-  const columns = useMemo(() => getColumns({ selectedIds, toggleOne }), [selectedIds, toggleOne]);
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allSelected = allIds.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  }, [allIds]);
+
+  const columns = useMemo(() => getColumns({ selectedIds, toggleOne, allIds, toggleAll }), [selectedIds, toggleOne, allIds, toggleAll]);
 
   const handleCreate = async () => {
     if (!newContact.email.trim()) { toast.error('Email is required'); return; }
