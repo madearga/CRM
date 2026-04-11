@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { CreateDealDialog } from './create-deal-dialog';
 import { LostReasonDialog } from './lost-reason-dialog';
 import { STAGES, type StageId } from './stages';
+import { isValidTransition } from '@crm/domain';
 
 const DealsBoard = dynamic(() => import('./deals-board'), {
   ssr: false,
@@ -72,7 +73,13 @@ export default function DealsPage() {
         return;
       }
 
+      const sourceStage = source.droppableId as StageId;
       const targetStage = destination.droppableId as StageId;
+
+      if (!isValidTransition(sourceStage, targetStage)) {
+        toast.error(`Cannot move deal from "${sourceStage}" to "${targetStage}"`);
+        return;
+      }
 
       if (targetStage === 'lost') {
         setLostDragInfo({

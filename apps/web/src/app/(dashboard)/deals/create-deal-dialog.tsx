@@ -62,14 +62,24 @@ export function CreateDealDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    const trimmed = title.trim();
+    if (!trimmed) {
       toast.error('Title is required');
+      return;
+    }
+    if (trimmed.length > 200) {
+      toast.error('Title must be 200 characters or less');
+      return;
+    }
+    const numValue = value ? Number(value) : undefined;
+    if (numValue !== undefined && (isNaN(numValue) || numValue < 0)) {
+      toast.error('Value must be a non-negative number');
       return;
     }
 
     createDeal.mutate({
-      title: title.trim(),
-      ...(value ? { value: Number(value) } : {}),
+      title: trimmed,
+      ...(numValue !== undefined ? { value: numValue } : {}),
       currency,
       ...(companyId ? { companyId: companyId as any } : {}),
       ...(primaryContactId ? { primaryContactId: primaryContactId as any } : {}),

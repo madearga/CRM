@@ -66,10 +66,12 @@ export default function CompaniesPage() {
   );
 
   const handleCreate = async () => {
-    if (!newCompany.name.trim()) { toast.error('Company name is required'); return; }
+    const trimmed = newCompany.name.trim();
+    if (!trimmed) { toast.error('Company name is required'); return; }
+    if (trimmed.length > 200) { toast.error('Name must be 200 characters or less'); return; }
     try {
       await createCompany.mutateAsync({
-        name: newCompany.name.trim(), website: newCompany.website || undefined,
+        name: trimmed, website: newCompany.website || undefined,
         industry: newCompany.industry || undefined, size: newCompany.size as any,
         country: newCompany.country || undefined, source: newCompany.source as any,
       });

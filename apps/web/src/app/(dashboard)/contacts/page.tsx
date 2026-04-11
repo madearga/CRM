@@ -66,11 +66,13 @@ export default function ContactsPage() {
   );
 
   const handleCreate = async () => {
-    if (!newContact.email.trim()) { toast.error('Email is required'); return; }
+    const trimmed = newContact.email.trim();
+    if (!trimmed) { toast.error('Email is required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { toast.error('Invalid email address'); return; }
     try {
       await createContact.mutateAsync({
         firstName: newContact.firstName || undefined, lastName: newContact.lastName || undefined,
-        email: newContact.email.trim(), phone: newContact.phone || undefined,
+        email: trimmed, phone: newContact.phone || undefined,
         jobTitle: newContact.jobTitle || undefined, lifecycleStage: newContact.lifecycleStage as any,
       });
       toast.success('Contact created');
