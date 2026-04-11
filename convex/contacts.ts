@@ -1,5 +1,6 @@
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
+import type { Id } from './convex/_generated/dataModel';
 import { z } from 'zod';
 
 import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
@@ -313,6 +314,101 @@ export const archive = createOrgMutation()({
     await contact.patch({ archivedAt: Date.now() });
 
     return null;
+  },
+});
+
+// Bulk create contacts (CSV import), skipping duplicates
+export const bulkCreate = createOrgMutation()({
+  args: {
+    contacts: z.array(
+      z.object({
+        companyName: z.string().optional(),
+        email: z.string().email(),
+        firstName: z.string().optional(),
+        jobTitle: z.string().optional(),
+        lastName: z.string().optional(),
+        lifecycleStage: z.enum(['lead', 'prospect', 'customer', 'churned']).optional(),
+        notes: z.string().optional(),
+        phone: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+      })
+    ),
+  },
+  returns: z.object({
+    created: z.number(),
+    errors: z.array(
+      z.object({
+        email: z.string(),
+        reason: z.string(),
+        row: z.number(),
+      })
+    ),
+    skipped: z.number(),
+  }),
+  handler: async (ctx, args) => {
+    const { orgId } = ctx;
+
+    if (args.contacts.length > 500) {
+      throw new ConvexError({ code: 'BAD_REQUEST', message: 'Maximum 500 contacts per import' });
+    }
+
+    let created = 0;
+    let skipped = 0;
+    const errors: { row: number; email: string; reason: string }[] = [];
+
+    for (let i = 0; i < args.contacts.length; i++) {
+      const contact = args.contacts[i];
+      try {
+        // Check duplicate email in same org
+        const existing = await ctx
+          .table('contacts')
+          .get('organizationId_email', orgId, contact.email);
+
+        if (existing) {
+          skipped++;
+          continue;
+        }
+
+        const fullName =
+          [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.email;
+
+        // Look up company by name if provided
+        let companyId: Id<'companies'> | undefined;
+        if (contact.companyName) {
+          const company = await ctx
+            .table('companies', 'organizationId_name', (q) =>
+              q.eq('organizationId', orgId).eq('name', contact.companyName!)
+            )
+            .first();
+          companyId = company?._id;
+        }
+
+        await ctx.table('contacts').insert({
+          companyId,
+          email: contact.email,
+          firstName: contact.firstName,
+          fullName,
+          jobTitle: contact.jobTitle,
+          lastName: contact.lastName,
+          lifecycleStage: contact.lifecycleStage,
+          notes: contact.notes,
+          organizationId: orgId,
+          ownerId: ctx.user._id,
+          phone: contact.phone,
+          tags: contact.tags,
+        });
+
+        created++;
+      } catch (err) {
+        errors.push({
+          email: contact.email,
+          reason: err instanceof Error ? err.message : String(err),
+          row: i,
+        });
+      }
+    }
+
+    return { created, errors, skipped };
   },
 });
 

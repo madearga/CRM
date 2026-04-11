@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Users, Plus, Search } from 'lucide-react';
+import { Users, Plus, Search, Upload } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -21,6 +21,7 @@ import { getColumns, type ContactRow } from './columns';
 import { useContactsParams } from '@/hooks/use-contacts-params';
 import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
+import { ImportContactsDialog } from './import-contacts-dialog';
 
 export default function ContactsPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ContactsPage() {
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = selections.contacts ?? new Set();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [newContact, setNewContact] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     jobTitle: '', companyId: undefined as string | undefined,
@@ -93,7 +95,7 @@ export default function ContactsPage() {
   return (
     <div className="space-y-4">
       {/* Add */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="mr-1 h-4 w-4" />Add Contact</Button>
@@ -120,6 +122,10 @@ export default function ContactsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+          <Upload className="mr-1 h-4 w-4" />
+          Import
+        </Button>
       </div>
 
       {/* Search */}
@@ -158,6 +164,9 @@ export default function ContactsPage() {
         onClear={() => clearSelection("contacts")}
         onArchive={handleBulkArchive}
       />
+
+      {/* CSV Import Dialog */}
+      <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
