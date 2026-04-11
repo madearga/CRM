@@ -15,16 +15,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import dynamic from 'next/dynamic';
 
 import { api } from '@convex/_generated/api';
 import { useAuthQuery } from '@/lib/convex/hooks';
@@ -39,10 +30,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuickAddDealDialog } from './quick-add-deal-dialog';
-import { STAGE_CHART_COLORS, STAGE_BAR_COLORS as STAGE_COLORS, STAGE_COLORS as STAGE_BADGE_COLORS } from '@/lib/constants';
 import { formatCurrency } from '@/lib/format';
 
-const STAGE_BADGE_VARIANTS = STAGE_BADGE_COLORS;
+const PipelineChart = dynamic(() => import('./pipeline-chart'), {
+  ssr: false,
+  loading: () => <div className="h-[260px] animate-pulse rounded-lg bg-muted/50" />,
+});
 
 const ACTIVITY_ICONS: Record<string, typeof Phone> = {
   call: Phone,
@@ -160,7 +153,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Pipeline by Stage */}
+      {/* Pipeline by Stage (lazy-loaded recharts) */}
       <Card>
         <CardHeader>
           <CardTitle>Pipeline by Stage</CardTitle>
@@ -169,56 +162,7 @@ export default function DashboardPage() {
           {data.dealsByStage.length === 0 ? (
             <p className="text-sm text-muted-foreground">No deals yet</p>
           ) : (
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.dealsByStage.map((s) => ({
-                    stage: s.stage.charAt(0).toUpperCase() + s.stage.slice(1),
-                    count: s.count,
-                    value: s.value,
-                  }))}
-                  margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="stage" className="text-xs" tick={{ fontSize: 12 }} />
-                  <YAxis className="text-xs" tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(value: number, name: string) =>
-                      name === 'value' ? formatCurrency(value) : [value, 'Deals']
-                    }
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid hsl(var(--border))',
-                      background: 'hsl(var(--card))',
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Deals">
-                    {data.dealsByStage.map((stage) => (
-                      <Cell
-                        key={stage.stage}
-                        fill={STAGE_CHART_COLORS[stage.stage] ?? '#6366f1'}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-          {/* Value summary */}
-          {data.dealsByStage.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-              {data.dealsByStage.map((stage) => (
-                <div key={stage.stage} className="rounded-lg border p-2 text-center">
-                  <div
-                    className={`mx-auto mb-1 h-1.5 w-8 rounded-full ${STAGE_COLORS[stage.stage] ?? 'bg-primary'}`}
-                  />
-                  <p className="text-xs font-medium capitalize">{stage.stage}</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {formatCurrency(stage.value)}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <PipelineChart dealsByStage={data.dealsByStage} />
           )}
         </CardContent>
       </Card>
@@ -226,7 +170,7 @@ export default function DashboardPage() {
       {/* Recent & Upcoming Activities */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Aging Deals */}
-        {data.agingDeals && data.agingDeals.length > 0 && (
+        {data.agingDeals && data.agingDeals.length > 0 ? (
           <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-amber-700">
@@ -248,17 +192,17 @@ export default function DashboardPage() {
                         {deal.daysInStage}d in stage
                       </p>
                     </div>
-                    {deal.value != null && (
+                    {deal.value != null ? (
                       <span className="shrink-0 font-mono text-xs text-muted-foreground">
                         {formatCurrency(deal.value)}
                       </span>
-                    )}
+                    ) : null}
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Recent Activities */}
         <Card>
@@ -267,25 +211,18 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {data.recentActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recent activities
-              </p>
+              <p className="text-sm text-muted-foreground">No recent activities</p>
             ) : (
               <ul className="space-y-3">
                 {data.recentActivities.map((activity) => {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
-                    <li
-                      key={activity.id}
-                      className="flex items-start gap-3 text-sm"
-                    >
+                    <li key={activity.id} className="flex items-start gap-3 text-sm">
                       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{activity.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(activity.createdAt), {
-                            addSuffix: true,
-                          })}
+                          {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                         </p>
                       </div>
                     </li>
@@ -303,18 +240,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {data.upcomingActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No upcoming activities
-              </p>
+              <p className="text-sm text-muted-foreground">No upcoming activities</p>
             ) : (
               <ul className="space-y-3">
                 {data.upcomingActivities.map((activity) => {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
-                    <li
-                      key={activity.id}
-                      className="flex items-start gap-3 text-sm"
-                    >
+                    <li key={activity.id} className="flex items-start gap-3 text-sm">
                       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{activity.title}</p>
