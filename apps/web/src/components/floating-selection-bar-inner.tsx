@@ -16,7 +16,7 @@ interface FloatingSelectionBarInnerProps {
   isArchiving?: boolean;
 }
 
-export function FloatingSelectionBarInner({
+export default memo(function FloatingSelectionBarInner({
   count,
   onClear,
   onArchive,
@@ -61,6 +61,4 @@ export function FloatingSelectionBarInner({
       ) : null}
     </AnimatePresence>
   );
-}
-
-export default memo(FloatingSelectionBarInner);
+});

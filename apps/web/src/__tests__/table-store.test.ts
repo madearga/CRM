@@ -8,11 +8,8 @@ function getStore() {
 
 describe('useTableStore', () => {
   beforeEach(() => {
-    // Reset store by clearing all known keys
-    const store = getStore();
-    for (const key of Object.keys(store.selections)) {
-      store.clearSelection(key);
-    }
+    // Full reset — clears all keys including dynamically created ones
+    useTableStore.setState({ selections: {} });
   });
 
   describe('toggleOne', () => {
