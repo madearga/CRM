@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -8,7 +9,7 @@ interface NoResultsProps {
   onClear: () => void;
 }
 
-export function NoResults({ searchQuery, onClear }: NoResultsProps) {
+export const NoResults = memo(function NoResults({ searchQuery, onClear }: NoResultsProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16">
       <div className="flex size-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
@@ -23,4 +24,4 @@ export function NoResults({ searchQuery, onClear }: NoResultsProps) {
       </Button>
     </div>
   );
-}
+});

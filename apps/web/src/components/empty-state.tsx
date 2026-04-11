@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
@@ -10,7 +11,7 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+export const EmptyState = memo(function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center py-16', className)}>
       <div className="relative">
@@ -21,12 +22,12 @@ export function EmptyState({ icon, title, description, action, className }: Empt
         </div>
       </div>
       <h3 className="mt-6 text-sm font-semibold">{title}</h3>
-      {description && (
+      {description ? (
         <p className="mt-1 max-w-[260px] text-center text-sm text-muted-foreground">
           {description}
         </p>
-      )}
-      {action && <div className="mt-4">{action}</div>}
+      ) : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
-}
+});

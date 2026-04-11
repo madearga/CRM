@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -52,15 +52,17 @@ export default function CompaniesPage() {
 
   const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
 
+  const toggleOneCompany = useCallback((id: string) => toggleOne("companies", id), [toggleOne]);
+  const toggleAllCompanies = useCallback(() => toggleAll("companies", allIds), [toggleAll, allIds]);
+
   const columns = useMemo(
     () => getColumns({
       selectedIds,
-      toggleOne: (id: string) => toggleOne("companies", id),
+      toggleOne: toggleOneCompany,
       allIds,
-      toggleAll: () => toggleAll("companies", allIds),
+      toggleAll: toggleAllCompanies,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedIds, allIds],
+    [selectedIds, toggleOneCompany, allIds, toggleAllCompanies],
   );
 
   const handleCreate = async () => {
@@ -72,7 +74,7 @@ export default function CompaniesPage() {
         country: newCompany.country || undefined, source: newCompany.source as any,
       });
       toast.success(`Company "${newCompany.name}" created`);
-      setNewCompany({ name: '', website: '', industry: '', size: undefined, country: '', source: undefined });
+      setNewCompany((p) => ({ ...p, name: '', website: '', industry: '', size: undefined, country: '', source: undefined }));
       setDialogOpen(false);
     } catch (e: any) { toast.error(e.data?.message ?? 'Failed to create company'); }
   };
@@ -106,11 +108,11 @@ export default function CompaniesPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Add Company</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <Input placeholder="Company name *" value={newCompany.name} onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })} />
-              <Input placeholder="Website" value={newCompany.website} onChange={(e) => setNewCompany({ ...newCompany, website: e.target.value })} />
+              <Input placeholder="Company name *" value={newCompany.name} onChange={(e) => setNewCompany((p) => ({ ...p, name: e.target.value }))} />
+              <Input placeholder="Website" value={newCompany.website} onChange={(e) => setNewCompany((p) => ({ ...p, website: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Industry" value={newCompany.industry} onChange={(e) => setNewCompany({ ...newCompany, industry: e.target.value })} />
-                <Select value={newCompany.size} onValueChange={(v) => setNewCompany({ ...newCompany, size: v })}>
+                <Input placeholder="Industry" value={newCompany.industry} onChange={(e) => setNewCompany((p) => ({ ...p, industry: e.target.value }))} />
+                <Select value={newCompany.size} onValueChange={(v) => setNewCompany((p) => ({ ...p, size: v }))}>
                   <SelectTrigger><SelectValue placeholder="Size" /></SelectTrigger>
                   <SelectContent>
                     {['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'].map((s) => (
@@ -120,8 +122,8 @@ export default function CompaniesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Country" value={newCompany.country} onChange={(e) => setNewCompany({ ...newCompany, country: e.target.value })} />
-                <Select value={newCompany.source} onValueChange={(v) => setNewCompany({ ...newCompany, source: v })}>
+                <Input placeholder="Country" value={newCompany.country} onChange={(e) => setNewCompany((p) => ({ ...p, country: e.target.value }))} />
+                <Select value={newCompany.source} onValueChange={(v) => setNewCompany((p) => ({ ...p, source: v }))}>
                   <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
                   <SelectContent>
                     {['referral', 'website', 'linkedin', 'cold', 'event', 'other'].map((s) => (

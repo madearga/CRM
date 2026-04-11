@@ -83,7 +83,7 @@ export function CommandPalette() {
         <CommandEmpty>No results found.</CommandEmpty>
 
         {/* Search results */}
-        {searchResults && searchResults.companies.length > 0 && (
+        {searchResults && searchResults.companies.length > 0 ? (
           <CommandGroup heading="Companies">
             {searchResults.companies.map((company) => (
               <CommandItem
@@ -93,17 +93,17 @@ export function CommandPalette() {
               >
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>{company.name}</span>
-                {company.industry && (
+                {company.industry ? (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {company.industry}
                   </span>
-                )}
+                ) : null}
               </CommandItem>
             ))}
           </CommandGroup>
-        )}
+        ) : null}
 
-        {searchResults && searchResults.contacts.length > 0 && (
+        {searchResults && searchResults.contacts.length > 0 ? (
           <CommandGroup heading="Contacts">
             {searchResults.contacts.map((contact) => (
               <CommandItem
@@ -119,9 +119,9 @@ export function CommandPalette() {
               </CommandItem>
             ))}
           </CommandGroup>
-        )}
+        ) : null}
 
-        {searchResults && searchResults.deals.length > 0 && (
+        {searchResults && searchResults.deals.length > 0 ? (
           <CommandGroup heading="Deals">
             {searchResults.deals.map((deal) => (
               <CommandItem
@@ -137,10 +137,10 @@ export function CommandPalette() {
               </CommandItem>
             ))}
           </CommandGroup>
-        )}
+        ) : null}
 
         {/* Navigation (show when not searching or no results) */}
-        {(!hasResults || query.length < 2) && (
+        {(!hasResults || query.length < 2) ? (
           <>
             <CommandSeparator />
             <CommandGroup heading="Navigation">
@@ -156,7 +156,7 @@ export function CommandPalette() {
               ))}
             </CommandGroup>
           </>
-        )}
+        ) : null}
       </CommandList>
     </CommandDialog>
   );

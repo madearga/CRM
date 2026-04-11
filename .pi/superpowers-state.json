@@ -30,13 +30,15 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/login/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/deals/page.tsx",
       "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/companies/page.tsx",
       "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/activities/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/page.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/deals/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/deals/deals-board.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/floating-selection-bar.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/floating-selection-bar-inner.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/no-results.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/empty-state.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/command-palette.tsx"
     ],
     "redVerificationPending": false
   },

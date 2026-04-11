@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -52,15 +52,17 @@ export default function ContactsPage() {
 
   const allIds = useMemo(() => rows.map((r) => r.id), [rows]);
 
+  const toggleOneContact = useCallback((id: string) => toggleOne("contacts", id), [toggleOne]);
+  const toggleAllContacts = useCallback(() => toggleAll("contacts", allIds), [toggleAll, allIds]);
+
   const columns = useMemo(
     () => getColumns({
       selectedIds,
-      toggleOne: (id: string) => toggleOne("contacts", id),
+      toggleOne: toggleOneContact,
       allIds,
-      toggleAll: () => toggleAll("contacts", allIds),
+      toggleAll: toggleAllContacts,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedIds, allIds],
+    [selectedIds, toggleOneContact, allIds, toggleAllContacts],
   );
 
   const handleCreate = async () => {
@@ -72,7 +74,7 @@ export default function ContactsPage() {
         jobTitle: newContact.jobTitle || undefined, lifecycleStage: newContact.lifecycleStage as any,
       });
       toast.success('Contact created');
-      setNewContact({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', companyId: undefined, lifecycleStage: undefined });
+      setNewContact((p) => ({ ...p, firstName: '', lastName: '', email: '', phone: '', jobTitle: '', companyId: undefined, lifecycleStage: undefined }));
       setDialogOpen(false);
     } catch (e: any) { toast.error(e.data?.message ?? 'Failed to create contact'); }
   };
@@ -98,13 +100,13 @@ export default function ContactsPage() {
             <DialogHeader><DialogTitle>Add Contact</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="First name" value={newContact.firstName} onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })} />
-                <Input placeholder="Last name" value={newContact.lastName} onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })} />
+                <Input placeholder="First name" value={newContact.firstName} onChange={(e) => setNewContact((p) => ({ ...p, firstName: e.target.value }))} />
+                <Input placeholder="Last name" value={newContact.lastName} onChange={(e) => setNewContact((p) => ({ ...p, lastName: e.target.value }))} />
               </div>
-              <Input placeholder="Email *" type="email" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} />
-              <Input placeholder="Phone" value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} />
-              <Input placeholder="Job title" value={newContact.jobTitle} onChange={(e) => setNewContact({ ...newContact, jobTitle: e.target.value })} />
-              <Select value={newContact.lifecycleStage} onValueChange={(v) => setNewContact({ ...newContact, lifecycleStage: v })}>
+              <Input placeholder="Email *" type="email" value={newContact.email} onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))} />
+              <Input placeholder="Phone" value={newContact.phone} onChange={(e) => setNewContact((p) => ({ ...p, phone: e.target.value }))} />
+              <Input placeholder="Job title" value={newContact.jobTitle} onChange={(e) => setNewContact((p) => ({ ...p, jobTitle: e.target.value }))} />
+              <Select value={newContact.lifecycleStage} onValueChange={(v) => setNewContact((p) => ({ ...p, lifecycleStage: v }))}>
                 <SelectTrigger><SelectValue placeholder="Lifecycle stage" /></SelectTrigger>
                 <SelectContent>
                   {['lead', 'prospect', 'customer', 'churned'].map((s) => (
