@@ -1,0 +1,56 @@
+{
+  "workflow": {
+    "phases": {
+      "brainstorm": "pending",
+      "plan": "complete",
+      "execute": "active",
+      "verify": "pending",
+      "review": "pending",
+      "finish": "pending"
+    },
+    "currentPhase": "execute",
+    "artifacts": {
+      "brainstorm": null,
+      "plan": null,
+      "execute": null,
+      "verify": null,
+      "review": null,
+      "finish": null
+    },
+    "prompted": {
+      "brainstorm": false,
+      "plan": false,
+      "execute": false,
+      "verify": false,
+      "review": false,
+      "finish": false
+    }
+  },
+  "tdd": {
+    "phase": "green",
+    "testFiles": [
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/__tests__/csv-utils.test.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/__tests__/csv-utils.test.ts"
+    ],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/convex/contacts.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-upload.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/use-csv-import.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/import-contacts-dialog.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-map-columns.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-result.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-preview.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/csv-utils.ts"
+    ],
+    "redVerificationPending": false
+  },
+  "debug": {
+    "active": false,
+    "investigated": true,
+    "fixAttempts": 0
+  },
+  "verification": {
+    "verified": true,
+    "verificationWaived": false
+  }
+}

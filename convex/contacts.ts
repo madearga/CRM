@@ -355,16 +355,33 @@ export const bulkCreate = createOrgMutation()({
     let created = 0;
     let skipped = 0;
     const errors: { row: number; email: string; reason: string }[] = [];
+    const seenEmails = new Set<string>();
+
+    // Pre-fetch existing emails in org for faster duplicate detection
+    const existingContacts = await ctx
+      .table('contacts', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(10000);
+    const existingEmails = new Set(existingContacts.map((c) => c.email));
+
+    // Pre-fetch companies for name lookup
+    const allCompanies = await ctx
+      .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(10000);
+    const companyByName = new Map(allCompanies.map((c) => [c.name.toLowerCase(), c._id]));
 
     for (let i = 0; i < args.contacts.length; i++) {
       const contact = args.contacts[i];
       try {
-        // Check duplicate email in same org
-        const existing = await ctx
-          .table('contacts')
-          .get('organizationId_email', orgId, contact.email);
+        // Intra-batch duplicate check
+        if (seenEmails.has(contact.email)) {
+          skipped++;
+          errors.push({ row: i, email: contact.email, reason: 'Duplicate email in import' });
+          continue;
+        }
+        seenEmails.add(contact.email);
 
-        if (existing) {
+        // Check duplicate email in org (pre-fetched)
+        if (existingEmails.has(contact.email)) {
           skipped++;
           continue;
         }
@@ -372,15 +389,10 @@ export const bulkCreate = createOrgMutation()({
         const fullName =
           [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.email;
 
-        // Look up company by name if provided
+        // Look up company by name (pre-fetched)
         let companyId: Id<'companies'> | undefined;
         if (contact.companyName) {
-          const company = await ctx
-            .table('companies', 'organizationId_name', (q) =>
-              q.eq('organizationId', orgId).eq('name', contact.companyName!)
-            )
-            .first();
-          companyId = company?._id;
+          companyId = companyByName.get(contact.companyName.toLowerCase());
         }
 
         await ctx.table('contacts').insert({

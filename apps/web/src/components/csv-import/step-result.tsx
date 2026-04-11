@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ImportResult } from './import-types';
 
 interface StepResultProps {
@@ -60,12 +61,9 @@ export function StepResult({ result, onClose }: StepResultProps) {
         </div>
       )}
 
-      <button
-        onClick={onClose}
-        className="px-4 py-2 bg-[#171717] text-white text-sm font-medium rounded-md hover:bg-black transition-colors"
-      >
+      <Button onClick={onClose}>
         Done
-      </button>
+      </Button>
     </div>
   );
 }

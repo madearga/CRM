@@ -1,6 +1,13 @@
 'use client';
 
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   CONTACT_FIELDS,
   type ColumnMap,
   type ContactField,
@@ -36,20 +43,23 @@ export function StepMapColumns({
                 {field.label}
                 {field.required && <span className="text-red-500">*</span>}
               </label>
-              <select
-                className="flex-1 h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[hsla(212,100%,48%,1)]"
-                value={columnMap[field.key] || ''}
-                onChange={(e) =>
-                  onMapField(field.key, e.target.value || undefined)
+              <Select
+                value={columnMap[field.key] || '__none__'}
+                onValueChange={(v) =>
+                  onMapField(field.key, v === '__none__' ? undefined : v)
                 }
               >
-                <option value="">-- None --</option>
-                {headers.map((header) => (
-                  <option key={header} value={header}>
-                    {header}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="flex-1 h-9">
+                  <SelectValue placeholder="-- None --" />
+                </SelectTrigger>
+                <SelectContent>
+                  {headers.map((header) => (
+                    <SelectItem key={header} value={header}>
+                      {header}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ))}
         </div>

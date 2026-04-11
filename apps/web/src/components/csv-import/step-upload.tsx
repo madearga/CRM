@@ -10,7 +10,10 @@ interface StepUploadProps {
 export function StepUpload({ onFileSelected }: StepUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -19,10 +22,17 @@ export function StepUpload({ onFileSelected }: StepUploadProps) {
         setError('Please upload a .csv file');
         return;
       }
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum is 5MB.`);
+        return;
+      }
+      setIsParsing(true);
       try {
         await onFileSelected(file);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to parse file');
+      } finally {
+        setIsParsing(false);
       }
     },
     [onFileSelected],
@@ -60,12 +70,18 @@ export function StepUpload({ onFileSelected }: StepUploadProps) {
           }}
         />
         <Upload className="w-8 h-8 text-gray-400 mb-3" />
-        <p className="text-sm text-[#171717] font-medium">
-          Drag & drop CSV or click to browse
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Maximum 500 rows. .csv files only.
-        </p>
+        {isParsing ? (
+          <p className="text-sm text-[#171717] font-medium animate-pulse">Parsing CSV...</p>
+        ) : (
+          <>
+            <p className="text-sm text-[#171717] font-medium">
+              Drag & drop CSV or click to browse
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Maximum 500 rows, 5MB. .csv files only.
+            </p>
+          </>
+        )}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

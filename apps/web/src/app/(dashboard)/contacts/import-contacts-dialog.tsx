@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useCsvImport } from '@/components/csv-import/use-csv-import';
 import { StepUpload } from '@/components/csv-import/step-upload';
 import { StepMapColumns } from '@/components/csv-import/step-map-columns';
@@ -44,6 +45,7 @@ export function ImportContactsDialog({
   } = useCsvImport();
 
   const handleClose = (isOpen: boolean) => {
+    if (!isOpen && isImporting) return; // prevent close during import
     if (!isOpen) reset();
     onOpenChange(isOpen);
   };
@@ -139,20 +141,21 @@ export function ImportContactsDialog({
         {/* Footer navigation */}
         {step > 1 && step < 4 && (
           <div className="flex justify-between px-6 py-4 border-t border-gray-200">
-            <button
+            <Button
+              variant="outline"
               onClick={handleBack}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+              className="text-sm"
             >
               Back
-            </button>
+            </Button>
             {step === 2 && (
-              <button
+              <Button
                 onClick={() => goToPreview()}
                 disabled={!canProceed}
-                className="px-4 py-2 bg-[#171717] text-white text-sm font-medium rounded-md hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                size="sm"
               >
                 Next
-              </button>
+              </Button>
             )}
           </div>
         )}

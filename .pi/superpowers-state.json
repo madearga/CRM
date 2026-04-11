@@ -30,15 +30,9 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/companies/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/deals/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/deals/deals-board.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/floating-selection-bar.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/floating-selection-bar-inner.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/no-results.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/empty-state.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/command-palette.tsx"
+      "apps/web/src/app/(dashboard)/pipeline-chart.tsx",
+      "apps/web/src/app/layout.tsx",
+      "apps/web/src/app/(dashboard)/layout.tsx"
     ],
     "redVerificationPending": false
   },

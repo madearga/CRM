@@ -27,6 +27,12 @@ interface PipelineChartProps {
 const chartFormatter = (value: number, name: string) =>
   name === "value" ? formatCurrency(value) : [value, "Deals"];
 
+const tooltipStyle = {
+  borderRadius: "8px",
+  border: "1px solid hsl(var(--border))",
+  background: "hsl(var(--card))",
+};
+
 export const PipelineChart = memo(function PipelineChart({ dealsByStage }: PipelineChartProps) {
   const chartData = dealsByStage.map((s) => ({
     stage: s.stage.charAt(0).toUpperCase() + s.stage.slice(1),
@@ -45,11 +51,7 @@ export const PipelineChart = memo(function PipelineChart({ dealsByStage }: Pipel
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="stage" className="text-xs" tick={{ fontSize: 12 }} />
             <YAxis className="text-xs" tick={{ fontSize: 12 }} />
-            <Tooltip formatter={chartFormatter} contentStyle={{
-              borderRadius: "8px",
-              border: "1px solid hsl(var(--border))",
-              background: "hsl(var(--card))",
-            }} />
+            <Tooltip formatter={chartFormatter} contentStyle={tooltipStyle} />
             <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Deals">
               {dealsByStage.map((stage) => (
                 <Cell

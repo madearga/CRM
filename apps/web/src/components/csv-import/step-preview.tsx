@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { type ColumnMap, type ValidatedRow, CONTACT_FIELDS } from './import-types';
 
 interface StepPreviewProps {
@@ -105,15 +106,15 @@ export function StepPreview({
 
       {/* Import button */}
       <div className="flex justify-end">
-        <button
+        <Button
           onClick={onImport}
           disabled={isImporting || validCount === 0}
-          className="px-4 py-2 bg-[#171717] text-white text-sm font-medium rounded-md hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          size="sm"
         >
           {isImporting
             ? 'Importing...'
             : `Import ${validCount} contact${validCount !== 1 ? 's' : ''}`}
-        </button>
+        </Button>
       </div>
     </div>
   );

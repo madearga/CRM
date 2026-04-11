@@ -68,10 +68,10 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-2">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <div className="flex size-8 items-center justify-center rounded-[32px] border border-[rgba(240,240,250,0.35)] bg-[rgba(240,240,250,0.1)] text-foreground">
               <Building2 className="size-4" />
             </div>
-            <span className="truncate text-sm font-semibold">
+            <span className="truncate text-sm font-bold uppercase tracking-[0.96px]">
               {user?.activeOrganization?.name ?? 'CRM'}
             </span>
           </div>
@@ -80,7 +80,7 @@ export default function DashboardLayout({
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel className="uppercase tracking-[1.17px]">Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {navItems.map((item) => {
@@ -93,7 +93,7 @@ export default function DashboardLayout({
                       <SidebarMenuButton asChild isActive={isActive}>
                         <Link href={item.href}>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span className="uppercase tracking-[1.17px]">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -118,7 +118,7 @@ export default function DashboardLayout({
                       .toUpperCase() ?? '?'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex-1 truncate text-sm font-medium">
+                <span className="flex-1 truncate text-sm font-medium uppercase tracking-[0.96px]">
                   {user?.name ?? 'User'}
                 </span>
               </div>
@@ -126,13 +126,13 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                 {theme === 'dark' ? <Sun /> : <Moon />}
-                <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                <span className="uppercase tracking-[1.17px]">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={() => signOut()}>
                 <LogOut />
-                <span>Sign out</span>
+                <span className="uppercase tracking-[1.17px]">Sign out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -140,10 +140,10 @@ export default function DashboardLayout({
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
+        <header className="flex h-14 items-center gap-2 bg-black/80 px-4 backdrop-blur">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-semibold">{getPageTitle(pathname)}</h1>
+          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname)}</h1>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
