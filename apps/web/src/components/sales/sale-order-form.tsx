@@ -16,7 +16,6 @@ import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineItemEditor, type LineItem } from './line-item-editor';
 import { AmountSummary } from './amount-summary';
-import { formatMoney } from '@/lib/format-money';
 
 interface SaleOrderFormProps {
   saleOrderId?: string;

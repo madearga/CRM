@@ -4,7 +4,8 @@ import { memo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, Edit, Copy } from "lucide-react";
 import Link from "next/link";
 import { DataTableColumnHeader } from "@/components/data-table";
 import { formatMoney } from "@/lib/format-money";
@@ -142,9 +143,22 @@ export function getColumns({
     {
       id: "actions",
       header: "",
-      size: 80,
+      size: 100,
       enableSorting: false,
-      cell: () => null,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/sales/${row.original.id}/edit`}>
+              <Edit className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/sales/${row.original.id}`}>
+              <Copy className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+      ),
     },
   ];
 }
