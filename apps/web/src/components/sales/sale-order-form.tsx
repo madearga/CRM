@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthMutation, useAuthQuery, useAuthPaginatedQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -56,6 +56,12 @@ interface SaleOrderFormProps {
 export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) {
   const router = useRouter();
   const isEdit = !!saleOrderId;
+  const isDirty = useRef(false);
+
+  const updateForm = useCallback(<T,>(setter: (prev: T) => T): void => {
+    isDirty.current = true;
+    setForm(setter as any);
+  }, []);
 
   const [form, setForm] = useState({
     companyId: '' as string,
@@ -96,6 +102,20 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
 
   const createSO = useAuthMutation(api.saleOrders.create);
   const updateSO = useAuthMutation(api.saleOrders.update);
+
+  // Unsaved changes guard
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty.current) e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  const handleCancel = () => {
+    if (isDirty.current && !confirm('You have unsaved changes. Discard?')) return;
+    router.back();
+  };
 
   // Calculate totals
   const { subtotal, discountValue, taxAmount, totalAmount } = useMemo(() => {
@@ -221,7 +241,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={handleCancel}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
@@ -239,7 +259,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Company</Label>
-              <Select value={form.companyId || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, companyId: v === "__none__" ? "" : v }))}>
+              <Select value={form.companyId || "__none__"} onValueChange={(v) => updateForm((prev) => ({ ...prev, companyId: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No company</SelectItem>
@@ -251,7 +271,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
             </div>
             <div className="space-y-2">
               <Label>Contact</Label>
-              <Select value={form.contactId || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, contactId: v === "__none__" ? "" : v }))}>
+              <Select value={form.contactId || "__none__"} onValueChange={(v) => updateForm((prev) => ({ ...prev, contactId: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Select contact" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No contact</SelectItem>
@@ -265,20 +285,20 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Order Date *</Label>
-              <Input type="date" value={form.orderDate} onChange={(e) => setForm((prev) => ({ ...prev, orderDate: e.target.value }))} />
+              <Input type="date" value={form.orderDate} onChange={(e) => updateForm((prev) => ({ ...prev, orderDate: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Valid Until</Label>
-              <Input type="date" value={form.validUntil} onChange={(e) => setForm((prev) => ({ ...prev, validUntil: e.target.value }))} />
+              <Input type="date" value={form.validUntil} onChange={(e) => updateForm((prev) => ({ ...prev, validUntil: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Delivery Date</Label>
-              <Input type="date" value={form.deliveryDate} onChange={(e) => setForm((prev) => ({ ...prev, deliveryDate: e.target.value }))} />
+              <Input type="date" value={form.deliveryDate} onChange={(e) => updateForm((prev) => ({ ...prev, deliveryDate: e.target.value }))} />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Delivery Address</Label>
-            <Input placeholder="Delivery address..." value={form.deliveryAddress} onChange={(e) => setForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
+            <Input placeholder="Delivery address..." value={form.deliveryAddress} onChange={(e) => updateForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
           </div>
         </CardContent>
       </Card>
@@ -289,7 +309,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         <CardContent>
           <LineItemEditor
             lines={form.lines}
-            onChange={(lines) => setForm((prev) => ({ ...prev, lines }))}
+            onChange={(lines) => updateForm((prev) => ({ ...prev, lines }))}
           />
         </CardContent>
       </Card>
@@ -305,10 +325,10 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                 min="0"
                 placeholder="0"
                 value={form.discountAmount}
-                onChange={(e) => setForm((prev) => ({ ...prev, discountAmount: e.target.value }))}
+                onChange={(e) => updateForm((prev) => ({ ...prev, discountAmount: e.target.value }))}
                 className="w-32"
               />
-              <Select value={form.discountType} onValueChange={(v: 'percentage' | 'fixed') => setForm((prev) => ({ ...prev, discountType: v }))}>
+              <Select value={form.discountType} onValueChange={(v: 'percentage' | 'fixed') => updateForm((prev) => ({ ...prev, discountType: v }))}>
                 <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
@@ -333,15 +353,15 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Customer Notes</Label>
-            <Textarea placeholder="Notes visible to customer..." value={form.customerNotes} onChange={(e) => setForm((prev) => ({ ...prev, customerNotes: e.target.value }))} rows={2} />
+            <Textarea placeholder="Notes visible to customer..." value={form.customerNotes} onChange={(e) => updateForm((prev) => ({ ...prev, customerNotes: e.target.value }))} rows={2} />
           </div>
           <div className="space-y-2">
             <Label>Internal Notes</Label>
-            <Textarea placeholder="Internal notes..." value={form.internalNotes} onChange={(e) => setForm((prev) => ({ ...prev, internalNotes: e.target.value }))} rows={2} />
+            <Textarea placeholder="Internal notes..." value={form.internalNotes} onChange={(e) => updateForm((prev) => ({ ...prev, internalNotes: e.target.value }))} rows={2} />
           </div>
           <div className="space-y-2">
             <Label>Terms & Conditions</Label>
-            <Textarea placeholder="Payment terms, delivery terms..." value={form.terms} onChange={(e) => setForm((prev) => ({ ...prev, terms: e.target.value }))} rows={2} />
+            <Textarea placeholder="Payment terms, delivery terms..." value={form.terms} onChange={(e) => updateForm((prev) => ({ ...prev, terms: e.target.value }))} rows={2} />
           </div>
         </CardContent>
       </Card>
@@ -351,7 +371,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         <Button type="submit" disabled={isPending}>
           {isPending ? 'Saving...' : isEdit ? 'Update Order' : 'Create Quotation'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
       </div>
     </form>
   );
