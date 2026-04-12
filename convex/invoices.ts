@@ -370,8 +370,10 @@ export const create = createOrgMutation()({
       }
     }
 
+    // Note: taxAmount is already included in each line's subtotal via calculateLineSubtotal
+    // so we do NOT add it again to totalAmount
     const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
-    const totalAmount = Math.round((subtotal - discountTotal + taxAmount) * 100) / 100;
+    const totalAmount = Math.round((subtotal - discountTotal) * 100) / 100;
 
     const invId = await ctx.table('invoices').insert({
       number,
@@ -489,8 +491,9 @@ export const update = createOrgMutation()({
         }
       }
 
+      // Note: taxAmount already included in line subtotals via calculateLineSubtotal
       const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
-      const totalAmount = Math.round((subtotal - discountTotal + taxAmount) * 100) / 100;
+      const totalAmount = Math.round((subtotal - discountTotal) * 100) / 100;
 
       patchData.subtotal = subtotal;
       patchData.taxAmount = taxAmount;
@@ -535,7 +538,8 @@ export const update = createOrgMutation()({
           discountTotal = discAmt;
         }
       }
-      const totalAmount = Math.round((inv.subtotal - discountTotal + (inv.taxAmount ?? 0)) * 100) / 100;
+      // Note: taxAmount already included in inv.subtotal via calculateLineSubtotal
+      const totalAmount = Math.round((inv.subtotal - discountTotal) * 100) / 100;
       patchData.totalAmount = totalAmount;
       patchData.amountDue = totalAmount;
     }
