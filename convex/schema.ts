@@ -404,6 +404,7 @@ const schema = defineEntSchema(
     })
       .field('organizationId', v.id('organization'), { index: true })
       .field('parentId', v.optional(v.id('productCategories')))
+      .edges('products', { ref: 'category' })
       .index('organizationId_parentId', ['organizationId', 'parentId'])
       .searchIndex('search_product_categories', {
         searchField: 'name',
@@ -418,7 +419,7 @@ const schema = defineEntSchema(
         v.literal('consumable'),
         v.literal('service')
       ),
-      category: v.optional(v.string()),
+      category: v.optional(v.id('productCategories')),
       imageUrl: v.optional(v.string()),
       cost: v.optional(v.number()),
       price: v.optional(v.number()),
@@ -436,6 +437,7 @@ const schema = defineEntSchema(
       .edges('variants', { to: 'productVariants', ref: 'productId' })
       .index('organizationId_name', ['organizationId', 'name'])
       .index('organizationId_category', ['organizationId', 'category'])
+      .edge('categoryRef', { to: 'productCategories', field: 'category', optional: true })
       .index('organizationId_type', ['organizationId', 'type'])
       .searchIndex('search_products', {
         searchField: 'name',

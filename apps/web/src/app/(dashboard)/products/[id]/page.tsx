@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
 import { VariantManager } from '@/components/products/variant-manager';
-import { ProductForm } from '@/components/products/product-form';
+import { formatMoney } from '@/lib/format-money';
 
 const TYPE_COLORS: Record<string, string> = {
   storable: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -145,7 +145,7 @@ export default function ProductDetailPage() {
                 <CardTitle className="text-sm uppercase tracking-wider">Product Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <DetailRow label="Category" value={product.category} />
+                <DetailRow label="Category" value={product.categoryName} />
                 <DetailRow label="Barcode" value={product.barcode} />
                 <DetailRow label="Unit" value={product.unit} />
                 <DetailRow label="Weight" value={product.weight != null ? `${product.weight} kg` : undefined} />
@@ -160,12 +160,12 @@ export default function ProductDetailPage() {
                 <CardTitle className="text-sm uppercase tracking-wider">Pricing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <DetailRow label="Sale Price" value={product.price != null ? `Rp ${product.price.toLocaleString('id-ID')}` : undefined} />
-                <DetailRow label="Cost Price" value={product.cost != null ? `Rp ${product.cost.toLocaleString('id-ID')}` : undefined} />
+                <DetailRow label="Sale Price" value={formatMoney(product.price)} />
+                <DetailRow label="Cost Price" value={formatMoney(product.cost)} />
                 {product.price != null && product.cost != null && (
                   <DetailRow
                     label="Margin"
-                    value={`Rp ${(product.price - product.cost).toLocaleString('id-ID')} (${Math.round(((product.price - product.cost) / product.price) * 100)}%)`}
+                    value={`${formatMoney(product.price - product.cost)} (${Math.round(((product.price - product.cost) / product.price) * 100)}%)`}
                   />
                 )}
               </CardContent>

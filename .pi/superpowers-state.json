@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "pending",
-      "plan": "pending",
-      "execute": "active",
-      "verify": "pending",
-      "review": "pending",
+      "brainstorm": "skipped",
+      "plan": "skipped",
+      "execute": "complete",
+      "verify": "skipped",
+      "review": "active",
       "finish": "pending"
     },
-    "currentPhase": "execute",
+    "currentPhase": "review",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -20,7 +20,7 @@
     "prompted": {
       "brainstorm": false,
       "plan": false,
-      "execute": false,
+      "execute": true,
       "verify": false,
       "review": false,
       "finish": false
@@ -30,27 +30,18 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "apps/web/src/app/(dashboard)/pipeline-chart.tsx",
-      "apps/web/src/app/layout.tsx",
-      "apps/web/src/app/(dashboard)/layout.tsx",
-      "convex/shared/workflowEngine.ts",
-      "convex/shared/sequenceGenerator.ts",
-      "convex/shared/money.ts",
       "convex/schema.ts",
       "convex/products.ts",
       "convex/productCategories.ts",
       "convex/productVariants.ts",
-      "apps/web/src/hooks/use-products-params.ts",
+      "convex/shared/money.ts",
       "apps/web/src/app/(dashboard)/products/columns.tsx",
-      "apps/web/src/app/(dashboard)/products/page.tsx",
+      "apps/web/src/lib/format-money.ts",
       "apps/web/src/components/products/product-form.tsx",
-      "apps/web/src/app/(dashboard)/products/new/page.tsx",
-      "apps/web/src/components/products/variant-manager.tsx",
       "apps/web/src/app/(dashboard)/products/[id]/page.tsx",
-      "apps/web/src/app/(dashboard)/products/[id]/edit/page.tsx",
-      "apps/web/src/app/(dashboard)/products/categories/page.tsx",
-      "apps/web/src/components/products/csv-utils.ts",
-      "convex/auditLogs.ts"
+      "apps/web/src/components/products/variant-manager.tsx",
+      "apps/web/src/app/(dashboard)/products/page.tsx",
+      "apps/web/src/app/(dashboard)/products/[id]/edit/page.tsx"
     ],
     "redVerificationPending": false
   },

@@ -2,6 +2,9 @@
  * Money utilities — avoid floating point issues.
  * Store amounts in smallest currency unit.
  * IDR = Rupiah (no cents), USD = cents.
+ *
+ * For IDR: amounts stored as-is (already in Rupiah).
+ * For USD/EUR: amounts stored in cents (× 100).
  */
 
 /**
@@ -30,10 +33,11 @@ export function toDisplayAmount(
 
 /**
  * Format money for display.
- * IDR: "Rp 500.000"
+ * IDR: "Rp 500.000" (no decimals)
  * USD: "$500.00"
  */
-export function formatMoney(amount: number, currency: string): string {
+export function formatMoney(amount: number | null | undefined, currency: string = "IDR"): string {
+  if (amount == null) return "—";
   if (currency === "IDR") {
     return `Rp ${amount.toLocaleString("id-ID")}`;
   }
@@ -41,4 +45,13 @@ export function formatMoney(amount: number, currency: string): string {
     style: "currency",
     currency,
   }).format(amount / 100);
+}
+
+/**
+ * Format money with explicit + prefix (for variant extras).
+ */
+export function formatMoneyExtra(amount: number | null | undefined, currency: string = "IDR"): string {
+  if (amount == null) return "—";
+  const formatted = formatMoney(Math.abs(amount), currency);
+  return amount >= 0 ? `+${formatted}` : `-${formatted}`;
 }

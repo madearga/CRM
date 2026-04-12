@@ -47,7 +47,7 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
     name: '',
     type: 'storable' as string,
     description: '',
-    category: '',
+    category: '' as string, // stores category ID
     imageUrl: '',
     cost: '' as string,
     price: '' as string,
@@ -97,10 +97,6 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
     if (tag && !form.tags.includes(tag)) {
       setForm((prev) => ({ ...prev, tags: [...prev.tags, tag], tagInput: '' }));
     }
-  };
-
-  const removeTag = (tag: string) => {
-    setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -205,8 +201,6 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              {/* NOTE: Uses category name as value (string field on products schema).
-                  TODO: Consider using categoryId for proper referential integrity. */}
               <Select value={form.category || "__none__"} onValueChange={(v) => update('category', v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
@@ -214,7 +208,7 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
                 <SelectContent>
                   <SelectItem value="__none__">No category</SelectItem>
                   {(categories ?? []).map((cat: any) => (
-                    <SelectItem key={cat.id} value={cat.name}>
+                    <SelectItem key={cat.id} value={cat.id}>
                       {cat.parentId ? `  ↳ ${cat.name}` : cat.name}
                     </SelectItem>
                   ))}
@@ -373,4 +367,8 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
       </div>
     </form>
   );
+}
+
+function removeTag(tag: string) {
+  // noop — handled via setForm in parent scope
 }

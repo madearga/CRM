@@ -45,7 +45,7 @@ export default function EditProductPage() {
         name: product.name,
         type: product.type,
         description: product.description,
-        category: product.category,
+        category: product.category, // now passes category ID (FK)
         imageUrl: product.imageUrl,
         cost: product.cost,
         price: product.price,

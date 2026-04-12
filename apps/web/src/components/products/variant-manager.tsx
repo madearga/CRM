@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { Plus, Pencil, Archive, ArchiveRestore, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatMoney, formatMoneyExtra } from '@/lib/format-money';
 
 interface Variant {
   id: string;
@@ -206,10 +207,10 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
                     </TableCell>
                     <TableCell className="text-muted-foreground">{variant.sku ?? '—'}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {variant.priceExtra != null ? `+Rp ${variant.priceExtra.toLocaleString('id-ID')}` : '—'}
+                      {formatMoneyExtra(variant.priceExtra)}
                     </TableCell>
                     <TableCell>
-                      Rp {totalPrice.toLocaleString('id-ID')}
+                      {formatMoney(totalPrice)}
                     </TableCell>
                     <TableCell>
                       {variant.active ? (

@@ -5,6 +5,7 @@ import {
   createOrgMutation,
   createOrgQuery,
 } from './functions';
+import { createAuditLog } from './auditLogs';
 
 // ---------------------------------------------------------------------------
 // Shared schemas
@@ -96,6 +97,15 @@ export const create = createOrgMutation()({
       active: true,
     });
 
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: productId as unknown as string,
+      action: 'variant.create',
+      after: { variantId: variantId as unknown as string, name: args.name },
+    });
+
     return variantId;
   },
 });
@@ -125,11 +135,24 @@ export const update = createOrgMutation()({
       });
     }
 
+    const before = { name: variant.name, priceExtra: variant.priceExtra, active: variant.active };
+
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
 
     await variant.patch(cleanUpdates);
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: variant.productId as unknown as string,
+      action: 'variant.update',
+      before: { variantId: id as unknown as string, ...before },
+      after: { variantId: id as unknown as string, ...cleanUpdates },
+    });
+
     return null;
   },
 });
@@ -148,6 +171,16 @@ export const archive = createOrgMutation()({
     }
 
     await variant.patch({ active: false });
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: variant.productId as unknown as string,
+      action: 'variant.archive',
+      after: { variantId: args.id as unknown as string, active: false },
+    });
+
     return null;
   },
 });
@@ -166,6 +199,16 @@ export const unarchive = createOrgMutation()({
     }
 
     await variant.patch({ active: true });
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: variant.productId as unknown as string,
+      action: 'variant.unarchive',
+      after: { variantId: args.id as unknown as string, active: true },
+    });
+
     return null;
   },
 });

@@ -6,6 +6,7 @@ import {
   createOrgPaginatedQuery,
   createOrgQuery,
 } from './functions';
+import { createAuditLog } from './auditLogs';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -22,7 +23,7 @@ export const list = createOrgPaginatedQuery()({
   args: {
     includeArchived: z.boolean().optional(),
     type: productTypeEnum.optional(),
-    category: z.string().optional(),
+    category: zid('productCategories').optional(),
     search: z.string().optional(),
   },
   returns: z.object({
@@ -32,7 +33,8 @@ export const list = createOrgPaginatedQuery()({
         name: z.string(),
         description: z.string().optional(),
         type: productTypeEnum,
-        category: z.string().optional(),
+        category: zid('productCategories').optional(),
+        categoryName: z.string().optional(),
         imageUrl: z.string().optional(),
         cost: z.number().optional(),
         price: z.number().optional(),
@@ -56,12 +58,31 @@ export const list = createOrgPaginatedQuery()({
     let result;
 
     if (args.search) {
+      // Search index supports filterFields: organizationId, type, category
       result = await ctx
         .table('products')
-        .search('search_products', (q: any) =>
-          q.search('name', args.search!).eq('organizationId', orgId)
-        )
+        .search('search_products', (q: any) => {
+          let builder = q.search('name', args.search!).eq('organizationId', orgId);
+          if (args.type) builder = (builder as any).eq('type', args.type);
+          if (args.category) builder = (builder as any).eq('category', args.category);
+          return builder;
+        })
         .paginate(args.paginationOpts);
+    } else if (args.type || args.category) {
+      // Use appropriate index for filtered queries (avoids post-pagination filtering)
+      if (args.category) {
+        result = await ctx
+          .table('products', 'organizationId_category', (q: any) =>
+            q.eq('organizationId', orgId).eq('category', args.category)
+          )
+          .paginate(args.paginationOpts);
+      } else {
+        result = await ctx
+          .table('products', 'organizationId_type', (q: any) =>
+            q.eq('organizationId', orgId).eq('type', args.type)
+          )
+          .paginate(args.paginationOpts);
+      }
     } else {
       result = await ctx
         .table('products', 'organizationId_name', (q: any) =>
@@ -70,9 +91,6 @@ export const list = createOrgPaginatedQuery()({
         .paginate(args.paginationOpts);
     }
 
-    // TODO: Post-pagination filtering is a known limitation of Convex when combining
-    // multiple filters. When only `type` is specified, we should use the search index
-    // with filterFields. For now, this matches the existing pattern in companies.ts.
     let page = result.page as any[];
 
     // Filter out archived unless requested
@@ -80,14 +98,17 @@ export const list = createOrgPaginatedQuery()({
       page = page.filter((p: any) => !p.archivedAt);
     }
 
-    // Filter by type
-    if (args.type) {
+    // For type filter when category index was used, apply post-filter
+    if (args.type && args.category) {
       page = page.filter((p: any) => p.type === args.type);
     }
 
-    // Filter by category
-    if (args.category) {
-      page = page.filter((p: any) => p.category === args.category);
+    // Resolve category names
+    const categoryIds = [...new Set(page.map((p: any) => p.category).filter(Boolean))];
+    const categoryMap = new Map<string, string>();
+    for (const catId of categoryIds) {
+      const cat = await ctx.table('productCategories').get(catId);
+      if (cat) categoryMap.set(catId, cat.name);
     }
 
     return {
@@ -97,6 +118,7 @@ export const list = createOrgPaginatedQuery()({
         description: p.description,
         type: p.type,
         category: p.category,
+        categoryName: p.category ? categoryMap.get(p.category) : undefined,
         imageUrl: p.imageUrl,
         cost: p.cost,
         price: p.price,
@@ -124,7 +146,8 @@ export const getById = createOrgQuery()({
     name: z.string(),
     description: z.string().optional(),
     type: productTypeEnum,
-    category: z.string().optional(),
+    category: zid('productCategories').optional(),
+    categoryName: z.string().optional(),
     imageUrl: z.string().optional(),
     cost: z.number().optional(),
     price: z.number().optional(),
@@ -158,12 +181,20 @@ export const getById = createOrgQuery()({
 
     const variants = await product.edge('variants');
 
+    // Resolve category name
+    let categoryName: string | undefined;
+    if (product.category) {
+      const cat = await ctx.table('productCategories').get(product.category);
+      categoryName = cat?.name;
+    }
+
     return {
       id: product._id,
       name: product.name,
       description: product.description,
       type: product.type,
       category: product.category,
+      categoryName,
       imageUrl: product.imageUrl,
       cost: product.cost,
       price: product.price,
@@ -192,9 +223,9 @@ export const getById = createOrgQuery()({
   },
 });
 
-/** Get products by category. Limited to 1000 results — for dropdowns/selectors. */
+/** Get products by category ID. Limited to 1000 results — for dropdowns/selectors. */
 export const getByCategory = createOrgQuery()({
-  args: { category: z.string() },
+  args: { category: zid('productCategories') },
   returns: z.array(
     z.object({
       id: zid('products'),
@@ -232,7 +263,7 @@ export const create = createOrgMutation()({
     name: z.string().min(1),
     type: productTypeEnum,
     description: z.string().optional(),
-    category: z.string().optional(),
+    category: zid('productCategories').optional(),
     imageUrl: z.string().optional(),
     cost: z.number().optional(),
     price: z.number().optional(),
@@ -245,6 +276,14 @@ export const create = createOrgMutation()({
   },
   returns: zid('products'),
   handler: async (ctx, args) => {
+    // Validate category belongs to org
+    if (args.category) {
+      const cat = await ctx.table('productCategories').get(args.category);
+      if (!cat || cat.organizationId !== ctx.orgId) {
+        throw new ConvexError({ code: 'VALIDATION_ERROR', message: 'Category not found' });
+      }
+    }
+
     // 1. Create product
     const productId = await ctx.table('products').insert({
       name: args.name,
@@ -273,6 +312,22 @@ export const create = createOrgMutation()({
       active: true,
     });
 
+    // 3. Audit log
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: productId as unknown as string,
+      action: 'create',
+      after: {
+        name: args.name,
+        type: args.type,
+        category: args.category,
+        price: args.price,
+        cost: args.cost,
+      },
+    });
+
     return productId;
   },
 });
@@ -284,7 +339,7 @@ export const update = createOrgMutation()({
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     type: productTypeEnum.optional(),
-    category: z.string().optional(),
+    category: zid('productCategories').optional(),
     imageUrl: z.string().optional(),
     cost: z.number().optional(),
     price: z.number().optional(),
@@ -303,12 +358,42 @@ export const update = createOrgMutation()({
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Product not found' });
     }
 
+    // Validate category belongs to org
+    if (updates.category) {
+      const cat = await ctx.table('productCategories').get(updates.category);
+      if (!cat || cat.organizationId !== ctx.orgId) {
+        throw new ConvexError({ code: 'VALIDATION_ERROR', message: 'Category not found' });
+      }
+    }
+
+    // Snapshot before for audit
+    const before = {
+      name: product.name,
+      type: product.type,
+      category: product.category,
+      price: product.price,
+      cost: product.cost,
+      active: product.active,
+    };
+
     // Remove undefined fields
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
 
     await product.patch(cleanUpdates);
+
+    // Audit log
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: id as unknown as string,
+      action: 'update',
+      before,
+      after: cleanUpdates,
+    });
+
     return null;
   },
 });
@@ -322,7 +407,19 @@ export const archive = createOrgMutation()({
     if (product.organizationId !== ctx.orgId) {
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Product not found' });
     }
+
     await product.patch({ archivedAt: Date.now(), active: false });
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: args.id as unknown as string,
+      action: 'archive',
+      before: { name: product.name, active: product.active },
+      after: { archivedAt: true, active: false },
+    });
+
     return null;
   },
 });
@@ -336,7 +433,19 @@ export const unarchive = createOrgMutation()({
     if (product.organizationId !== ctx.orgId) {
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Product not found' });
     }
+
     await product.patch({ archivedAt: undefined, active: true });
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: args.id as unknown as string,
+      action: 'unarchive',
+      before: { name: product.name, archivedAt: true },
+      after: { active: true },
+    });
+
     return null;
   },
 });
@@ -387,6 +496,15 @@ export const duplicate = createOrgMutation()({
         organizationId: ctx.orgId,
       });
     }
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: newProductId as unknown as string,
+      action: 'duplicate',
+      metadata: { sourceProductId: args.id as unknown as string },
+    });
 
     return newProductId;
   },

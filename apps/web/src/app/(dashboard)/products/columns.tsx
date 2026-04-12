@@ -7,12 +7,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Package } from "lucide-react";
 import Link from "next/link";
 import { DataTableColumnHeader } from "@/components/data-table";
+import { formatMoney } from "@/lib/format-money";
 
 export type ProductRow = {
   id: string;
   name: string;
   type: string;
   category?: string | null;
+  categoryName?: string | null;
   sku?: string | null;
   price?: number | null;
   cost?: number | null;
@@ -112,10 +114,10 @@ export function getColumns({
     },
     {
       id: "category",
-      accessorKey: "category",
+      accessorKey: "categoryName",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
       size: 140,
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.category ?? "—"}</span>,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.categoryName ?? "—"}</span>,
     },
     {
       id: "price",
@@ -124,7 +126,7 @@ export function getColumns({
       size: 120,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {row.original.price != null ? `Rp ${row.original.price.toLocaleString("id-ID")}` : "—"}
+          {formatMoney(row.original.price)}
         </span>
       ),
     },
@@ -135,7 +137,7 @@ export function getColumns({
       size: 120,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {row.original.cost != null ? `Rp ${row.original.cost.toLocaleString("id-ID")}` : "—"}
+          {formatMoney(row.original.cost)}
         </span>
       ),
     },

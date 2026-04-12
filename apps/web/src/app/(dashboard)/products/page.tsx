@@ -35,12 +35,15 @@ export default function ProductsPage() {
 
   const archiveProduct = useAuthMutation(api.products.archive);
   const unarchiveProduct = useAuthMutation(api.products.unarchive);
+  const createProduct = useAuthMutation(api.products.create);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const rows: ProductRow[] = useMemo(() =>
     (products ?? []).map((p) => ({
-      id: p.id, name: p.name, type: p.type, category: p.category,
+      id: p.id, name: p.name, type: p.type,
+      category: p.category,
+      categoryName: p.categoryName,
       sku: p.sku, price: p.price, cost: p.cost, unit: p.unit,
       active: p.active, archivedAt: p.archivedAt,
     })),
@@ -62,13 +65,11 @@ export default function ProductsPage() {
     [selectedIds, toggleOneProduct, allIds, toggleAllProducts],
   );
 
-  const createProduct = useAuthMutation(api.products.create);
-
   const handleExport = () => {
     const csv = productsToCSV(rows.map((r) => ({
       name: r.name,
       type: r.type,
-      category: r.category ?? undefined,
+      category: r.categoryName ?? undefined,
       sku: r.sku ?? undefined,
       price: r.price ?? undefined,
       cost: r.cost ?? undefined,
@@ -85,16 +86,19 @@ export default function ProductsPage() {
     setImporting(true);
     try {
       const text = await file.text();
-      const rows = parseCSV(text);
+      const csvRows = parseCSV(text);
       const validTypes = ['storable', 'consumable', 'service'];
       let created = 0;
-      let skipped = 0;
-      const total = rows.length;
+      const failed: { row: number; reason: string }[] = [];
+      const total = csvRows.length;
 
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
+      for (let i = 0; i < csvRows.length; i++) {
+        const row = csvRows[i];
         const name = row.name?.trim();
-        if (!name) { skipped++; continue; }
+        if (!name) {
+          failed.push({ row: i + 2, reason: 'Missing name' });
+          continue;
+        }
         const type = validTypes.includes(row.type?.trim()?.toLowerCase()) ? row.type.trim().toLowerCase() : 'storable';
 
         // Validate numeric fields
@@ -109,7 +113,8 @@ export default function ProductsPage() {
           await createProduct.mutateAsync({
             name,
             type: type as any,
-            category: row.category?.trim() || undefined,
+            // Note: CSV category is a name string; category field now expects an ID.
+            // Users importing with categories should create categories first, then import.
             sku: row.sku?.trim() || undefined,
             barcode: row.barcode?.trim() || undefined,
             price: parseNum(row.price),
@@ -119,16 +124,25 @@ export default function ProductsPage() {
             tags: row.tags?.trim() ? row.tags.split(';').map((t) => t.trim()).filter(Boolean) : undefined,
           });
           created++;
-        } catch {
-          skipped++;
+        } catch (err: any) {
+          failed.push({ row: i + 2, reason: err?.data?.message ?? 'Unknown error' });
         }
 
         // Show progress every 10 items or at the end
-        if ((created + skipped) % 10 === 0 || i === rows.length - 1) {
-          toast.info(`Importing... ${created + skipped}/${total}`);
+        if ((created + failed.length) % 10 === 0 || i === csvRows.length - 1) {
+          toast.info(`Importing... ${created + failed.length}/${total}`);
         }
       }
-      toast.success(`Imported ${created} products${skipped > 0 ? ` (${skipped} skipped)` : ''}`);
+
+      const summary = `Imported ${created}/${total} products`;
+      if (failed.length > 0) {
+        toast.warning(`${summary}. ${failed.length} failed.`, {
+          description: failed.slice(0, 5).map((f) => `Row ${f.row}: ${f.reason}`).join('\n'),
+          duration: 8000,
+        });
+      } else {
+        toast.success(summary);
+      }
     } catch (err: any) {
       toast.error('Failed to import CSV');
     } finally {

@@ -5,6 +5,7 @@ import {
   createOrgMutation,
   createOrgQuery,
 } from './functions';
+import { createAuditLog } from './auditLogs';
 
 // ---------------------------------------------------------------------------
 // Shared schemas
@@ -18,6 +19,31 @@ const categorySchema = z.object({
   parentId: zid('productCategories').optional(),
   organizationId: zid('organization'),
 });
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function validateUniqueName(
+  ctx: any,
+  orgId: string,
+  name: string,
+  excludeId?: string,
+) {
+  const existing = await ctx
+    .table('productCategories', 'organizationId_parentId', (q: any) =>
+      q.eq('organizationId', orgId)
+    )
+    .filter((q: any) => q.eq(q.field('name'), name))
+    .first();
+
+  if (existing && existing._id !== excludeId) {
+    throw new ConvexError({
+      code: 'VALIDATION_ERROR',
+      message: `Category "${name}" already exists`,
+    });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -128,6 +154,9 @@ export const create = createOrgMutation()({
   },
   returns: zid('productCategories'),
   handler: async (ctx, args) => {
+    // Check for duplicate name in org
+    await validateUniqueName(ctx, ctx.orgId, args.name);
+
     // Validate parent exists and belongs to org (max depth check)
     if (args.parentId) {
       const parent = await ctx.table('productCategories').get(args.parentId);
@@ -160,6 +189,15 @@ export const create = createOrgMutation()({
       organizationId: ctx.orgId,
     });
 
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: categoryId as unknown as string,
+      action: 'category.create',
+      after: { name: args.name, parentId: args.parentId },
+    });
+
     return categoryId;
   },
 });
@@ -182,6 +220,11 @@ export const update = createOrgMutation()({
         code: 'NOT_FOUND',
         message: 'Category not found',
       });
+    }
+
+    // Check for duplicate name if name is being changed
+    if (updates.name && updates.name !== category.name) {
+      await validateUniqueName(ctx, ctx.orgId, updates.name, id as unknown as string);
     }
 
     // Prevent setting self as parent or creating circular reference
@@ -213,9 +256,6 @@ export const update = createOrgMutation()({
         }
         visited.add(currentId as string);
         depth++;
-        // Current category is at level `depth` from root.
-        // Adding this category as child makes it level `depth + 1`.
-        // Max allowed is 3, so the parent chain must be at most 2 deep.
         if (depth > 2) {
           throw new ConvexError({
             code: 'VALIDATION_ERROR',
@@ -227,11 +267,24 @@ export const update = createOrgMutation()({
       }
     }
 
+    const before = { name: category.name, active: category.active, parentId: category.parentId };
+
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
 
     await category.patch(cleanUpdates);
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: id as unknown as string,
+      action: 'category.update',
+      before,
+      after: cleanUpdates,
+    });
+
     return null;
   },
 });
@@ -263,13 +316,10 @@ export const remove = createOrgMutation()({
       });
     }
 
-    // NOTE: products.category is a free-form string, not a foreign key to productCategories.
-    // This means renaming a category won't update existing products, and deletion
-    // checks by name match. TODO: Consider changing to categoryId: v.id('productCategories')
-    // for proper referential integrity in a future migration.
+    // Check for products referencing this category (FK-based check)
     const productsInCategory = await ctx
       .table('products', 'organizationId_category', (q: any) =>
-        q.eq('organizationId', ctx.orgId).eq('category', category.name)
+        q.eq('organizationId', ctx.orgId).eq('category', args.id)
       )
       .first();
 
@@ -280,7 +330,19 @@ export const remove = createOrgMutation()({
       });
     }
 
+    const before = { name: category.name, parentId: category.parentId };
+
     await category.delete();
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'product',
+      entityId: args.id as unknown as string,
+      action: 'category.delete',
+      before,
+    });
+
     return null;
   },
 });
