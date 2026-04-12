@@ -111,8 +111,15 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     e.preventDefault();
 
     const validLines = form.lines.filter((l) => l.productName.trim());
-    if (validLines.length === 0) {
-      toast.error('Add at least one line item');
+
+    const errors: string[] = [];
+    if (!form.orderDate) errors.push('Order date is required');
+    if (validLines.length === 0) errors.push('Add at least one line item');
+    if (validLines.some((l) => !l.quantity || l.quantity <= 0)) errors.push('All line items must have quantity > 0');
+    if (validLines.some((l) => l.unitPrice < 0)) errors.push('All line items must have a valid price');
+
+    if (errors.length > 0) {
+      toast.error(errors.join('. '));
       return;
     }
 
