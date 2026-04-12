@@ -211,6 +211,7 @@ const schema = defineEntSchema(
       .edges('saleOrders', { ref: 'companyId' })
       .edges('invoices', { ref: 'companyId' })
       .edges('payments', { ref: 'companyId' })
+      .edges('subscriptionTemplates', { ref: 'companyId' })
       .edge('pricelist', { to: 'pricelists', field: 'pricelistId', optional: true })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
@@ -250,6 +251,7 @@ const schema = defineEntSchema(
       .edges('deals', { to: 'deals', ref: 'primaryContactId' })
       .edges('saleOrders', { ref: 'contactId' })
       .edges('invoices', { ref: 'contactId' })
+      .edges('subscriptionTemplates', { ref: 'contactId' })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_email', ['organizationId', 'email'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
@@ -466,6 +468,8 @@ const schema = defineEntSchema(
       .edges('variants', { to: 'productVariants', ref: 'productId' })
       .edges('saleOrderLines', { ref: 'productId' })
       .edges('invoiceLines', { ref: 'productId' })
+      .edges('priceRules', { ref: 'productId' })
+
       .index('organizationId_name', ['organizationId', 'name'])
       .index('organizationId_category', ['organizationId', 'category'])
       .edge('categoryRef', { to: 'productCategories', field: 'category', optional: true })
@@ -716,6 +720,8 @@ const schema = defineEntSchema(
     })
       .field('organizationId', v.id('organization'), { index: true })
       .field('ownerId', v.id('user'))
+      .edge('owner', { to: 'user', field: 'ownerId' })
+
       .edges('lines', { to: 'quotationTemplateLines', ref: 'templateId' })
       .index('organizationId_name', ['organizationId'])
       .searchIndex('search_templates', { searchField: 'name', filterFields: ['organizationId'] }),
