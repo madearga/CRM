@@ -1,0 +1,10 @@
+{
+  "runId": "d7764d23",
+  "agent": "crew-planner",
+  "index": 0,
+  "exitCode": 1,
+  "durationMs": 2634,
+  "tokens": 0,
+  "truncated": false,
+  "error": "No API key found for anthropic.\n\nUse /login or set an API key environment variable. See /opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/docs/providers.md\n"
+}

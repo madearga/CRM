@@ -130,7 +130,7 @@ export const salesPerformance = createAuthQuery()({
     }
 
     // Resolve owner names
-    const result = [];
+    const result: Array<{ ownerId: any; ownerName: string; totalDeals: number; wonDeals: number; winRate: number; totalValue: number; avgCloseDays: number }> = [];
     for (const [ownerId, bucket] of byOwner) {
       const user = await ctx.table('user').get(ownerId as any);
       const avgCloseDays =
@@ -212,10 +212,15 @@ export const pipelineForecast = createAuthQuery()({
 
     return stages
       .filter((s) => s !== 'lost')
-      .map((stage) => ({
-        stage,
-        ...(byStage.get(stage)!),
-      }));
+      .map((stage) => {
+        const bucket = byStage.get(stage)!;
+        return {
+          stage,
+          dealCount: bucket.count,
+          totalValue: bucket.totalValue,
+          expectedRevenue: bucket.expectedRevenue,
+        };
+      });
   },
 });
 

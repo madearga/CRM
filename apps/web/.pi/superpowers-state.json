@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "pending",
-      "plan": "complete",
-      "execute": "active",
-      "verify": "pending",
-      "review": "pending",
+      "brainstorm": "skipped",
+      "plan": "skipped",
+      "execute": "complete",
+      "verify": "skipped",
+      "review": "active",
       "finish": "pending"
     },
-    "currentPhase": "execute",
+    "currentPhase": "review",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -19,8 +19,8 @@
     },
     "prompted": {
       "brainstorm": false,
-      "plan": true,
-      "execute": false,
+      "plan": false,
+      "execute": true,
       "verify": false,
       "review": false,
       "finish": false
@@ -29,16 +29,20 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/convex/schema.ts",
+      "/Users/madearga/Desktop/crm/convex/analytics.ts",
+      "/Users/madearga/Desktop/crm/convex/invoiceReminders.ts"
+    ],
     "redVerificationPending": false
   },
   "debug": {
     "active": false,
-    "investigated": false,
+    "investigated": true,
     "fixAttempts": 0
   },
   "verification": {
-    "verified": true,
+    "verified": false,
     "verificationWaived": false
   }
 }
