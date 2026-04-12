@@ -20,6 +20,20 @@ import { AmountSummary } from './amount-summary';
 interface CompanyOption { id: string; name: string }
 interface ContactOption { id: string; fullName: string }
 
+function dateToTimestamp(dateStr: string): number {
+  if (!dateStr) return 0;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return Date.UTC(y, m - 1, d, 12, 0, 0);
+}
+
+function timestampToDate(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 interface SaleOrderFormProps {
   saleOrderId?: string;
   initialData?: {
@@ -66,9 +80,9 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
       setForm({
         companyId: initialData.companyId ?? '',
         contactId: initialData.contactId ?? '',
-        orderDate: new Date(initialData.orderDate).toISOString().split('T')[0],
-        validUntil: initialData.validUntil ? new Date(initialData.validUntil).toISOString().split('T')[0] : '',
-        deliveryDate: initialData.deliveryDate ? new Date(initialData.deliveryDate).toISOString().split('T')[0] : '',
+        orderDate: timestampToDate(initialData.orderDate),
+        validUntil: initialData.validUntil ? timestampToDate(initialData.validUntil) : '',
+        deliveryDate: initialData.deliveryDate ? timestampToDate(initialData.deliveryDate) : '',
         deliveryAddress: initialData.deliveryAddress ?? '',
         internalNotes: initialData.internalNotes ?? '',
         customerNotes: initialData.customerNotes ?? '',
@@ -149,9 +163,9 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     } = {
       companyId: form.companyId || undefined,
       contactId: form.contactId || undefined,
-      orderDate: new Date(form.orderDate).getTime(),
-      validUntil: form.validUntil ? new Date(form.validUntil).getTime() : undefined,
-      deliveryDate: form.deliveryDate ? new Date(form.deliveryDate).getTime() : undefined,
+      orderDate: dateToTimestamp(form.orderDate),
+      validUntil: form.validUntil ? dateToTimestamp(form.validUntil) : undefined,
+      deliveryDate: form.deliveryDate ? dateToTimestamp(form.deliveryDate) : undefined,
       deliveryAddress: form.deliveryAddress || undefined,
       internalNotes: form.internalNotes || undefined,
       customerNotes: form.customerNotes || undefined,
