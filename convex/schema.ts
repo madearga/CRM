@@ -149,6 +149,7 @@ const schema = defineEntSchema(
       .edges('contacts', { ref: 'ownerId' })
       .edges('deals', { ref: 'ownerId' })
       .edges('products', { ref: 'ownerId' })
+      .edges('saleOrders', { ref: 'ownerId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually
@@ -462,6 +463,91 @@ const schema = defineEntSchema(
         searchField: 'name',
         filterFields: ['organizationId', 'productId'],
       }),
+
+    // ---------------------
+    // Sales Order (Module 2)
+    // ---------------------
+
+    saleOrders: defineEnt({
+      number: v.string(),
+      state: v.union(
+        v.literal('draft'),
+        v.literal('sent'),
+        v.literal('confirmed'),
+        v.literal('invoiced'),
+        v.literal('delivered'),
+        v.literal('done'),
+        v.literal('cancel'),
+      ),
+      orderDate: v.number(),
+      validUntil: v.optional(v.number()),
+      subtotal: v.number(),
+      discountAmount: v.optional(v.number()),
+      discountType: v.optional(v.union(
+        v.literal('percentage'),
+        v.literal('fixed'),
+      )),
+      taxAmount: v.optional(v.number()),
+      totalAmount: v.number(),
+      currency: v.optional(v.string()),
+      deliveryDate: v.optional(v.number()),
+      deliveryAddress: v.optional(v.string()),
+      internalNotes: v.optional(v.string()),
+      customerNotes: v.optional(v.string()),
+      terms: v.optional(v.string()),
+      source: v.optional(v.string()),
+      invoiceStatus: v.optional(v.union(
+        v.literal('to_invoice'),
+        v.literal('partially'),
+        v.literal('invoiced'),
+      )),
+      deliveryStatus: v.optional(v.union(
+        v.literal('to_deliver'),
+        v.literal('partially'),
+        v.literal('delivered'),
+      )),
+      archivedAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('companyId', v.optional(v.id('companies')))
+      .field('contactId', v.optional(v.id('contacts')))
+      .field('dealId', v.optional(v.id('deals')))
+      .edge('owner', { to: 'user', field: 'ownerId' })
+      .edge('company', { to: 'companies', field: 'companyId', optional: true })
+      .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
+      .edge('deal', { to: 'deals', field: 'dealId', optional: true })
+      .edges('lines', { to: 'saleOrderLines', ref: 'saleOrderId' })
+      .index('organizationId_state', ['organizationId', 'state'])
+      .index('organizationId_companyId', ['organizationId', 'companyId'])
+      .index('organizationId_orderDate', ['organizationId', 'orderDate'])
+      .index('organizationId_ownerId', ['organizationId', 'ownerId'])
+      .searchIndex('search_sale_orders', {
+        searchField: 'number',
+        filterFields: ['organizationId', 'state'],
+      }),
+
+    saleOrderLines: defineEnt({
+      productName: v.string(),
+      description: v.optional(v.string()),
+      quantity: v.number(),
+      unitPrice: v.number(),
+      discount: v.optional(v.number()),
+      discountType: v.optional(v.union(
+        v.literal('percentage'),
+        v.literal('fixed'),
+      )),
+      taxAmount: v.optional(v.number()),
+      subtotal: v.number(),
+      deliveredQty: v.optional(v.number()),
+      invoicedQty: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('saleOrderId', v.id('saleOrders'))
+      .field('productId', v.optional(v.id('products')))
+      .field('productVariantId', v.optional(v.id('productVariants')))
+      .edge('saleOrder', { to: 'saleOrders', field: 'saleOrderId' })
+      .edge('product', { to: 'products', field: 'productId', optional: true })
+      .index('organizationId_saleOrderId', ['organizationId', 'saleOrderId']),
   },
   {
     schemaValidation: true,
