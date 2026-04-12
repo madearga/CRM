@@ -10,6 +10,8 @@ import {
   DEFAULT_CURRENCY,
 } from '@crm/domain';
 import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
+import { nextSequence } from './shared/sequenceGenerator';
+import { createAuditLog } from './auditLogs';
 
 const DEFAULT_ORG_CURRENCY = DEFAULT_CURRENCY;
 
@@ -384,5 +386,76 @@ export const restore = createOrgMutation()({
     await ctx.table('deals').getX(args.id).patch({ archivedAt: undefined });
 
     return null;
+  },
+});
+
+// Convert a won deal to a Sale Order
+export const convertToSaleOrder = createOrgMutation()({
+  args: {
+    id: zid('deals'),
+    lines: z.array(z.object({
+      productName: z.string(),
+      quantity: z.number().min(0.01),
+      unitPrice: z.number(),
+      productId: zid('products').optional(),
+    })).min(1),
+  },
+  returns: zid('saleOrders'),
+  handler: async (ctx, args) => {
+    const deal = await ctx.table('deals').getX(args.id);
+    if (deal.organizationId !== ctx.orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Deal not found' });
+    }
+
+    if (deal.stage !== 'won') {
+      throw new ConvexError({
+        code: 'VALIDATION_ERROR',
+        message: 'Can only convert won deals to sale orders',
+      });
+    }
+
+    const number = await nextSequence(ctx, ctx.orgId, 'saleOrder');
+    const subtotal = args.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+    const totalAmount = Math.round(subtotal * 100) / 100;
+
+    const soId = await ctx.table('saleOrders').insert({
+      number,
+      state: 'draft',
+      orderDate: Date.now(),
+      subtotal,
+      totalAmount,
+      source: 'deal',
+      companyId: deal.companyId,
+      contactId: deal.primaryContactId,
+      dealId: args.id,
+      invoiceStatus: 'to_invoice',
+      deliveryStatus: 'to_deliver',
+      organizationId: ctx.orgId,
+      ownerId: ctx.userId,
+    });
+
+    for (const line of args.lines) {
+      const lineSubtotal = line.quantity * line.unitPrice;
+      await ctx.table('saleOrderLines').insert({
+        productName: line.productName,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        subtotal: lineSubtotal,
+        productId: line.productId,
+        saleOrderId: soId,
+        organizationId: ctx.orgId,
+      });
+    }
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'saleOrder',
+      entityId: soId as unknown as string,
+      action: 'createFromDeal',
+      metadata: { dealId: args.id as unknown as string },
+    });
+
+    return soId;
   },
 });
