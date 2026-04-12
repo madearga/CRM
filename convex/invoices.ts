@@ -250,6 +250,8 @@ export const getById = createOrgQuery()({
     paymentTermId: zid('paymentTerms').optional(),
     source: z.enum(['sale_order', 'manual']).optional(),
     saleOrderId: zid('saleOrders').optional(),
+    subscriptionTemplateId: zid('subscriptionTemplates').optional(),
+    subscriptionName: z.string().optional(),
     notes: z.string().optional(),
     internalNotes: z.string().optional(),
     companyId: zid('companies').optional(),
@@ -291,6 +293,12 @@ export const getById = createOrgQuery()({
       contactName = c?.fullName;
     }
 
+    let subscriptionName: string | undefined;
+    if (inv.subscriptionTemplateId) {
+      const s = await ctx.table('subscriptionTemplates').get(inv.subscriptionTemplateId);
+      subscriptionName = s?.name;
+    }
+
     return {
       id: inv._id,
       number: inv.number,
@@ -309,6 +317,8 @@ export const getById = createOrgQuery()({
       paymentTermId: inv.paymentTermId,
       source: inv.source,
       saleOrderId: inv.saleOrderId,
+      subscriptionTemplateId: inv.subscriptionTemplateId,
+      subscriptionName,
       notes: inv.notes,
       internalNotes: inv.internalNotes,
       companyId: inv.companyId,
