@@ -7,12 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Building2, Globe, MapPin, Users, Handshake, Activity, Archive, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Building2, Globe, MapPin, Users, Handshake, Activity, Archive, RotateCcw, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { STATUS_COLORS } from '@/lib/constants';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function CompanyDetailPage() {
   const params = useParams();
@@ -26,6 +30,17 @@ export default function CompanyDetailPage() {
   );
   const archiveCompany = useAuthMutation(api.companies.archive);
   const restoreCompany = useAuthMutation(api.companies.restore);
+  const updateCompany = useAuthMutation(api.companies.update);
+  const { data: pricelists } = useAuthQuery(api.pricelists.listActive, {});
+
+  const handlePricelistChange = async (pricelistId: string) => {
+    try {
+      await updateCompany.mutateAsync({ id: id as any, pricelistId: pricelistId === '__none__' ? undefined : (pricelistId as any) });
+      toast.success(pricelistId === '__none__' ? 'Pricelist removed' : 'Pricelist assigned');
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to update pricelist');
+    }
+  };
 
   const handleArchive = async () => {
     try {
@@ -158,6 +173,27 @@ export default function CompanyDetailPage() {
                 <p className="text-xs text-muted-foreground">Deals</p>
                 <p className="text-sm font-mono">{company.dealsCount}</p>
               </div>
+            </div>
+          </div>
+          {/* Pricelist Assignment */}
+          <div className="mt-4 flex items-end gap-3 rounded-md border p-3">
+            <Tag className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Assigned Pricelist</Label>
+              <Select
+                value={company.pricelistId || '__none__'}
+                onValueChange={handlePricelistChange}
+              >
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue placeholder="No pricelist" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No pricelist</SelectItem>
+                  {(pricelists ?? []).map((pl: any) => (
+                    <SelectItem key={pl.id} value={pl.id}>{pl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           {company.notes && (

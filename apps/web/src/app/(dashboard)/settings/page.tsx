@@ -242,6 +242,25 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Products */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Products
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Link href="/settings/pricelists" className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+            <Settings className="h-4 w-4" />
+            Pricelists
+          </Link>
+          <p className="text-xs text-muted-foreground">
+            Manage pricing rules, volume discounts, and customer-specific pricing.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Invoice Settings */}
       <Card>
         <CardHeader>

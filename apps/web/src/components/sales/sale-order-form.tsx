@@ -16,6 +16,7 @@ import { ArrowLeft, ShoppingCart, Bookmark, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineItemEditor, type LineItem } from './line-item-editor';
 import { AmountSummary } from './amount-summary';
+import { useAuthQuery } from '@/lib/convex/hooks';
 
 interface CompanyOption { id: string; name: string }
 interface ContactOption { id: string; fullName: string }
@@ -103,6 +104,41 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
 
   const { data: companies } = useAuthPaginatedQuery(api.companies.list, { search: undefined }, { initialNumItems: 100 });
   const { data: contacts } = useAuthPaginatedQuery(api.contacts.list, { search: undefined }, { initialNumItems: 100 });
+
+  // Pricelist resolution for selected company
+  const { data: companyDetail } = useAuthQuery(
+    api.companies.getById,
+    header.companyId ? { id: header.companyId as any } : 'skip',
+  );
+  const pricelistId = companyDetail?.pricelistId;
+  const pricelistName = companyDetail?.pricelistName;
+
+  // Resolve prices for line items when company changes
+  const { data: resolvedPrices } = useAuthQuery(
+    api.pricelists.resolvePrices,
+    header.companyId && lines.some(l => l.productId)
+      ? {
+          productIds: lines.filter(l => l.productId).map(l => l.productId as any),
+          companyId: header.companyId as any,
+          quantities: lines.filter(l => l.productId).map(l => l.quantity),
+        }
+      : 'skip',
+  );
+
+  // Auto-apply resolved prices
+  useEffect(() => {
+    if (!resolvedPrices || resolvedPrices.length === 0) return;
+    const updated = [...lines];
+    let changed = false;
+    for (const resolved of resolvedPrices) {
+      const idx = updated.findIndex(l => l.productId === resolved.productId);
+      if (idx >= 0 && updated[idx].unitPrice !== resolved.finalPrice) {
+        updated[idx] = { ...updated[idx], unitPrice: resolved.finalPrice };
+        changed = true;
+      }
+    }
+    if (changed) setLines(updated);
+  }, [resolvedPrices]);
 
   useEffect(() => {
     if (initialData) {
@@ -339,6 +375,11 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                   ))}
                 </SelectContent>
               </Select>
+              {pricelistId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Price from pricelist: <span className="font-medium text-foreground">{pricelistName ?? 'Unknown'}</span>
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Contact</Label>

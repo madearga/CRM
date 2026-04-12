@@ -201,6 +201,7 @@ const schema = defineEntSchema(
       ),
       notes: v.optional(v.string()),
       archivedAt: v.optional(v.number()),
+      pricelistId: v.optional(v.id('pricelists')),
     })
       .field('organizationId', v.id('organization'), { index: true })
       .edge('owner', { to: 'user', field: 'ownerId' })
@@ -209,6 +210,7 @@ const schema = defineEntSchema(
       .edges('saleOrders', { ref: 'companyId' })
       .edges('invoices', { ref: 'companyId' })
       .edges('payments', { ref: 'companyId' })
+      .edge('pricelist', { to: 'pricelists', field: 'pricelistId', optional: true })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_name', ['organizationId', 'name'])
@@ -758,6 +760,49 @@ const schema = defineEntSchema(
       .field('reminderRuleId', v.id('reminderRules'), { index: true })
       .field('organizationId', v.id('organization'), { index: true })
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
+
+    // ---------------------
+    // Pricelists & Pricing Rules (Module 6)
+    // ---------------------
+
+    pricelists: defineEnt({
+      name: v.string(),
+      description: v.optional(v.string()),
+      type: v.union(
+        v.literal('fixed'),
+        v.literal('percentage_discount'),
+        v.literal('formula'),
+      ),
+      defaultDiscount: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      priority: v.optional(v.number()),
+      isActive: v.optional(v.boolean()),
+      archivedAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edges('rules', { to: 'priceRules', ref: 'pricelistId' })
+      .edges('applicableCompanies', { to: 'companies', ref: 'pricelistId' })
+      .index('organizationId_active', ['organizationId'])
+      .searchIndex('search_pricelists', {
+        searchField: 'name',
+        filterFields: ['organizationId'],
+      }),
+
+    priceRules: defineEnt({
+      productId: v.optional(v.id('products')),
+      productCategoryId: v.optional(v.id('productCategories')),
+      minQuantity: v.optional(v.number()),
+      fixedPrice: v.optional(v.number()),
+      discountPercent: v.optional(v.number()),
+      formula: v.optional(v.string()),
+      startDate: v.optional(v.number()),
+      endDate: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('pricelistId', v.id('pricelists'))
+      .edge('pricelist', { to: 'pricelists', field: 'pricelistId' })
+      .edge('product', { to: 'products', field: 'productId', optional: true })
+      .index('organizationId_pricelistId', ['organizationId', 'pricelistId']),
 
     payments: defineEnt({
       amount: v.number(),

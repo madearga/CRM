@@ -102,6 +102,8 @@ export const getById = createOrgQuery()({
       createdAt: z.number(),
       contactsCount: z.number(),
       dealsCount: z.number(),
+      pricelistId: zid('pricelists').optional(),
+      pricelistName: z.string().optional(),
     })
     .nullable(),
   handler: async (ctx, args) => {
@@ -141,6 +143,10 @@ export const getById = createOrgQuery()({
       createdAt: company._creationTime,
       contactsCount: contacts.length,
       dealsCount: deals.length,
+      pricelistId: company.pricelistId,
+      pricelistName: company.pricelistId
+        ? (await ctx.table('pricelists').get(company.pricelistId))?.name
+        : undefined,
     };
   },
 });
@@ -212,6 +218,7 @@ export const update = createOrgMutation()({
     tags: z.array(z.string()).optional(),
     status: statusEnum.optional(),
     notes: z.string().optional(),
+    pricelistId: zid('pricelists').optional(),
   },
   returns: z.null(),
   handler: async (ctx, args) => {

@@ -16,6 +16,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { InvoiceLineEditor, type InvoiceLineItem } from './invoice-line-editor';
 import { AmountSummary } from '../sales/amount-summary';
+import { useAuthQuery } from '@/lib/convex/hooks';
 
 interface InvoiceFormProps {
   invoiceId?: string;
@@ -57,6 +58,41 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
   const { data: companies } = useAuthPaginatedQuery(api.companies.list, { search: undefined }, { initialNumItems: 100 });
   const { data: contacts } = useAuthPaginatedQuery(api.contacts.list, { search: undefined }, { initialNumItems: 100 });
   const { data: paymentTerms = [] } = useAuthPaginatedQuery(api.paymentTerms.list, { search: undefined }, { initialNumItems: 50 });
+
+  // Pricelist resolution for selected company
+  const { data: companyDetail } = useAuthQuery(
+    api.companies.getById,
+    form.companyId ? { id: form.companyId as any } : 'skip',
+  );
+  const pricelistId = companyDetail?.pricelistId;
+  const pricelistName = companyDetail?.pricelistName;
+
+  // Resolve prices for line items when company changes
+  const { data: resolvedPrices } = useAuthQuery(
+    api.pricelists.resolvePrices,
+    form.companyId && form.lines.some(l => l.productId)
+      ? {
+          productIds: form.lines.filter(l => l.productId).map(l => l.productId as any),
+          companyId: form.companyId as any,
+          quantities: form.lines.filter(l => l.productId).map(l => l.quantity),
+        }
+      : 'skip',
+  );
+
+  // Auto-apply resolved prices
+  useEffect(() => {
+    if (!resolvedPrices || resolvedPrices.length === 0) return;
+    const updated = [...form.lines];
+    let changed = false;
+    for (const resolved of resolvedPrices) {
+      const idx = updated.findIndex(l => l.productId === resolved.productId);
+      if (idx >= 0 && updated[idx].unitPrice !== resolved.finalPrice) {
+        updated[idx] = { ...updated[idx], unitPrice: resolved.finalPrice };
+        changed = true;
+      }
+    }
+    if (changed) setForm((prev) => ({ ...prev, lines: updated }));
+  }, [resolvedPrices]);
 
   useEffect(() => {
     if (initialData) {
@@ -226,6 +262,11 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                  {pricelistId && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Price from pricelist: <span className="font-medium text-foreground">{pricelistName ?? 'Unknown'}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Contact</Label>
