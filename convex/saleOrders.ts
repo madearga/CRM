@@ -570,6 +570,7 @@ export const duplicate = createOrgMutation()({
       number: newNumber,
       state: 'draft',
       orderDate: Date.now(),
+      validUntil: undefined, // Clear old expiration
       subtotal: so.subtotal,
       discountAmount: so.discountAmount,
       discountType: so.discountType,
