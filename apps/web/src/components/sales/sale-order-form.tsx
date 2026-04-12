@@ -58,12 +58,17 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
   const isEdit = !!saleOrderId;
   const isDirty = useRef(false);
 
-  const updateForm = useCallback(<T,>(setter: (prev: T) => T): void => {
-    isDirty.current = true;
-    setForm(setter as any);
-  }, []);
+  const markDirty = () => { isDirty.current = true; };
+  const updateHeader = (fn: (prev: typeof header) => typeof header) => {
+    markDirty();
+    setHeader(fn);
+  };
+  const updateLines = (newLines: LineItem[]) => {
+    markDirty();
+    setLines(newLines);
+  };
 
-  const [form, setForm] = useState({
+  const [header, setHeader] = useState({
     companyId: '' as string,
     contactId: '' as string,
     orderDate: new Date().toISOString().split('T')[0],
@@ -75,15 +80,15 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     terms: '',
     discountAmount: '',
     discountType: 'percentage' as 'percentage' | 'fixed',
-    lines: [{ productName: '', quantity: 1, unitPrice: 0 }] as LineItem[],
   });
+  const [lines, setLines] = useState<LineItem[]>([{ productName: '', quantity: 1, unitPrice: 0 }]);
 
   const { data: companies } = useAuthPaginatedQuery(api.companies.list, { search: undefined }, { initialNumItems: 100 });
   const { data: contacts } = useAuthPaginatedQuery(api.contacts.list, { search: undefined }, { initialNumItems: 100 });
 
   useEffect(() => {
     if (initialData) {
-      setForm({
+      setHeader({
         companyId: initialData.companyId ?? '',
         contactId: initialData.contactId ?? '',
         orderDate: timestampToDate(initialData.orderDate),
@@ -95,8 +100,8 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         terms: initialData.terms ?? '',
         discountAmount: initialData.discountAmount != null ? String(initialData.discountAmount) : '',
         discountType: initialData.discountType ?? 'percentage',
-        lines: initialData.lines.length > 0 ? initialData.lines : [{ productName: '', quantity: 1, unitPrice: 0 }],
       });
+      setLines(initialData.lines.length > 0 ? initialData.lines : [{ productName: '', quantity: 1, unitPrice: 0 }]);
     }
   }, [initialData]);
 
@@ -119,7 +124,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
 
   // Calculate totals
   const { subtotal, discountValue, taxAmount, totalAmount } = useMemo(() => {
-    const sub = form.lines.reduce((sum, l) => {
+    const sub = lines.reduce((sum, l) => {
       let lineTotal = l.quantity * l.unitPrice;
       if (l.discount) {
         if (l.discountType === 'percentage') lineTotal -= lineTotal * (l.discount / 100);
@@ -129,25 +134,25 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
       return sum + lineTotal;
     }, 0);
 
-    const disc = form.discountAmount
-      ? form.discountType === 'percentage'
-        ? sub * Number(form.discountAmount) / 100
-        : Number(form.discountAmount)
+    const disc = header.discountAmount
+      ? header.discountType === 'percentage'
+        ? sub * Number(header.discountAmount) / 100
+        : Number(header.discountAmount)
       : 0;
 
-    const tax = form.lines.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
+    const tax = lines.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
     const total = Math.round((sub - disc + tax) * 100) / 100;
 
     return { subtotal: sub, discountValue: disc, taxAmount: tax, totalAmount: total };
-  }, [form.lines, form.discountAmount, form.discountType]);
+  }, [lines, header.discountAmount, header.discountType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validLines = form.lines.filter((l) => l.productName.trim());
+    const validLines = lines.filter((l) => l.productName.trim());
 
     const errors: string[] = [];
-    if (!form.orderDate) errors.push('Order date is required');
+    if (!header.orderDate) errors.push('Order date is required');
     if (validLines.length === 0) errors.push('Add at least one line item');
     if (validLines.some((l) => !l.quantity || l.quantity <= 0)) errors.push('All line items must have quantity > 0');
     if (validLines.some((l) => l.unitPrice < 0)) errors.push('All line items must have a valid price');
@@ -157,41 +162,18 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
       return;
     }
 
-    const payload: {
-      companyId?: string;
-      contactId?: string;
-      orderDate: number;
-      validUntil?: number;
-      deliveryDate?: number;
-      deliveryAddress?: string;
-      internalNotes?: string;
-      customerNotes?: string;
-      terms?: string;
-      discountAmount?: number;
-      discountType?: 'percentage' | 'fixed';
-      lines: Array<{
-        productName: string;
-        description?: string;
-        quantity: number;
-        unitPrice: number;
-        discount?: number;
-        discountType?: 'percentage' | 'fixed';
-        taxAmount?: number;
-        productId?: string;
-        productVariantId?: string;
-      }>;
-    } = {
-      companyId: form.companyId || undefined,
-      contactId: form.contactId || undefined,
-      orderDate: dateToTimestamp(form.orderDate),
-      validUntil: form.validUntil ? dateToTimestamp(form.validUntil) : undefined,
-      deliveryDate: form.deliveryDate ? dateToTimestamp(form.deliveryDate) : undefined,
-      deliveryAddress: form.deliveryAddress || undefined,
-      internalNotes: form.internalNotes || undefined,
-      customerNotes: form.customerNotes || undefined,
-      terms: form.terms || undefined,
-      discountAmount: form.discountAmount ? Number(form.discountAmount) : undefined,
-      discountType: form.discountAmount ? form.discountType : undefined,
+    const payload = {
+      companyId: header.companyId || undefined,
+      contactId: header.contactId || undefined,
+      orderDate: dateToTimestamp(header.orderDate),
+      validUntil: header.validUntil ? dateToTimestamp(header.validUntil) : undefined,
+      deliveryDate: header.deliveryDate ? dateToTimestamp(header.deliveryDate) : undefined,
+      deliveryAddress: header.deliveryAddress || undefined,
+      internalNotes: header.internalNotes || undefined,
+      customerNotes: header.customerNotes || undefined,
+      terms: header.terms || undefined,
+      discountAmount: header.discountAmount ? Number(header.discountAmount) : undefined,
+      discountType: header.discountAmount ? header.discountType : undefined,
       lines: validLines.map((l) => ({
         productName: l.productName.trim(),
         description: l.description,
@@ -200,10 +182,10 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         discount: l.discount,
         discountType: l.discountType,
         taxAmount: l.taxAmount,
-        productId: l.productId,
-        productVariantId: l.productVariantId,
+        productId: l.productId as any,
+        productVariantId: l.productVariantId as any,
       })),
-    };
+    } as any;
 
     try {
       if (isEdit) {
@@ -259,7 +241,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Company</Label>
-              <Select value={form.companyId || "__none__"} onValueChange={(v) => updateForm((prev) => ({ ...prev, companyId: v === "__none__" ? "" : v }))}>
+              <Select value={header.companyId || "__none__"} onValueChange={(v) => updateHeader((prev) => ({ ...prev, companyId: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No company</SelectItem>
@@ -271,7 +253,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
             </div>
             <div className="space-y-2">
               <Label>Contact</Label>
-              <Select value={form.contactId || "__none__"} onValueChange={(v) => updateForm((prev) => ({ ...prev, contactId: v === "__none__" ? "" : v }))}>
+              <Select value={header.contactId || "__none__"} onValueChange={(v) => updateHeader((prev) => ({ ...prev, contactId: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Select contact" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No contact</SelectItem>
@@ -285,20 +267,20 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Order Date *</Label>
-              <Input type="date" value={form.orderDate} onChange={(e) => updateForm((prev) => ({ ...prev, orderDate: e.target.value }))} />
+              <Input type="date" value={header.orderDate} onChange={(e) => updateHeader((prev) => ({ ...prev, orderDate: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Valid Until</Label>
-              <Input type="date" value={form.validUntil} onChange={(e) => updateForm((prev) => ({ ...prev, validUntil: e.target.value }))} />
+              <Input type="date" value={header.validUntil} onChange={(e) => updateHeader((prev) => ({ ...prev, validUntil: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Delivery Date</Label>
-              <Input type="date" value={form.deliveryDate} onChange={(e) => updateForm((prev) => ({ ...prev, deliveryDate: e.target.value }))} />
+              <Input type="date" value={header.deliveryDate} onChange={(e) => updateHeader((prev) => ({ ...prev, deliveryDate: e.target.value }))} />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Delivery Address</Label>
-            <Input placeholder="Delivery address..." value={form.deliveryAddress} onChange={(e) => updateForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
+            <Input placeholder="Delivery address..." value={header.deliveryAddress} onChange={(e) => updateHeader((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
           </div>
         </CardContent>
       </Card>
@@ -308,8 +290,8 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         <CardHeader><CardTitle className="text-sm uppercase tracking-wider">Order Lines</CardTitle></CardHeader>
         <CardContent>
           <LineItemEditor
-            lines={form.lines}
-            onChange={(lines) => updateForm((prev) => ({ ...prev, lines }))}
+            lines={lines}
+            onChange={updateLines}
           />
         </CardContent>
       </Card>
@@ -324,11 +306,11 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                 type="number"
                 min="0"
                 placeholder="0"
-                value={form.discountAmount}
-                onChange={(e) => updateForm((prev) => ({ ...prev, discountAmount: e.target.value }))}
+                value={header.discountAmount}
+                onChange={(e) => updateHeader((prev) => ({ ...prev, discountAmount: e.target.value }))}
                 className="w-32"
               />
-              <Select value={form.discountType} onValueChange={(v: 'percentage' | 'fixed') => updateForm((prev) => ({ ...prev, discountType: v }))}>
+              <Select value={header.discountType} onValueChange={(v: 'percentage' | 'fixed') => updateHeader((prev) => ({ ...prev, discountType: v }))}>
                 <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
@@ -340,8 +322,8 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         </Card>
         <AmountSummary
           subtotal={subtotal}
-          discountAmount={form.discountAmount ? Number(form.discountAmount) : undefined}
-          discountType={form.discountType as any}
+          discountAmount={header.discountAmount ? Number(header.discountAmount) : undefined}
+          discountType={header.discountType as any}
           taxAmount={taxAmount}
           totalAmount={totalAmount}
         />
@@ -353,15 +335,15 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Customer Notes</Label>
-            <Textarea placeholder="Notes visible to customer..." value={form.customerNotes} onChange={(e) => updateForm((prev) => ({ ...prev, customerNotes: e.target.value }))} rows={2} />
+            <Textarea placeholder="Notes visible to customer..." value={header.customerNotes} onChange={(e) => updateHeader((prev) => ({ ...prev, customerNotes: e.target.value }))} rows={2} />
           </div>
           <div className="space-y-2">
             <Label>Internal Notes</Label>
-            <Textarea placeholder="Internal notes..." value={form.internalNotes} onChange={(e) => updateForm((prev) => ({ ...prev, internalNotes: e.target.value }))} rows={2} />
+            <Textarea placeholder="Internal notes..." value={header.internalNotes} onChange={(e) => updateHeader((prev) => ({ ...prev, internalNotes: e.target.value }))} rows={2} />
           </div>
           <div className="space-y-2">
             <Label>Terms & Conditions</Label>
-            <Textarea placeholder="Payment terms, delivery terms..." value={form.terms} onChange={(e) => updateForm((prev) => ({ ...prev, terms: e.target.value }))} rows={2} />
+            <Textarea placeholder="Payment terms, delivery terms..." value={header.terms} onChange={(e) => updateHeader((prev) => ({ ...prev, terms: e.target.value }))} rows={2} />
           </div>
         </CardContent>
       </Card>

@@ -455,7 +455,7 @@ export const update = createOrgMutation()({
     if (args.lines) {
       const existingLines = await so.edge('lines');
       for (const line of existingLines) {
-        await line.delete();
+        await (line as any).delete();
       }
       const lineSubtotals = args.lines.map((line) => ({
         ...line,
