@@ -734,7 +734,6 @@ const schema = defineEntSchema(
     })
       .field('organizationId', v.id('organization'), { index: true })
       .field('templateId', v.id('quotationTemplates'))
-      .field('productId', v.optional(v.id('products')))
       .edge('template', { to: 'quotationTemplates', field: 'templateId' })
       .index('organizationId_templateId', ['organizationId', 'templateId']),
 
