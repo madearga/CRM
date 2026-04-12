@@ -27,7 +27,7 @@ export default function ContactsPage() {
   const router = useRouter();
   const { q: search, setSearch } = useContactsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.contacts ?? new Set();
+  const selectedIds = useMemo(() => selections.contacts ?? new Set(), [selections.contacts]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [newContact, setNewContact] = useState({

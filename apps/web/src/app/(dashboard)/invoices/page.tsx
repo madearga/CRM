@@ -23,7 +23,7 @@ export default function InvoicesPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useInvoicesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.invoices ?? new Set();
+  const selectedIds = useMemo(() => selections.invoices ?? new Set(), [selections.invoices]);
   const [stateFilter, setStateFilter] = useState<string | undefined>(undefined);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
 

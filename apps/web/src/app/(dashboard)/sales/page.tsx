@@ -23,7 +23,7 @@ export default function SalesPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useSalesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.sales ?? new Set();
+  const selectedIds = useMemo(() => selections.sales ?? new Set(), [selections.sales]);
   const [stateFilter, setStateFilter] = useState<string | undefined>(undefined);
 
   const { data: orders, isLoading } = useAuthPaginatedQuery(api.saleOrders.list, {

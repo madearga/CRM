@@ -13,7 +13,7 @@ export function formatMoney(amount: number | null | undefined, currency: string 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 export function formatMoneyExtra(amount: number | null | undefined, currency: string = "IDR"): string {

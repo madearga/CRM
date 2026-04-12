@@ -24,7 +24,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useProductsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.products ?? new Set();
+  const selectedIds = useMemo(() => selections.products ?? new Set(), [selections.products]);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
 
   const { data: products, isLoading } = useAuthPaginatedQuery(api.products.list, {

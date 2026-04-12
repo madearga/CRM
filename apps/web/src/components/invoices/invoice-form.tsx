@@ -78,9 +78,8 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
   }, [initialData]);
 
   const createInvoice = useAuthMutation(api.invoices.create);
-  // Note: API invoices doesn't have update yet based on Task 3 implementation.
-  // I will check if I should add it. For now, I'll follow what was implemented.
-  
+  const updateInvoice = useAuthMutation(api.invoices.update);
+
   // Update dueDate when invoiceDate or paymentTermId changes
   useEffect(() => {
     if (form.paymentTermId) {
@@ -153,9 +152,12 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
 
     try {
       if (isEdit) {
-        // update mutation not implemented in Task 3, but plan might expect it.
-        // I will assume for now only create is supported as per Task 3.
-        toast.error('Edit not yet supported in backend');
+        await updateInvoice.mutateAsync({
+          id: invoiceId as any,
+          ...payload,
+        });
+        toast.success('Invoice updated');
+        router.push(`/invoices/${invoiceId}`);
       } else {
         const newId = await createInvoice.mutateAsync(payload);
         toast.success('Invoice created');

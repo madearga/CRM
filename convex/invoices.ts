@@ -418,6 +418,143 @@ export const create = createOrgMutation()({
   },
 });
 
+export const update = createOrgMutation()({
+  args: {
+    id: zid('invoices'),
+    companyId: zid('companies').optional(),
+    contactId: zid('contacts').optional(),
+    invoiceDate: z.number().optional(),
+    dueDate: z.number().optional(),
+    currency: z.string().optional(),
+    paymentTermId: zid('paymentTerms').optional(),
+    notes: z.string().optional(),
+    internalNotes: z.string().optional(),
+    discountAmount: z.number().optional(),
+    discountType: z.enum(['percentage', 'fixed']).optional(),
+    lines: z.array(z.object({
+      id: zid('invoiceLines').optional(),
+      productName: z.string(),
+      description: z.string().optional(),
+      quantity: z.number().min(0.01),
+      unitPrice: z.number(),
+      discount: z.number().optional(),
+      discountType: z.enum(['percentage', 'fixed']).optional(),
+      taxAmount: z.number().optional(),
+      productId: zid('products').optional(),
+      taxId: zid('taxes').optional(),
+    })).optional(),
+  },
+  returns: zid('invoices'),
+  handler: async (ctx, args) => {
+    const inv = await ctx.table('invoices').getX(args.id);
+    if (inv.organizationId !== ctx.orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Invoice not found' });
+    }
+
+    if (inv.state !== 'draft') {
+      throw new ConvexError({
+        code: 'VALIDATION_ERROR',
+        message: 'Can only edit invoices in draft state',
+      });
+    }
+
+    const patchData: any = {};
+    if (args.companyId !== undefined) patchData.companyId = args.companyId;
+    if (args.contactId !== undefined) patchData.contactId = args.contactId;
+    if (args.invoiceDate !== undefined) patchData.invoiceDate = args.invoiceDate;
+    if (args.dueDate !== undefined) patchData.dueDate = args.dueDate;
+    if (args.currency !== undefined) patchData.currency = args.currency;
+    if (args.paymentTermId !== undefined) patchData.paymentTermId = args.paymentTermId;
+    if (args.notes !== undefined) patchData.notes = args.notes;
+    if (args.internalNotes !== undefined) patchData.internalNotes = args.internalNotes;
+    if (args.discountAmount !== undefined) patchData.discountAmount = args.discountAmount;
+    if (args.discountType !== undefined) patchData.discountType = args.discountType;
+
+    if (args.lines) {
+      const lineSubtotals = args.lines.map((line) => ({
+        ...line,
+        subtotal: calculateLineSubtotal(line),
+      }));
+
+      const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
+
+      let discountTotal = 0;
+      const discAmt = args.discountAmount ?? inv.discountAmount;
+      const discType = args.discountType ?? inv.discountType;
+      if (discAmt) {
+        if (discType === 'percentage') {
+          discountTotal = subtotal * (discAmt / 100);
+        } else {
+          discountTotal = discAmt;
+        }
+      }
+
+      const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
+      const totalAmount = Math.round((subtotal - discountTotal + taxAmount) * 100) / 100;
+
+      patchData.subtotal = subtotal;
+      patchData.taxAmount = taxAmount;
+      patchData.totalAmount = totalAmount;
+      patchData.amountDue = totalAmount; // Reset amount due on edit
+
+      // Update lines
+      const existingLines = await inv.edge('lines');
+      const existingIds = new Set(existingLines.map((l: any) => l._id));
+      const keepIds = new Set(args.lines.map((l) => l.id).filter(Boolean));
+
+      // Delete removed lines
+      for (const line of existingLines) {
+        if (!keepIds.has(line._id)) {
+          await ctx.db.delete(line._id);
+        }
+      }
+
+      // Upsert lines
+      for (const line of lineSubtotals) {
+        if (line.id && existingIds.has(line.id)) {
+          const { id, ...lineData } = line;
+          await ctx.table('invoiceLines').getX(id).patch(lineData);
+        } else {
+          const { id, ...lineData } = line;
+          await ctx.table('invoiceLines').insert({
+            ...lineData,
+            invoiceId: inv._id,
+            organizationId: ctx.orgId,
+          });
+        }
+      }
+    } else if (args.discountAmount !== undefined || args.discountType !== undefined) {
+      // Re-calculate totals if only discount changed
+      const discAmt = args.discountAmount ?? inv.discountAmount;
+      const discType = args.discountType ?? inv.discountType;
+      let discountTotal = 0;
+      if (discAmt) {
+        if (discType === 'percentage') {
+          discountTotal = inv.subtotal * (discAmt / 100);
+        } else {
+          discountTotal = discAmt;
+        }
+      }
+      const totalAmount = Math.round((inv.subtotal - discountTotal + (inv.taxAmount ?? 0)) * 100) / 100;
+      patchData.totalAmount = totalAmount;
+      patchData.amountDue = totalAmount;
+    }
+
+    await inv.patch(patchData);
+
+    await createAuditLog(ctx, {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      entityType: 'invoice',
+      entityId: inv._id as unknown as string,
+      action: 'update',
+      after: patchData,
+    });
+
+    return inv._id;
+  },
+});
+
 export const createFromSaleOrder = createOrgMutation()({
   args: {
     saleOrderId: zid('saleOrders'),

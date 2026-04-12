@@ -26,7 +26,7 @@ export default function CompaniesPage() {
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useCompaniesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = selections.companies ?? new Set();
+  const selectedIds = useMemo(() => selections.companies ?? new Set(), [selections.companies]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCompany, setNewCompany] = useState({
     name: '', website: '', industry: '', size: undefined as string | undefined,
