@@ -10,6 +10,7 @@ import {
   LogOut,
   Moon,
   Package,
+  FileText,
   Settings,
   ShoppingCart,
   Sun,
@@ -47,6 +48,7 @@ const navItems = [
   { title: 'Deals', href: '/deals', icon: Handshake },
   { title: 'Products', href: '/products', icon: Package },
   { title: 'Sales', href: '/sales', icon: ShoppingCart },
+  { title: 'Invoices', href: '/invoices', icon: FileText },
   { title: 'Activities', href: '/activities', icon: Activity },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];
