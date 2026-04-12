@@ -54,7 +54,7 @@ function calculateLineSubtotal(line: {
       subtotal -= line.discount;
     }
   }
-  if (line.taxAmount) subtotal += line.taxAmount;
+  // Tax summed separately at SO level — don't include in line subtotal
   return Math.round(subtotal * 100) / 100;
 }
 
