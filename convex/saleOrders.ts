@@ -8,7 +8,8 @@ import {
 } from './functions';
 import { createAuditLog } from './auditLogs';
 import { nextSequence } from './shared/sequenceGenerator';
-import type { SequenceType } from './shared/sequenceGenerator';
+import type { AuthMutationCtx } from './functions';
+import type { EntWriter } from './shared/types';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -24,9 +25,9 @@ const lineSchema = z.object({
   description: z.string().optional(),
   quantity: z.number(),
   unitPrice: z.number(),
-  discount: z.number().optional(),
+  discount: z.number().min(0).optional(),
   discountType: z.enum(['percentage', 'fixed']).optional(),
-  taxAmount: z.number().optional(),
+  taxAmount: z.number().min(0).optional(),
   subtotal: z.number(),
   productId: zid('products').optional(),
   productVariantId: zid('productVariants').optional(),
@@ -57,7 +58,7 @@ function calculateLineSubtotal(line: {
   return Math.round(subtotal * 100) / 100;
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
+const VALID_TRANSITIONS: Record<z.infer<typeof stateEnum>, string[]> = {
   draft: ['sent', 'cancel'],
   sent: ['confirmed', 'cancel'],
   confirmed: ['invoiced', 'delivered', 'cancel'],
@@ -77,7 +78,11 @@ function validateTransition(current: string, target: string): void {
   }
 }
 
-async function recalculateTotals(ctx: any, so: any) {
+async function recalculateTotals(ctx: AuthMutationCtx, so: EntWriter<'saleOrders'>) {
+  // NOTE: This follows a read-modify-write pattern.
+  // Convex ensures single-writer per document, so this is safe from concurrent writes
+  // within the same transaction, but callers must ensure they don't call this
+  // concurrently across different transactions for the same SO if atomicity is critical.
   const lines = await so.edge('lines');
   const subtotal = lines.reduce((sum: number, l: any) => sum + l.subtotal, 0);
 

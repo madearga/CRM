@@ -501,7 +501,7 @@ const schema = defineEntSchema(
       internalNotes: v.optional(v.string()),
       customerNotes: v.optional(v.string()),
       terms: v.optional(v.string()),
-      source: v.optional(v.string()),
+      source: v.optional(v.union(v.literal('deal'), v.literal('manual'))),
       invoiceStatus: v.optional(v.union(
         v.literal('to_invoice'),
         v.literal('partially'),
