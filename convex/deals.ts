@@ -414,6 +414,13 @@ export const convertToSaleOrder = createOrgMutation()({
       });
     }
 
+    if (deal.convertedToSaleOrderId) {
+      throw new ConvexError({
+        code: 'VALIDATION_ERROR',
+        message: 'Deal already converted to a Sale Order',
+      });
+    }
+
     const number = await nextSequence(ctx, ctx.orgId, 'saleOrder');
     const subtotal = args.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
     const totalAmount = Math.round(subtotal * 100) / 100;
@@ -455,6 +462,8 @@ export const convertToSaleOrder = createOrgMutation()({
       action: 'createFromDeal',
       metadata: { dealId: args.id as unknown as string },
     });
+
+    await ctx.table('deals').getX(args.id).patch({ convertedToSaleOrderId: soId });
 
     return soId;
   },

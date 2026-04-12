@@ -260,6 +260,7 @@ const schema = defineEntSchema(
       wonAt: v.optional(v.number()),
       lostAt: v.optional(v.number()),
       stageEnteredAt: v.optional(v.number()),
+      convertedToSaleOrderId: v.optional(v.id('saleOrders')),
       archivedAt: v.optional(v.number()),
     })
       .field(
