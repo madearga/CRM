@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Settings, User, Building2, Save, Pencil } from 'lucide-react';
+import { Settings, User, Building2, Save, Pencil, Bell } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
@@ -238,6 +239,25 @@ export default function SettingsPage() {
             <p>CRM v0.0.1</p>
             <p>Built with Convex + Better Auth + Next.js</p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Invoice Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Invoice Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Link href="/settings/reminder-rules" className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+            <Bell className="h-4 w-4" />
+            Reminder Rules
+          </Link>
+          <p className="text-xs text-muted-foreground">
+            Configure automated reminders for overdue invoices.
+          </p>
         </CardContent>
       </Card>
     </div>

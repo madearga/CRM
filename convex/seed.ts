@@ -493,6 +493,46 @@ export const seedCrmData = createInternalMutation()({
     }
     console.info(`  ✅ Created ${invoiceIds.length} invoices`);
 
+    // -------------------------
+    // Reminder Rules
+    // -------------------------
+    console.info('📧 Creating reminder rules...');
+
+    const reminderRuleData = [
+      {
+        name: 'First Reminder',
+        daysOverdue: 7,
+        subject: 'Reminder: Invoice {invoice_number} is overdue',
+        body: 'Dear {customer_name},\n\nThis is a friendly reminder that invoice {invoice_number} for {amount} was due on {due_date}.\n\nPlease arrange payment at your earliest convenience.\n\nThank you.',
+        includeInvoicePdf: true,
+        isActive: true,
+      },
+      {
+        name: 'Second Notice',
+        daysOverdue: 30,
+        subject: 'Second Notice: Invoice {invoice_number} is {days_overdue} days overdue',
+        body: 'Dear {customer_name},\n\nWe have not yet received payment for invoice {invoice_number} ({amount}), which was due on {due_date}.\n\nPlease process payment immediately or contact us.\n\nRegards.',
+        includeInvoicePdf: true,
+        isActive: true,
+      },
+      {
+        name: 'Final Notice',
+        daysOverdue: 60,
+        subject: 'FINAL NOTICE: Invoice {invoice_number}',
+        body: 'Dear {customer_name},\n\nThis is our final notice regarding invoice {invoice_number} for {amount}, due on {due_date}.\n\nThis invoice is now {days_overdue} days overdue. Please contact us immediately.',
+        includeInvoicePdf: true,
+        isActive: true,
+      },
+    ];
+
+    for (const rule of reminderRuleData) {
+      await ctx.table('reminderRules').insert({
+        ...rule,
+        organizationId: orgId,
+      });
+    }
+    console.info(`  ✅ Created ${reminderRuleData.length} reminder rules`);
+
     return null;
   },
 });

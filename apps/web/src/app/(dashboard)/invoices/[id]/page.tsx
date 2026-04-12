@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import {
   ArrowLeft, FileText, Archive, RotateCcw, Pencil,
-  Send, XCircle, CreditCard, ExternalLink,
+  Send, XCircle, CreditCard, ExternalLink, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
@@ -54,6 +54,15 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const handleSendReminder = async (ruleId: string) => {
+    try {
+      await sendReminder.mutateAsync({ invoiceId: id as any, reminderRuleId: ruleId as any });
+      toast.success('Reminder logged');
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to send reminder');
+    }
+  };
+
   const handleArchive = async () => {
     try {
       await archiveInvoice.mutateAsync({ id: id as any });
@@ -91,6 +100,15 @@ export default function InvoiceDetailPage() {
   const canPost = invoice.state === 'draft';
   const canCancel = ['draft', 'posted'].includes(invoice.state);
   const canPay = ['draft', 'posted'].includes(invoice.state) && invoice.amountDue > 0;
+
+  const isOverdue = invoice.state === 'posted' && invoice.amountDue > 0 && invoice.dueDate < Date.now();
+
+  const { data: reminderRules } = useAuthQuery(api.invoiceReminders.listReminderRules, {});
+  const { data: reminderHistory } = useAuthQuery(
+    api.invoiceReminders.getReminderHistory,
+    { invoiceId: id as any }
+  );
+  const sendReminder = useAuthMutation(api.invoiceReminders.sendReminder);
 
   return (
     <div className="space-y-4">
@@ -269,6 +287,68 @@ export default function InvoiceDetailPage() {
                     <TableCell className="text-right">
                       <Badge variant="outline" className={payment.state === 'confirmed' ? 'text-green-600' : 'text-red-600'}>
                         {payment.state}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Overdue Banner */}
+      {isOverdue && (
+        <Card className="border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
+              <AlertTriangle className="size-4" />
+              OVERDUE — {Math.floor((Date.now() - invoice.dueDate) / (24 * 60 * 60 * 1000))} days past due
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <p className="text-sm">
+                Amount due: <span className="font-bold text-red-600">{formatMoney(invoice.amountDue, invoice.currency)}</span>
+              </p>
+              {reminderRules?.filter((r: any) => r.isActive !== false).map((rule: any) => (
+                <Button
+                  key={rule._id}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSendReminder(rule._id)}
+                  disabled={sendReminder.isPending}
+                >
+                  <Send className="mr-1 h-3.5 w-3.5" />
+                  {rule.name}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reminder History */}
+      {reminderHistory && reminderHistory.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm uppercase tracking-wider">Reminder History</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rule</TableHead>
+                  <TableHead>Sent At</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reminderHistory.map((r: any) => (
+                  <TableRow key={r.id}>
+                    <TableCell>{r.ruleName}</TableCell>
+                    <TableCell>{new Date(r.sentAt).toLocaleDateString('id-ID')}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.status === 'sent' ? 'secondary' : 'destructive'} className="text-xs">
+                        {r.status}
                       </Badge>
                     </TableCell>
                   </TableRow>
