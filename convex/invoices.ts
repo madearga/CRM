@@ -72,6 +72,29 @@ function calculateLineSubtotal(line: {
   return Math.round(subtotal * 100) / 100;
 }
 
+/**
+ * Calculate invoice totals using the invoice convention:
+ * subtotal = sum of line subtotals (each line subtotal includes tax via calculateLineSubtotal)
+ * totalAmount = subtotal - discount
+ * taxAmount is tracked separately for display but already baked into subtotal.
+ */
+function calculateInvoiceTotals(lineSubtotals: { subtotal: number; taxAmount?: number }[], discountAmount?: number, discountType?: 'percentage' | 'fixed') {
+  const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
+  const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
+
+  let discountTotal = 0;
+  if (discountAmount) {
+    if (discountType === 'percentage') {
+      discountTotal = subtotal * (discountAmount / 100);
+    } else {
+      discountTotal = discountAmount;
+    }
+  }
+
+  const totalAmount = Math.round((subtotal - discountTotal) * 100) / 100;
+  return { subtotal, taxAmount, discountTotal, totalAmount };
+}
+
 function validateTransition(current: string, target: string): void {
   const allowed = VALID_TRANSITIONS[current];
   if (!allowed || !allowed.includes(target)) {
@@ -359,21 +382,9 @@ export const create = createOrgMutation()({
       subtotal: calculateLineSubtotal(line),
     }));
 
-    const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
-
-    let discountTotal = 0;
-    if (args.discountAmount) {
-      if (args.discountType === 'percentage') {
-        discountTotal = subtotal * (args.discountAmount / 100);
-      } else {
-        discountTotal = args.discountAmount;
-      }
-    }
-
-    // Note: taxAmount is already included in each line's subtotal via calculateLineSubtotal
-    // so we do NOT add it again to totalAmount
-    const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
-    const totalAmount = Math.round((subtotal - discountTotal) * 100) / 100;
+    const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotals(
+      lineSubtotals, args.discountAmount, args.discountType
+    );
 
     const invId = await ctx.table('invoices').insert({
       number,
@@ -478,22 +489,9 @@ export const update = createOrgMutation()({
         subtotal: calculateLineSubtotal(line),
       }));
 
-      const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
-
-      let discountTotal = 0;
-      const discAmt = args.discountAmount ?? inv.discountAmount;
-      const discType = args.discountType ?? inv.discountType;
-      if (discAmt) {
-        if (discType === 'percentage') {
-          discountTotal = subtotal * (discAmt / 100);
-        } else {
-          discountTotal = discAmt;
-        }
-      }
-
-      // Note: taxAmount already included in line subtotals via calculateLineSubtotal
-      const taxAmount = lineSubtotals.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
-      const totalAmount = Math.round((subtotal - discountTotal) * 100) / 100;
+      const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotals(
+        lineSubtotals, args.discountAmount ?? inv.discountAmount, args.discountType ?? inv.discountType
+      );
 
       patchData.subtotal = subtotal;
       patchData.taxAmount = taxAmount;
@@ -528,18 +526,12 @@ export const update = createOrgMutation()({
       }
     } else if (args.discountAmount !== undefined || args.discountType !== undefined) {
       // Re-calculate totals if only discount changed
-      const discAmt = args.discountAmount ?? inv.discountAmount;
-      const discType = args.discountType ?? inv.discountType;
-      let discountTotal = 0;
-      if (discAmt) {
-        if (discType === 'percentage') {
-          discountTotal = inv.subtotal * (discAmt / 100);
-        } else {
-          discountTotal = discAmt;
-        }
-      }
-      // Note: taxAmount already included in inv.subtotal via calculateLineSubtotal
-      const totalAmount = Math.round((inv.subtotal - discountTotal) * 100) / 100;
+      // Use a single-line representation of inv.subtotal (already tax-inclusive) for the helper
+      const { totalAmount } = calculateInvoiceTotals(
+        [{ subtotal: inv.subtotal, taxAmount: inv.taxAmount }],
+        args.discountAmount ?? inv.discountAmount,
+        args.discountType ?? inv.discountType
+      );
       patchData.totalAmount = totalAmount;
       patchData.amountDue = totalAmount;
     }
@@ -582,18 +574,35 @@ export const createFromSaleOrder = createOrgMutation()({
     const now = Date.now();
     const dueDate = now + 30 * 24 * 60 * 60 * 1000; // Default 30 days
 
+    // SO subtotal is pre-tax; invoice convention requires tax-inclusive subtotal.
+    // Recalculate using invoice's calculateLineSubtotal via helper.
+    const lines = await so.edge('lines');
+    const soLineSubtotals = lines.map((l: any) => ({
+      subtotal: calculateLineSubtotal({
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        discount: l.discount,
+        discountType: l.discountType,
+        taxAmount: l.taxAmount,
+      }),
+      taxAmount: l.taxAmount,
+    }));
+    const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotals(
+      soLineSubtotals, so.discountAmount, so.discountType
+    );
+
     const invId = await ctx.table('invoices').insert({
       number,
       type: 'customer_invoice',
       state: 'draft',
       invoiceDate: now,
       dueDate,
-      subtotal: so.subtotal,
+      subtotal,
       discountAmount: so.discountAmount,
       discountType: so.discountType,
-      taxAmount: so.taxAmount,
-      totalAmount: so.totalAmount,
-      amountDue: so.totalAmount,
+      taxAmount,
+      totalAmount,
+      amountDue: totalAmount,
       currency: so.currency,
       paymentStatus: 'unpaid',
       source: 'sale_order',
@@ -604,7 +613,6 @@ export const createFromSaleOrder = createOrgMutation()({
       ownerId: ctx.userId,
     });
 
-    const lines = await so.edge('lines');
     for (const line of lines) {
       await ctx.table('invoiceLines').insert({
         productName: line.productName,
@@ -621,7 +629,6 @@ export const createFromSaleOrder = createOrgMutation()({
       });
     }
 
-    const totalAmount = so.totalAmount;
     const newInvoiceStatus = totalAmount >= so.totalAmount ? 'invoiced' : 'partially';
     await so.patch({ invoiceStatus: newInvoiceStatus });
 

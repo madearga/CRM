@@ -111,7 +111,9 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
       : 0;
 
     const tax = form.lines.reduce((sum, l) => sum + (l.taxAmount ?? 0), 0);
-    const total = Math.round((sub - disc + tax) * 100) / 100;
+    // sub already includes tax via calculateLineSubtotal convention
+    // backend: totalAmount = subtotal - discount (no separate tax addition)
+    const total = Math.round((sub - disc) * 100) / 100;
 
     return { subtotal: sub, taxAmount: tax, totalAmount: total };
   }, [form.lines, form.discountAmount, form.discountType]);
