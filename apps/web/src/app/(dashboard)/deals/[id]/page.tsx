@@ -22,6 +22,7 @@ import {
   Clock,
   Archive,
   RotateCcw,
+  ShoppingCart,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -37,6 +38,26 @@ export default function DealDetailPage() {
   const { data: deal, isLoading } = useAuthQuery(api.deals.getById, { id: dealId as any });
   const archiveDeal = useAuthMutation(api.deals.archive);
   const restoreDeal = useAuthMutation(api.deals.restore);
+  const convertToSO = useAuthMutation(api.deals.convertToSaleOrder);
+
+  const handleConvertToSO = async () => {
+    try {
+      const soId = await convertToSO.mutateAsync({
+        id: dealId as any,
+        lines: [
+          {
+            productName: deal?.title ?? 'Deal Item',
+            quantity: 1,
+            unitPrice: deal?.value ?? 0,
+          },
+        ],
+      });
+      toast.success('Converted to Sale Order');
+      router.push(`/sales/${soId}`);
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Conversion failed');
+    }
+  };
 
   const handleArchive = async () => {
     try {
@@ -101,6 +122,12 @@ export default function DealDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {deal.stage === 'won' && (
+            <Button variant="default" size="sm" onClick={handleConvertToSO} disabled={convertToSO.isPending}>
+              <ShoppingCart className="mr-1 h-4 w-4" />
+              {convertToSO.isPending ? 'Converting...' : 'Convert to SO'}
+            </Button>
+          )}
           {deal.archivedAt ? (
             <Button variant="outline" size="sm" onClick={handleRestore}>
               <RotateCcw className="mr-1 h-3.5 w-3.5" />

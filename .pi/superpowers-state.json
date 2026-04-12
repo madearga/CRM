@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "skipped",
-      "plan": "skipped",
-      "execute": "complete",
-      "verify": "skipped",
-      "review": "active",
+      "brainstorm": "pending",
+      "plan": "pending",
+      "execute": "active",
+      "verify": "pending",
+      "review": "pending",
       "finish": "pending"
     },
-    "currentPhase": "review",
+    "currentPhase": "execute",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -20,7 +20,7 @@
     "prompted": {
       "brainstorm": false,
       "plan": false,
-      "execute": true,
+      "execute": false,
       "verify": false,
       "review": false,
       "finish": false
@@ -30,18 +30,18 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "convex/schema.ts",
-      "convex/products.ts",
-      "convex/productCategories.ts",
-      "convex/productVariants.ts",
-      "convex/shared/money.ts",
-      "apps/web/src/app/(dashboard)/products/columns.tsx",
-      "apps/web/src/lib/format-money.ts",
-      "apps/web/src/components/products/product-form.tsx",
-      "apps/web/src/app/(dashboard)/products/[id]/page.tsx",
-      "apps/web/src/components/products/variant-manager.tsx",
-      "apps/web/src/app/(dashboard)/products/page.tsx",
-      "apps/web/src/app/(dashboard)/products/[id]/edit/page.tsx"
+      "apps/web/src/app/(dashboard)/layout.tsx",
+      "apps/web/src/hooks/use-sales-params.ts",
+      "apps/web/src/app/(dashboard)/sales/columns.tsx",
+      "apps/web/src/app/(dashboard)/sales/page.tsx",
+      "apps/web/src/app/(dashboard)/sales/new/page.tsx",
+      "apps/web/src/app/(dashboard)/sales/[id]/page.tsx",
+      "apps/web/src/app/(dashboard)/sales/[id]/edit/page.tsx",
+      "apps/web/src/components/sales/amount-summary.tsx",
+      "apps/web/src/components/sales/line-item-editor.tsx",
+      "apps/web/src/components/sales/sale-order-form.tsx",
+      "apps/web/src/app/(dashboard)/deals/[id]/page.tsx",
+      "convex/schema.ts"
     ],
     "redVerificationPending": false
   },

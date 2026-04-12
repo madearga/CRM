@@ -11,6 +11,7 @@ import {
   Moon,
   Package,
   Settings,
+  ShoppingCart,
   Sun,
   Users,
 } from 'lucide-react';
@@ -45,6 +46,7 @@ const navItems = [
   { title: 'Contacts', href: '/contacts', icon: Users },
   { title: 'Deals', href: '/deals', icon: Handshake },
   { title: 'Products', href: '/products', icon: Package },
+  { title: 'Sales', href: '/sales', icon: ShoppingCart },
   { title: 'Activities', href: '/activities', icon: Activity },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];
