@@ -17,6 +17,9 @@ import { toast } from 'sonner';
 import { LineItemEditor, type LineItem } from './line-item-editor';
 import { AmountSummary } from './amount-summary';
 
+interface CompanyOption { id: string; name: string }
+interface ContactOption { id: string; fullName: string }
+
 interface SaleOrderFormProps {
   saleOrderId?: string;
   initialData?: {
@@ -113,7 +116,30 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
       return;
     }
 
-    const payload: any = {
+    const payload: {
+      companyId?: string;
+      contactId?: string;
+      orderDate: number;
+      validUntil?: number;
+      deliveryDate?: number;
+      deliveryAddress?: string;
+      internalNotes?: string;
+      customerNotes?: string;
+      terms?: string;
+      discountAmount?: number;
+      discountType?: 'percentage' | 'fixed';
+      lines: Array<{
+        productName: string;
+        description?: string;
+        quantity: number;
+        unitPrice: number;
+        discount?: number;
+        discountType?: 'percentage' | 'fixed';
+        taxAmount?: number;
+        productId?: string;
+        productVariantId?: string;
+      }>;
+    } = {
       companyId: form.companyId || undefined,
       contactId: form.contactId || undefined,
       orderDate: new Date(form.orderDate).getTime(),
@@ -162,8 +188,9 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         toast.success('Sale order created');
         router.push(`/sales/${newId}`);
       }
-    } catch (e: any) {
-      toast.error(e.data?.message ?? `Failed to ${isEdit ? 'update' : 'create'} sale order`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : `Failed to ${isEdit ? 'update' : 'create'} sale order`;
+      toast.error(message);
     }
   };
 
@@ -195,7 +222,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                 <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No company</SelectItem>
-                  {(companies ?? []).map((c: any) => (
+                  {(companies ?? []).map((c: CompanyOption) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -207,7 +234,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                 <SelectTrigger><SelectValue placeholder="Select contact" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No contact</SelectItem>
-                  {(contacts ?? []).map((c: any) => (
+                  {(contacts ?? []).map((c: ContactOption) => (
                     <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>
                   ))}
                 </SelectContent>
@@ -260,7 +287,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
                 onChange={(e) => setForm((prev) => ({ ...prev, discountAmount: e.target.value }))}
                 className="w-32"
               />
-              <Select value={form.discountType} onValueChange={(v: any) => setForm((prev) => ({ ...prev, discountType: v }))}>
+              <Select value={form.discountType} onValueChange={(v: 'percentage' | 'fixed') => setForm((prev) => ({ ...prev, discountType: v }))}>
                 <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
