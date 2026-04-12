@@ -16,6 +16,10 @@ import {
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
 import { formatMoney } from '@/lib/format-money';
+import { useMemo } from 'react';
+import { PdfDownloadButton } from '@/components/pdf-download-button';
+import { QuotationPDF } from '@/pdf/quotation-pdf';
+import type { QuotationPDFData } from '@/pdf/quotation-pdf';
 
 const STATE_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400',
@@ -117,6 +121,34 @@ export default function SaleOrderDetailPage() {
     );
   }
 
+  const quotationPdfData: QuotationPDFData = useMemo(() => ({
+    number: so.number,
+    state: so.state,
+    orderDate: so.orderDate,
+    validUntil: so.validUntil,
+    deliveryDate: so.deliveryDate,
+    companyName: so.companyName,
+    contactName: so.contactName,
+    lines: so.lines.map((l: any) => ({
+      productName: l.productName,
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      discount: l.discount,
+      discountType: l.discountType,
+      taxAmount: l.taxAmount,
+      subtotal: l.subtotal,
+    })),
+    subtotal: so.subtotal,
+    discountAmount: so.discountAmount,
+    discountType: so.discountType,
+    taxAmount: so.taxAmount,
+    totalAmount: so.totalAmount,
+    customerNotes: so.customerNotes,
+    internalNotes: so.internalNotes,
+    terms: so.terms,
+  }), [so]);
+
   const actions = WORKFLOW_ACTIONS[so.state] ?? [];
 
   return (
@@ -156,6 +188,10 @@ export default function SaleOrderDetailPage() {
               <Pencil className="mr-1 h-4 w-4" />Edit
             </Button>
           )}
+          <PdfDownloadButton
+            doc={<QuotationPDF data={quotationPdfData} />}
+            fileName={`${so.number}.pdf`}
+          />
           {so.archivedAt ? (
             <Button variant="outline" size="sm" onClick={handleRestore}>
               <RotateCcw className="mr-1 h-4 w-4" />Restore

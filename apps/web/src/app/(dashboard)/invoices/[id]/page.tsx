@@ -22,6 +22,10 @@ import { PaymentMethodBadge } from '@/components/invoices/payment-method-badge';
 import { InvoiceTypeBadge } from '@/components/invoices/invoice-type-badge';
 import { InvoiceStatusBadge } from '@/components/invoices/invoice-status-badge';
 import Link from 'next/link';
+import { useMemo } from 'react';
+import { PdfDownloadButton } from '@/components/pdf-download-button';
+import { InvoicePDF } from '@/pdf/invoice-pdf';
+import type { InvoicePDFData } from '@/pdf/invoice-pdf';
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -88,6 +92,36 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const invoicePdfData: InvoicePDFData = useMemo(() => ({
+    number: invoice.number,
+    type: invoice.type,
+    state: invoice.state,
+    invoiceDate: invoice.invoiceDate,
+    dueDate: invoice.dueDate,
+    companyName: invoice.companyName,
+    contactName: invoice.contactName,
+    lines: invoice.lines.map((l: any) => ({
+      productName: l.productName,
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      discount: l.discount,
+      discountType: l.discountType,
+      taxAmount: l.taxAmount,
+      subtotal: l.subtotal,
+    })),
+    subtotal: invoice.subtotal,
+    discountAmount: invoice.discountAmount,
+    discountType: invoice.discountType,
+    taxAmount: invoice.taxAmount,
+    totalAmount: invoice.totalAmount,
+    amountDue: invoice.amountDue,
+    currency: invoice.currency,
+    notes: invoice.notes,
+    internalNotes: invoice.internalNotes,
+    paymentTermName: invoice.paymentTermName,
+  }), [invoice]);
+
   const canPost = invoice.state === 'draft';
   const canCancel = ['draft', 'posted'].includes(invoice.state);
   const canPay = ['draft', 'posted'].includes(invoice.state) && invoice.amountDue > 0;
@@ -141,6 +175,10 @@ export default function InvoiceDetailPage() {
               <Pencil className="mr-1 h-4 w-4" />Edit
             </Button>
           )}
+          <PdfDownloadButton
+            doc={<InvoicePDF data={invoicePdfData} />}
+            fileName={`${invoice.number}.pdf`}
+          />
           {invoice.archivedAt ? (
             <Button variant="outline" size="sm" onClick={handleRestore}>
               <RotateCcw className="mr-1 h-4 w-4" />Restore
