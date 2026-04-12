@@ -154,6 +154,7 @@ const schema = defineEntSchema(
       .edges('invoices', { ref: 'ownerId' })
       .edges('payments', { ref: 'ownerId' })
       .edges('quotationTemplates', { ref: 'ownerId' })
+      .edges('subscriptionTemplates', { ref: 'ownerId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually
@@ -651,6 +652,7 @@ const schema = defineEntSchema(
       saleOrderId: v.optional(v.id('saleOrders')),
       notes: v.optional(v.string()),
       internalNotes: v.optional(v.string()),
+      subscriptionTemplateId: v.optional(v.id('subscriptionTemplates')),
       archivedAt: v.optional(v.number()),
     })
       .field('organizationId', v.id('organization'), { index: true })
@@ -660,6 +662,7 @@ const schema = defineEntSchema(
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
       .edge('saleOrder', { to: 'saleOrders', field: 'saleOrderId', optional: true })
+      .edge('subscription', { to: 'subscriptionTemplates', field: 'subscriptionTemplateId', optional: true })
       .edges('lines', { to: 'invoiceLines', ref: 'invoiceId' })
       .edges('payments', { to: 'payments', ref: 'invoiceId' })
       .index('organizationId_state', ['organizationId', 'state'])
@@ -803,6 +806,73 @@ const schema = defineEntSchema(
       .edge('pricelist', { to: 'pricelists', field: 'pricelistId' })
       .edge('product', { to: 'products', field: 'productId', optional: true })
       .index('organizationId_pricelistId', ['organizationId', 'pricelistId']),
+
+    // Subscription Templates (Module 7)
+    // ---------------------
+
+    subscriptionTemplates: defineEnt({
+      name: v.string(),
+      description: v.optional(v.string()),
+      interval: v.union(
+        v.literal('weekly'),
+        v.literal('monthly'),
+        v.literal('quarterly'),
+        v.literal('yearly'),
+      ),
+      intervalCount: v.optional(v.number()),
+      billingDay: v.number(),
+      startDate: v.number(),
+      endDate: v.optional(v.number()),
+      autoGenerateInvoice: v.optional(v.boolean()),
+      autoPostInvoice: v.optional(v.boolean()),
+      numberOfInvoices: v.optional(v.number()),
+      generatedCount: v.optional(v.number()),
+      nextBillingDate: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      discountAmount: v.optional(v.number()),
+      discountType: v.optional(v.union(v.literal('percentage'), v.literal('fixed'))),
+      paymentTermId: v.optional(v.id('paymentTerms')),
+      state: v.optional(v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('expired'),
+        v.literal('cancelled'),
+      )),
+      archivedAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('ownerId', v.id('user'))
+      .field('companyId', v.optional(v.id('companies')))
+      .field('contactId', v.optional(v.id('contacts')))
+      .edge('owner', { to: 'user', field: 'ownerId' })
+      .edge('company', { to: 'companies', field: 'companyId', optional: true })
+      .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
+      .edges('lines', { to: 'subscriptionLines', ref: 'subscriptionTemplateId' })
+      .edges('generatedInvoices', { to: 'invoices', ref: 'subscriptionTemplateId' })
+      .index('organizationId_state', ['organizationId', 'state'])
+      .index('organizationId_nextBillingDate', ['organizationId', 'nextBillingDate'])
+      .searchIndex('search_subscriptions', {
+        searchField: 'name',
+        filterFields: ['organizationId'],
+      }),
+
+    subscriptionLines: defineEnt({
+      productName: v.string(),
+      description: v.optional(v.string()),
+      quantity: v.number(),
+      unitPrice: v.number(),
+      discount: v.optional(v.number()),
+      discountType: v.optional(v.union(v.literal('percentage'), v.literal('fixed'))),
+      taxAmount: v.optional(v.number()),
+      subtotal: v.number(),
+      productId: v.optional(v.id('products')),
+      taxId: v.optional(v.id('taxes')),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('subscriptionTemplateId', v.id('subscriptionTemplates'))
+      .edge('subscription', { to: 'subscriptionTemplates', field: 'subscriptionTemplateId' })
+      .index('organizationId_subscriptionTemplateId', ['organizationId', 'subscriptionTemplateId']),
 
     payments: defineEnt({
       amount: v.number(),

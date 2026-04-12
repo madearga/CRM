@@ -30,9 +30,7 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/schema.ts",
-      "/Users/madearga/Desktop/crm/convex/analytics.ts",
-      "/Users/madearga/Desktop/crm/convex/invoiceReminders.ts"
+      "/Users/madearga/Desktop/crm/convex/schema.ts"
     ],
     "redVerificationPending": false
   },

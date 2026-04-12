@@ -266,7 +266,7 @@ export const resolvePrice = createOrgQuery()({
     }
 
     const basePrice = product.price ?? 0;
-    let pricelistId: string | undefined;
+    let pricelistId: any;
     let pricelist: any;
 
     // 2. Check if company has a pricelist assigned
@@ -363,7 +363,7 @@ export const resolvePrice = createOrgQuery()({
         }
       } else if (pricelist.type === 'percentage_discount' && bestRule.discountPercent != null) {
         discountPercent = bestRule.discountPercent;
-        finalPrice = basePrice * (1 - discountPercent / 100);
+        finalPrice = basePrice * (1 - (discountPercent as number) / 100);
       } else if (pricelist.type === 'formula' && bestRule.formula) {
         // Simple formula evaluation: base * 0.9, base - 1000, etc.
         try {
@@ -513,7 +513,7 @@ export const resolvePrices = createOrgQuery()({
             if (basePrice > 0) discountPercent = Math.round((1 - finalPrice / basePrice) * 10000) / 100;
           } else if (pricelist.type === 'percentage_discount' && bestRule.discountPercent != null) {
             discountPercent = bestRule.discountPercent;
-            finalPrice = basePrice * (1 - discountPercent / 100);
+            finalPrice = basePrice * (1 - (discountPercent as number) / 100);
           } else if (pricelist.type === 'formula' && bestRule.formula) {
             try {
               const formula = bestRule.formula.replace(/base/gi, String(basePrice));
@@ -646,7 +646,7 @@ export const update = createOrgMutation()({
       // Delete existing rules
       const existingRules = await pricelist.edge('rules');
       for (const rule of existingRules) {
-        await rule.delete();
+        await ctx.db.delete(rule._id);
       }
 
       // Insert new rules
@@ -738,13 +738,13 @@ export const remove = createOrgMutation()({
     // Delete all rules
     const rules = await pricelist.edge('rules');
     for (const rule of rules) {
-      await rule.delete();
+      await ctx.db.delete(rule._id);
     }
 
     // Clear pricelistId from companies
     const companies = await pricelist.edge('applicableCompanies');
     for (const company of companies) {
-      await company.patch({ pricelistId: undefined });
+      await ctx.db.patch(company._id, { pricelistId: undefined });
     }
 
     await pricelist.delete();

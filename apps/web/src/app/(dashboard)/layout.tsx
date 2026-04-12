@@ -16,6 +16,7 @@ import {
   Sun,
   Users,
   LayoutTemplate,
+  RefreshCw,
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
@@ -50,6 +51,7 @@ const navItems = [
   { title: 'Products', href: '/products', icon: Package },
   { title: 'Sales', href: '/sales', icon: ShoppingCart },
   { title: 'Invoices', href: '/invoices', icon: FileText },
+  { title: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
   { title: 'Templates', href: '/templates', icon: LayoutTemplate },
   { title: 'Activities', href: '/activities', icon: Activity },
   { title: 'Settings', href: '/settings', icon: Settings },

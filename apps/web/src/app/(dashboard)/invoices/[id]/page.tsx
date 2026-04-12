@@ -228,6 +228,16 @@ export default function InvoiceDetailPage() {
                 } 
               />
             )}
+            {(invoice as any).subscriptionTemplateId && (
+              <DetailRow
+                label="Subscription"
+                value={
+                  <Link href={`/subscriptions/${(invoice as any).subscriptionTemplateId}`} className="flex items-center gap-1 text-blue-600 hover:underline">
+                    {(invoice as any).subscriptionName ?? 'View Subscription'} <ExternalLink className="h-3 w-3" />
+                  </Link>
+                }
+              />
+            )}
           </CardContent>
         </Card>
 
