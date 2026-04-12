@@ -153,6 +153,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           terms: payload.terms,
           discountAmount: payload.discountAmount,
           discountType: payload.discountType,
+          lines: payload.lines,
         });
         toast.success('Sale order updated');
         router.push(`/sales/${saleOrderId}`);

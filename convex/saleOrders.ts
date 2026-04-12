@@ -420,6 +420,17 @@ export const update = createOrgMutation()({
     terms: z.string().optional(),
     discountAmount: z.number().optional(),
     discountType: z.enum(['percentage', 'fixed']).optional(),
+    lines: z.optional(z.array(z.object({
+      productName: z.string(),
+      description: z.string().optional(),
+      quantity: z.number().min(0.01),
+      unitPrice: z.number(),
+      discount: z.number().optional(),
+      discountType: z.enum(['percentage', 'fixed']).optional(),
+      taxAmount: z.number().optional(),
+      productId: zid('products').optional(),
+      productVariantId: zid('productVariants').optional(),
+    })).min(1)),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
@@ -439,6 +450,26 @@ export const update = createOrgMutation()({
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
+
+    // Replace lines if provided
+    if (args.lines) {
+      const existingLines = await so.edge('lines');
+      for (const line of existingLines) {
+        await line.delete();
+      }
+      const lineSubtotals = args.lines.map((line) => ({
+        ...line,
+        subtotal: calculateLineSubtotal(line),
+      }));
+      for (const line of lineSubtotals) {
+        await ctx.table('saleOrderLines').insert({
+          ...line,
+          saleOrderId: id,
+          organizationId: ctx.orgId,
+        });
+      }
+      await recalculateTotals(ctx, so);
+    }
 
     // Recalculate total if discount changed
     if (cleanUpdates.discountAmount !== undefined || cleanUpdates.discountType !== undefined) {
