@@ -5,6 +5,7 @@ import type { Id } from './_generated/dataModel';
 import { internal } from './_generated/api';
 import { createInternalMutation } from './functions';
 import { getEnv } from './helpers/getEnv';
+import { nextSequence } from './shared/sequenceGenerator';
 
 const getAdminConfig = () => {
   const adminEmail = getEnv().ADMIN[0] || 'admin@example.com';
@@ -53,6 +54,79 @@ const SAMPLE_DEALS = [
 
 const ACTIVITY_TYPES = ['call', 'email', 'meeting', 'note'] as const;
 
+const SAMPLE_SALE_ORDERS = [
+  {
+    title: 'TechVentures - Platform Development SO',
+    state: 'draft' as const,
+    currency: 'IDR',
+    companyIndex: 0,
+    contactIndex: 0,
+    dealIndex: 0,
+    daysAgo: 10,
+    lines: [
+      { productName: 'Platform Development - Phase 1', quantity: 1, unitPrice: 125000000 },
+      { productName: 'Project Management', quantity: 3, unitPrice: 8333333 },
+    ],
+  },
+  {
+    title: 'CloudFirst - Consulting Package SO',
+    state: 'confirmed' as const,
+    currency: 'IDR',
+    companyIndex: 2,
+    contactIndex: 4,
+    dealIndex: 4,
+    daysAgo: 40,
+    lines: [
+      { productName: 'Cloud Architecture Review', quantity: 1, unitPrice: 5000 },
+      { productName: 'Migration Strategy', quantity: 1, unitPrice: 4000 },
+      { productName: 'Team Training (2 days)', quantity: 2, unitPrice: 1500 },
+    ],
+  },
+  {
+    title: 'Digital Nusantara - Website Revamp SO',
+    state: 'sent' as const,
+    currency: 'IDR',
+    companyIndex: 1,
+    contactIndex: 2,
+    dealIndex: 2,
+    daysAgo: 5,
+    lines: [
+      { productName: 'Website Design', quantity: 1, unitPrice: 25000000 },
+      { productName: 'Frontend Development', quantity: 1, unitPrice: 35000000 },
+      { productName: 'CMS Integration', quantity: 1, unitPrice: 15000000 },
+    ],
+  },
+  {
+    title: 'Startup Garage - Demo Day Platform SO',
+    state: 'draft' as const,
+    currency: 'IDR',
+    companyIndex: 3,
+    contactIndex: 5,
+    dealIndex: 13,
+    daysAgo: 2,
+    lines: [
+      { productName: 'Platform Setup', quantity: 1, unitPrice: 30000000 },
+      { productName: 'Live Streaming Module', quantity: 1, unitPrice: 25000000 },
+      { productName: 'Voting System', quantity: 1, unitPrice: 20000000 },
+      { productName: 'Analytics Dashboard', quantity: 1, unitPrice: 5000000 },
+    ],
+  },
+  {
+    title: 'PayEasy - Payment Gateway Module SO',
+    state: 'invoiced' as const,
+    currency: 'IDR',
+    companyIndex: 4,
+    contactIndex: 6,
+    dealIndex: 6,
+    daysAgo: 8,
+    lines: [
+      { productName: 'Payment Gateway Integration', quantity: 1, unitPrice: 6000 },
+      { productName: 'Transaction Processing Module', quantity: 1, unitPrice: 1500 },
+      { productName: 'Security Audit', quantity: 1, unitPrice: 500 },
+    ],
+  },
+];
+
 // Main seed function
 export const seed = createInternalMutation()({
   args: {},
@@ -86,6 +160,13 @@ export const cleanupSeedData = createInternalMutation()({
 
     const auditLogs = await ctx.table('auditLogs').take(1000);
     for (const a of auditLogs) await ctx.db.delete(a._id);
+
+    // Delete sale orders and their lines first
+    const saleOrderLines = await ctx.table('saleOrderLines').take(1000);
+    for (const l of saleOrderLines) await ctx.db.delete(l._id);
+
+    const saleOrders = await ctx.table('saleOrders').take(1000);
+    for (const s of saleOrders) await ctx.db.delete(s._id);
 
     const deals = await ctx.table('deals').take(1000);
     for (const d of deals) await ctx.db.delete(d._id);
@@ -188,7 +269,60 @@ export const seedCrmData = createInternalMutation()({
     }
     console.info(`  ✅ Created ${dealIds.length} deals`);
 
-    // 4. Create activities
+    // 4. Create sale orders
+    console.info('📄 Creating sale orders...');
+    const saleOrderIds: Id<'saleOrders'>[] = [];
+    for (const so of SAMPLE_SALE_ORDERS) {
+      const { companyIndex, contactIndex, dealIndex, daysAgo, lines, ...soData } = so;
+      const now = Date.now();
+      const orderDate = now - daysAgo * 24 * 60 * 60 * 1000;
+      const validUntil = now + (14 - daysAgo) * 24 * 60 * 60 * 1000;
+      const deliveryDate = now + (30 - daysAgo) * 24 * 60 * 60 * 1000;
+
+      const number = await nextSequence(ctx, orgId, 'saleOrder', orderDate);
+
+      // Calculate line subtotals
+      const lineSubtotals = lines.map((l) => ({
+        ...l,
+        subtotal: l.quantity * l.unitPrice,
+      }));
+
+      const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
+
+      // Create sale order first
+      const soId = await ctx.table('saleOrders').insert({
+        number,
+        state: soData.state,
+        orderDate,
+        validUntil,
+        deliveryDate,
+        companyId: companyIds[companyIndex],
+        contactId: contactIds[contactIndex],
+        dealId: dealIds[dealIndex],
+        currency: soData.currency,
+        subtotal,
+        taxAmount: 0,
+        totalAmount: subtotal,
+        source: 'deal',
+        invoiceStatus: 'to_invoice',
+        deliveryStatus: 'to_deliver',
+        organizationId: orgId,
+        ownerId: adminUser._id,
+      });
+
+      // Create sale order lines
+      for (const line of lineSubtotals) {
+        await ctx.table('saleOrderLines').insert({
+          ...line,
+          saleOrderId: soId,
+          organizationId: orgId,
+        });
+      }
+      saleOrderIds.push(soId);
+    }
+    console.info(`  ✅ Created ${saleOrderIds.length} sale orders`);
+
+    // 5. Create activities
     console.info('📋 Creating activities...');
     let activityCount = 0;
     for (let i = 0; i < dealIds.length; i++) {
