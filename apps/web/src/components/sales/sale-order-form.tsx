@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Bookmark, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineItemEditor, type LineItem } from './line-item-editor';
 import { AmountSummary } from './amount-summary';
@@ -57,6 +57,24 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
   const router = useRouter();
   const isEdit = !!saleOrderId;
   const isDirty = useRef(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [saveTemplateName, setSaveTemplateName] = useState('');
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+
+  // Template list for selector
+  const { data: templates } = useAuthPaginatedQuery(api.quotationTemplates.list, {
+    search: undefined,
+    includeArchived: false,
+  }, { initialNumItems: 100 });
+
+  // Template detail for auto-fill
+  const { data: templateDetail } = useAuthQuery(
+    api.quotationTemplates.getById,
+    selectedTemplateId ? { id: selectedTemplateId as any } : 'skip',
+  );
+
+  // Save as template mutation
+  const saveAsTemplate = useAuthMutation(api.quotationTemplates.createFromSaleOrder);
 
   const markDirty = () => { isDirty.current = true; };
   const updateHeader = (fn: (prev: typeof header) => typeof header) => {
@@ -105,6 +123,36 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     }
   }, [initialData]);
 
+  // Auto-fill from template when template detail loads
+  useEffect(() => {
+    if (templateDetail && !initialData) {
+      isDirty.current = true;
+      setHeader((prev) => ({
+        ...prev,
+        internalNotes: templateDetail.internalNotes ?? prev.internalNotes,
+        customerNotes: templateDetail.customerNotes ?? prev.customerNotes,
+        terms: templateDetail.terms ?? prev.terms,
+        discountAmount: templateDetail.discountAmount != null ? String(templateDetail.discountAmount) : prev.discountAmount,
+        discountType: templateDetail.discountType ?? prev.discountType,
+      }));
+      setLines(
+        templateDetail.lines.length > 0
+          ? templateDetail.lines.map((l) => ({
+              productName: l.productName,
+              description: l.description,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              discount: l.discount,
+              discountType: l.discountType,
+              taxAmount: l.taxAmount,
+              productId: l.productId,
+              productVariantId: undefined,
+            }))
+          : [{ productName: '', quantity: 1, unitPrice: 0 }],
+      );
+    }
+  }, [templateDetail, initialData]);
+
   const createSO = useAuthMutation(api.saleOrders.create);
   const updateSO = useAuthMutation(api.saleOrders.update);
 
@@ -145,6 +193,26 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
 
     return { subtotal: sub, discountValue: disc, taxAmount: tax, totalAmount: total };
   }, [lines, header.discountAmount, header.discountType]);
+
+  const handleSaveAsTemplate = async () => {
+    if (!saleOrderId) {
+      toast.error('Save order first, then save as template');
+      return;
+    }
+    const name = saveTemplateName.trim();
+    if (!name) {
+      toast.error('Enter a template name');
+      return;
+    }
+    try {
+      await saveAsTemplate.mutateAsync({ saleOrderId: saleOrderId as any, name, description: `From SO ${name}` });
+      toast.success('Template created from sale order');
+      setShowSaveTemplate(false);
+      setSaveTemplateName('');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create template');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,6 +301,27 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           <h2 className="text-lg font-semibold">{isEdit ? 'Edit Sale Order' : 'New Quotation'}</h2>
         </div>
       </div>
+
+      {/* Template Selector */}
+      {!isEdit && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm uppercase tracking-wider">Load from Template</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Bookmark className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedTemplateId || '__none__'} onValueChange={(v) => setSelectedTemplateId(v === '__none__' ? '' : v)}>
+                <SelectTrigger className="w-[300px]"><SelectValue placeholder="Select a template..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No template</SelectItem>
+                  {(templates ?? []).map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (default)' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customer & Dates */}
       <Card>
@@ -354,6 +443,28 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           {isPending ? 'Saving...' : isEdit ? 'Update Order' : 'Create Quotation'}
         </Button>
         <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
+        {isEdit && (
+          <>
+            {showSaveTemplate ? (
+              <div className="flex items-center gap-2 ml-auto">
+                <Input
+                  placeholder="Template name..."
+                  value={saveTemplateName}
+                  onChange={(e) => setSaveTemplateName(e.target.value)}
+                  className="w-48"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={handleSaveAsTemplate} disabled={saveAsTemplate.isPending}>
+                  <Save className="mr-1 h-4 w-4" />Save
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowSaveTemplate(false)}>Cancel</Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={() => setShowSaveTemplate(true)}>
+                <Bookmark className="mr-1 h-4 w-4" />Save as Template
+              </Button>
+            )}
+          </>
+        )}
       </div>
     </form>
   );

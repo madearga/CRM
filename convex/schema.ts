@@ -153,6 +153,7 @@ const schema = defineEntSchema(
       .edges('saleOrders', { ref: 'ownerId' })
       .edges('invoices', { ref: 'ownerId' })
       .edges('payments', { ref: 'ownerId' })
+      .edges('quotationTemplates', { ref: 'ownerId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually
@@ -676,6 +677,47 @@ const schema = defineEntSchema(
       .edge('product', { to: 'products', field: 'productId', optional: true })
       .edge('tax', { to: 'taxes', field: 'taxId', optional: true })
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
+
+    // ---------------------
+    // Quotation Templates (Module 4)
+    // ---------------------
+
+    quotationTemplates: defineEnt({
+      name: v.string(),
+      description: v.optional(v.string()),
+      discountAmount: v.optional(v.number()),
+      discountType: v.optional(v.union(v.literal('percentage'), v.literal('fixed'))),
+      internalNotes: v.optional(v.string()),
+      customerNotes: v.optional(v.string()),
+      terms: v.optional(v.string()),
+      currency: v.optional(v.string()),
+      validForDays: v.optional(v.number()),
+      isDefault: v.optional(v.boolean()),
+      archivedAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('ownerId', v.id('user'))
+      .edges('lines', { to: 'quotationTemplateLines', ref: 'templateId' })
+      .index('organizationId_name', ['organizationId'])
+      .searchIndex('search_templates', { searchField: 'name', filterFields: ['organizationId'] }),
+
+    quotationTemplateLines: defineEnt({
+      productName: v.string(),
+      description: v.optional(v.string()),
+      quantity: v.number(),
+      unitPrice: v.number(),
+      discount: v.optional(v.number()),
+      discountType: v.optional(v.union(v.literal('percentage'), v.literal('fixed'))),
+      taxAmount: v.optional(v.number()),
+      subtotal: v.number(),
+      productId: v.optional(v.id('products')),
+      taxId: v.optional(v.id('taxes')),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('templateId', v.id('quotationTemplates'))
+      .field('productId', v.optional(v.id('products')))
+      .edge('template', { to: 'quotationTemplates', field: 'templateId' })
+      .index('organizationId_templateId', ['organizationId', 'templateId']),
 
     payments: defineEnt({
       amount: v.number(),
