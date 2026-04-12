@@ -19,7 +19,7 @@
     },
     "prompted": {
       "brainstorm": false,
-      "plan": false,
+      "plan": true,
       "execute": false,
       "verify": false,
       "review": false,
@@ -27,26 +27,14 @@
     }
   },
   "tdd": {
-    "phase": "green",
-    "testFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/__tests__/csv-utils.test.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/__tests__/csv-utils.test.ts"
-    ],
-    "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/contacts.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-upload.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/use-csv-import.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/import-contacts-dialog.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-map-columns.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-result.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/step-preview.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/csv-import/csv-utils.ts"
-    ],
+    "phase": "idle",
+    "testFiles": [],
+    "sourceFiles": [],
     "redVerificationPending": false
   },
   "debug": {
     "active": false,
-    "investigated": true,
+    "investigated": false,
     "fixAttempts": 0
   },
   "verification": {

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Moon,
+  Package,
   Settings,
   Sun,
   Users,
@@ -43,6 +44,7 @@ const navItems = [
   { title: 'Companies', href: '/companies', icon: Building2 },
   { title: 'Contacts', href: '/contacts', icon: Users },
   { title: 'Deals', href: '/deals', icon: Handshake },
+  { title: 'Products', href: '/products', icon: Package },
   { title: 'Activities', href: '/activities', icon: Activity },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];

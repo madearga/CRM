@@ -1,14 +1,14 @@
 {
-  "name": "fix-csv-import-review",
-  "taskFile": ".ralph/fix-csv-import-review.md",
+  "name": "erm-brainstorm",
+  "taskFile": ".ralph/erm-brainstorm.md",
   "iteration": 1,
-  "maxIterations": 15,
-  "itemsPerIteration": 3,
-  "reflectEvery": 3,
+  "maxIterations": 12,
+  "itemsPerIteration": 1,
+  "reflectEvery": 0,
   "reflectInstructions": "REFLECTION CHECKPOINT\n\nPause and reflect on your progress:\n1. What has been accomplished so far?\n2. What's working well?\n3. What's not working or blocking progress?\n4. Should the approach be adjusted?\n5. What are the next priorities?\n\nUpdate the task file with your reflection, then continue working.",
   "active": false,
   "status": "completed",
-  "startedAt": "2026-04-11T20:46:55.780Z",
+  "startedAt": "2026-04-12T03:44:29.847Z",
   "lastReflectionAt": 0,
-  "completedAt": "2026-04-11T21:03:54.945Z"
+  "completedAt": "2026-04-12T04:26:32.993Z"
 }

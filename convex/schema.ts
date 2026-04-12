@@ -148,6 +148,7 @@ const schema = defineEntSchema(
       .edges('companies', { ref: 'ownerId' })
       .edges('contacts', { ref: 'ownerId' })
       .edges('deals', { ref: 'ownerId' })
+      .edges('products', { ref: 'ownerId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually
@@ -314,7 +315,16 @@ const schema = defineEntSchema(
         v.union(
           v.literal('company'),
           v.literal('contact'),
-          v.literal('deal')
+          v.literal('deal'),
+          // ERM modules
+          v.literal('product'),
+          v.literal('saleOrder'),
+          v.literal('invoice'),
+          v.literal('purchaseOrder'),
+          v.literal('ticket'),
+          v.literal('expense'),
+          v.literal('employee'),
+          v.literal('task'),
         ),
         { index: true }
       )
@@ -344,7 +354,16 @@ const schema = defineEntSchema(
         v.union(
           v.literal('company'),
           v.literal('contact'),
-          v.literal('deal')
+          v.literal('deal'),
+          // ERM modules
+          v.literal('product'),
+          v.literal('saleOrder'),
+          v.literal('invoice'),
+          v.literal('purchaseOrder'),
+          v.literal('ticket'),
+          v.literal('expense'),
+          v.literal('employee'),
+          v.literal('task'),
         ),
         { index: true }
       )
@@ -357,6 +376,90 @@ const schema = defineEntSchema(
         'entityId',
       ])
       .index('organizationId_createdAt', ['organizationId', 'createdAt']),
+
+    // --------------------
+    // Sequence Counter (shared)
+    // --------------------
+
+    sequences: defineEnt({
+      prefix: v.string(),
+      year: v.number(),
+      counter: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('organizationId_prefix_year', [
+        'organizationId',
+        'prefix',
+        'year',
+      ]),
+
+    // --------------------
+    // Product Catalog (Module 1)
+    // --------------------
+
+    productCategories: defineEnt({
+      name: v.string(),
+      description: v.optional(v.string()),
+      active: v.optional(v.boolean()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('parentId', v.optional(v.id('productCategories')))
+      .index('organizationId_parentId', ['organizationId', 'parentId'])
+      .searchIndex('search_product_categories', {
+        searchField: 'name',
+        filterFields: ['organizationId'],
+      }),
+
+    products: defineEnt({
+      name: v.string(),
+      description: v.optional(v.string()),
+      type: v.union(
+        v.literal('storable'),
+        v.literal('consumable'),
+        v.literal('service')
+      ),
+      category: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      cost: v.optional(v.number()),
+      price: v.optional(v.number()),
+      unit: v.optional(v.string()),
+      sku: v.optional(v.string()),
+      barcode: v.optional(v.string()),
+      weight: v.optional(v.number()),
+      active: v.optional(v.boolean()),
+      tags: v.optional(v.array(v.string())),
+      notes: v.optional(v.string()),
+      archivedAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('owner', { to: 'user', field: 'ownerId' })
+      .edges('variants', { to: 'productVariants', ref: 'productId' })
+      .index('organizationId_name', ['organizationId', 'name'])
+      .index('organizationId_category', ['organizationId', 'category'])
+      .index('organizationId_type', ['organizationId', 'type'])
+      .searchIndex('search_products', {
+        searchField: 'name',
+        filterFields: ['organizationId', 'type', 'category'],
+      }),
+
+    productVariants: defineEnt({
+      name: v.string(),
+      attributes: v.optional(v.record(v.string(), v.string())),
+      priceExtra: v.optional(v.number()),
+      costExtra: v.optional(v.number()),
+      sku: v.optional(v.string()),
+      barcode: v.optional(v.string()),
+      weight: v.optional(v.number()),
+      active: v.optional(v.boolean()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('productId', v.id('products'))
+      .edge('product', { to: 'products', field: 'productId' })
+      .index('organizationId_productId', ['organizationId', 'productId'])
+      .searchIndex('search_product_variants', {
+        searchField: 'name',
+        filterFields: ['organizationId', 'productId'],
+      }),
   },
   {
     schemaValidation: true,

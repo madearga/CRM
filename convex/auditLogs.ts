@@ -4,7 +4,11 @@ import { z } from 'zod';
 
 import { createAuthQuery } from './functions';
 
-const entityTypeSchema = z.enum(['company', 'contact', 'deal']);
+const entityTypeSchema = z.enum([
+  'company', 'contact', 'deal',
+  'product', 'saleOrder', 'invoice', 'purchaseOrder',
+  'ticket', 'expense', 'employee', 'task',
+]);
 
 const DEFAULT_LIST_LIMIT = 50;
 
@@ -109,7 +113,7 @@ export async function createAuditLog(
   args: {
     organizationId: string;
     actorUserId: string;
-    entityType: 'company' | 'contact' | 'deal';
+    entityType: 'company' | 'contact' | 'deal' | 'product' | 'saleOrder' | 'invoice' | 'purchaseOrder' | 'ticket' | 'expense' | 'employee' | 'task';
     entityId: string;
     action: string;
     before?: any;
