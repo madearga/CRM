@@ -56,8 +56,7 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
 
   const { data: companies } = useAuthPaginatedQuery(api.companies.list, { search: undefined }, { initialNumItems: 100 });
   const { data: contacts } = useAuthPaginatedQuery(api.contacts.list, { search: undefined }, { initialNumItems: 100 });
-  const { data: paymentTermsResult } = useAuthPaginatedQuery(api.paymentTerms.list, { search: undefined }, { initialNumItems: 50 });
-  const paymentTerms = paymentTermsResult?.page ?? [];
+  const { data: paymentTerms = [] } = useAuthPaginatedQuery(api.paymentTerms.list, { search: undefined }, { initialNumItems: 50 });
 
   useEffect(() => {
     if (initialData) {

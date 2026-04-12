@@ -41,10 +41,9 @@ export function InvoiceLineEditor({ lines, onChange, currency = "IDR" }: Invoice
     search: productSearch || undefined,
   }, { initialNumItems: 20 });
 
-  const { data: taxesResult } = useAuthPaginatedQuery(api.taxes.list, {
+  const { data: taxes = [] } = useAuthPaginatedQuery(api.taxes.list, {
     scope: 'sales',
   }, { initialNumItems: 50 });
-  const taxes = taxesResult?.page ?? [];
 
   const addLine = () => {
     onChange([...lines, { productName: '', quantity: 1, unitPrice: 0 }]);

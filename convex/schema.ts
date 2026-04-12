@@ -206,6 +206,8 @@ const schema = defineEntSchema(
       .edges('contacts', { ref: 'companyId' })
       .edges('deals', { ref: 'companyId' })
       .edges('saleOrders', { ref: 'companyId' })
+      .edges('invoices', { ref: 'companyId' })
+      .edges('payments', { ref: 'companyId' })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_name', ['organizationId', 'name'])
@@ -243,6 +245,7 @@ const schema = defineEntSchema(
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .edges('deals', { to: 'deals', ref: 'primaryContactId' })
       .edges('saleOrders', { ref: 'contactId' })
+      .edges('invoices', { ref: 'contactId' })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_email', ['organizationId', 'email'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
@@ -444,6 +447,7 @@ const schema = defineEntSchema(
       .edge('owner', { to: 'user', field: 'ownerId' })
       .edges('variants', { to: 'productVariants', ref: 'productId' })
       .edges('saleOrderLines', { ref: 'productId' })
+      .edges('invoiceLines', { ref: 'productId' })
       .index('organizationId_name', ['organizationId', 'name'])
       .index('organizationId_category', ['organizationId', 'category'])
       .edge('categoryRef', { to: 'productCategories', field: 'category', optional: true })
@@ -526,6 +530,7 @@ const schema = defineEntSchema(
       .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
       .edge('deal', { to: 'deals', field: 'dealId', optional: true })
       .edges('lines', { to: 'saleOrderLines', ref: 'saleOrderId' })
+      .edges('invoices', { to: 'invoices', ref: 'saleOrderId' })
       .index('organizationId_state', ['organizationId', 'state'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_orderDate', ['organizationId', 'orderDate'])
@@ -588,6 +593,7 @@ const schema = defineEntSchema(
       active: v.optional(v.boolean()),
     })
       .field('organizationId', v.id('organization'), { index: true })
+      .edges('invoiceLines', { ref: 'taxId' })
       .index('organizationId_scope', ['organizationId', 'scope']),
 
     invoices: defineEnt({
@@ -633,7 +639,7 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .field('companyId', v.optional(v.id('companies')))
       .field('contactId', v.optional(v.id('contacts')))
-      .field('ownerId', v.id('user'))
+      .edge('owner', { to: 'user', field: 'ownerId' })
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
       .edge('saleOrder', { to: 'saleOrders', field: 'saleOrderId', optional: true })
@@ -667,6 +673,8 @@ const schema = defineEntSchema(
       .field('productId', v.optional(v.id('products')))
       .field('taxId', v.optional(v.id('taxes')))
       .edge('invoice', { to: 'invoices', field: 'invoiceId' })
+      .edge('product', { to: 'products', field: 'productId', optional: true })
+      .edge('tax', { to: 'taxes', field: 'taxId', optional: true })
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
 
     payments: defineEnt({
@@ -692,7 +700,7 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .field('invoiceId', v.optional(v.id('invoices')))
       .field('companyId', v.optional(v.id('companies')))
-      .field('ownerId', v.id('user'))
+      .edge('owner', { to: 'user', field: 'ownerId' })
       .edge('invoice', { to: 'invoices', field: 'invoiceId', optional: true })
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .index('organizationId_paymentDate', ['organizationId', 'paymentDate'])
