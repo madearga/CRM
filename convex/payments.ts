@@ -1,5 +1,6 @@
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
+import { ConvexError } from 'convex/values';
 import {
   createOrgMutation,
   createOrgPaginatedQuery,
@@ -100,12 +101,37 @@ export const create = createOrgMutation()({
   }),
   returns: zid('payments'),
   handler: async (ctx, args) => {
-    return ctx.table('payments').insert({
+    const paymentId = await ctx.table('payments').insert({
       ...args,
       state: 'confirmed',
       organizationId: ctx.orgId,
       ownerId: ctx.userId,
     });
+
+    if (args.invoiceId) {
+      const invoice = await ctx.table('invoices').getX(args.invoiceId);
+      if (invoice.organizationId !== ctx.orgId) {
+        throw new ConvexError('Unauthorized');
+      }
+
+      const newAmountDue = Math.max(0, invoice.amountDue - args.amount);
+      const isFullyPaid = newAmountDue <= 0;
+
+      const updates: any = {
+        amountDue: newAmountDue,
+        paymentStatus: isFullyPaid ? 'paid' : 'partially_paid',
+      };
+
+      if (isFullyPaid) {
+        updates.state = 'paid';
+      } else if (invoice.state === 'draft') {
+        updates.state = 'posted';
+      }
+
+      await invoice.patch(updates);
+    }
+
+    return paymentId;
   },
 });
 
@@ -115,9 +141,35 @@ export const cancel = createOrgMutation()({
   handler: async (ctx, args) => {
     const payment = await ctx.table('payments').getX(args.id);
     if (payment.organizationId !== ctx.orgId) {
-      throw new Error('Not authorized');
+      throw new ConvexError('Unauthorized');
     }
+
+    if (payment.state === 'cancelled') {
+      return null;
+    }
+
     await payment.patch({ state: 'cancelled' });
+
+    if (payment.invoiceId) {
+      const invoice = await ctx.table('invoices').getX(payment.invoiceId);
+      if (invoice.organizationId === ctx.orgId) {
+        const newAmountDue = invoice.amountDue + payment.amount;
+        const paymentStatus =
+          newAmountDue >= invoice.totalAmount ? 'unpaid' : 'partially_paid';
+
+        const updates: any = {
+          amountDue: newAmountDue,
+          paymentStatus,
+        };
+
+        if (invoice.state === 'paid') {
+          updates.state = 'posted';
+        }
+
+        await invoice.patch(updates);
+      }
+    }
+
     return null;
   },
 });

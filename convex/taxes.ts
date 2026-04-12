@@ -1,5 +1,6 @@
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
+import { ConvexError } from 'convex/values';
 import {
   createOrgMutation,
   createOrgPaginatedQuery,
@@ -33,6 +34,7 @@ export const list = createOrgPaginatedQuery()({
   handler: async (ctx, args) => {
     const all = await ctx.table('taxes').take(100);
     let results = all.filter((t: any) => {
+      if (t.organizationId !== ctx.orgId) return false;
       if (args.scope && t.scope !== args.scope && t.scope !== 'both') return false;
       if (args.search && !t.name.toLowerCase().includes(args.search.toLowerCase())) return false;
       return true;
@@ -76,7 +78,11 @@ export const update = createOrgMutation()({
   returns: z.null(),
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.table('taxes').getX(id).patch(updates);
+    const tax = await ctx.table('taxes').getX(id);
+    if (tax.organizationId !== ctx.orgId) {
+      throw new ConvexError('Unauthorized');
+    }
+    await tax.patch(updates);
     return null;
   },
 });
@@ -85,7 +91,11 @@ export const remove = createOrgMutation()({
   args: { id: zid('taxes') },
   returns: z.null(),
   handler: async (ctx, args) => {
-    await ctx.table('taxes').getX(args.id).delete();
+    const tax = await ctx.table('taxes').getX(args.id);
+    if (tax.organizationId !== ctx.orgId) {
+      throw new ConvexError('Unauthorized');
+    }
+    await tax.delete();
     return null;
   },
 });

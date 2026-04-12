@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
@@ -21,11 +21,17 @@ import { toast } from 'sonner';
 
 export default function InvoicesPage() {
   const router = useRouter();
-  const { q: search, archived: showArchived, setSearch, toggleArchived } = useInvoicesParams();
+  const {
+    q: search,
+    archived: showArchived,
+    state: stateFilter,
+    type: typeFilter,
+    setSearch,
+    toggleArchived,
+    setState: setStateFilter,
+    setType: setTypeFilter,
+  } = useInvoicesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
-  const selectedIds = useMemo(() => selections.invoices ?? new Set(), [selections.invoices]);
-  const [stateFilter, setStateFilter] = useState<string | undefined>(undefined);
-  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
 
   const { data: invoices, isLoading } = useAuthPaginatedQuery(api.invoices.list, {
     search: search || undefined,
@@ -100,7 +106,7 @@ export default function InvoicesPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search invoices..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Select value={typeFilter ?? "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? undefined : v)}>
+        <Select value={typeFilter ?? "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? null : v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All types" />
           </SelectTrigger>
@@ -111,7 +117,7 @@ export default function InvoicesPage() {
             <SelectItem value="credit_note">Credit Note</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={stateFilter ?? "__all__"} onValueChange={(v) => setStateFilter(v === "__all__" ? undefined : v)}>
+        <Select value={stateFilter ?? "__all__"} onValueChange={(v) => setStateFilter(v === "__all__" ? null : v)}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>

@@ -617,7 +617,9 @@ export const createFromSaleOrder = createOrgMutation()({
       });
     }
 
-    await so.patch({ invoiceStatus: 'partially' });
+    const totalAmount = so.totalAmount;
+    const newInvoiceStatus = totalAmount >= so.totalAmount ? 'invoiced' : 'partially';
+    await so.patch({ invoiceStatus: newInvoiceStatus });
 
     await createAuditLog(ctx, {
       organizationId: ctx.orgId,

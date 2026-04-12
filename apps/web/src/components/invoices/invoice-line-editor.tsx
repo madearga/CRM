@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthPaginatedQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -56,26 +56,35 @@ export function InvoiceLineEditor({ lines, onChange, currency = "IDR" }: Invoice
   const updateLine = (index: number, field: keyof InvoiceLineItem, value: any) => {
     const updated = [...lines];
     updated[index] = { ...updated[index], [field]: value };
-    
-    // Auto-calculate taxAmount if taxId changed
-    if (field === 'taxId') {
-      const tax = taxes.find((t) => t.id === value);
-      if (tax) {
-        const line = updated[index];
-        let base = line.quantity * line.unitPrice;
-        if (line.discount) {
-          if (line.discountType === 'percentage') base -= base * (line.discount / 100);
-          else base -= line.discount;
-        }
-        const taxAmount = tax.type === 'percentage' ? base * tax.rate : tax.rate;
-        updated[index].taxAmount = Math.round(taxAmount * 100) / 100;
-      } else {
-        updated[index].taxAmount = undefined;
-      }
-    }
-
     onChange(updated);
   };
+
+  useEffect(() => {
+    const updatedLines = lines.map((line) => {
+      if (!line.taxId) {
+        return line.taxAmount !== undefined ? { ...line, taxAmount: undefined } : line;
+      }
+      const tax = taxes.find((t) => t.id === line.taxId);
+      if (!tax) return line;
+
+      let base = line.quantity * line.unitPrice;
+      if (line.discount) {
+        if (line.discountType === 'percentage') base -= base * (line.discount / 100);
+        else base -= line.discount;
+      }
+      const taxAmount = Math.round((tax.type === 'percentage' ? base * tax.rate : tax.rate) * 100) / 100;
+
+      if (line.taxAmount !== taxAmount) {
+        return { ...line, taxAmount };
+      }
+      return line;
+    });
+
+    const hasChanged = updatedLines.some((line, i) => line !== lines[i]);
+    if (hasChanged) {
+      onChange(updatedLines);
+    }
+  }, [lines, taxes, onChange]);
 
   const selectProduct = (lineIndex: number, product: any) => {
     const updated = [...lines];
