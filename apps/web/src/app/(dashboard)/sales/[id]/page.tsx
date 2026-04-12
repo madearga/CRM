@@ -48,7 +48,23 @@ export default function SaleOrderDetailPage() {
   const unarchiveSO = useAuthMutation(api.saleOrders.unarchive);
   const duplicateSO = useAuthMutation(api.saleOrders.duplicate);
 
+  const createInvoice = useAuthMutation(api.invoices.createFromSaleOrder);
+
+  const handleCreateInvoice = async () => {
+    try {
+      const invId = await createInvoice.mutateAsync({ saleOrderId: id as any });
+      toast.success('Invoice created');
+      router.push(`/invoices/${invId}`);
+    } catch (e: any) {
+      toast.error(e.data?.message ?? 'Failed to create invoice');
+    }
+  };
+
   const handleTransition = async (target: string) => {
+    if (target === 'invoiced') {
+      await handleCreateInvoice();
+      return;
+    }
     try {
       await transitionState.mutateAsync({ id: id as any, targetState: target as any });
       toast.success(`Order ${target}`);
@@ -122,7 +138,12 @@ export default function SaleOrderDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {actions.map((action) => (
+          {so.invoiceStatus !== 'invoiced' && ['confirmed', 'invoiced', 'delivered', 'done'].includes(so.state) && (
+            <Button variant="default" size="sm" onClick={handleCreateInvoice}>
+              <FileText className="mr-1 h-4 w-4" />Create Invoice
+            </Button>
+          )}
+          {actions.filter(a => a.target !== 'invoiced').map((action) => (
             <Button key={action.target} variant={action.variant} size="sm" onClick={() => handleTransition(action.target)}>
               <action.icon className="mr-1 h-4 w-4" />{action.label}
             </Button>
