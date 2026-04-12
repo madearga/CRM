@@ -309,6 +309,19 @@ const schema = defineEntSchema(
       completedAt: v.optional(v.number()),
       metadata: v.optional(v.record(v.string(), v.any())),
       createdAt: v.optional(v.number()),
+      // Scheduling fields
+      scheduledAt: v.optional(v.number()),
+      status: v.optional(v.union(
+        v.literal('planned'),
+        v.literal('done'),
+        v.literal('cancelled'),
+      )),
+      nextActivityType: v.optional(v.string()),
+      priority: v.optional(v.union(
+        v.literal('low'),
+        v.literal('medium'),
+        v.literal('high'),
+      )),
     })
       .field(
         'type',
@@ -351,7 +364,8 @@ const schema = defineEntSchema(
         'entityId',
       ])
       .index('assigneeId_dueAt', ['assigneeId', 'dueAt'])
-      .index('organizationId_createdAt', ['organizationId', 'createdAt']),
+      .index('organizationId_createdAt', ['organizationId', 'createdAt'])
+      .index('organizationId_status_scheduledAt', ['organizationId', 'status', 'scheduledAt']),
 
     auditLogs: defineEnt({
       action: v.string(),
@@ -675,6 +689,33 @@ const schema = defineEntSchema(
       .edge('invoice', { to: 'invoices', field: 'invoiceId' })
       .edge('product', { to: 'products', field: 'productId', optional: true })
       .edge('tax', { to: 'taxes', field: 'taxId', optional: true })
+      .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
+
+    // ---------------------
+    // Invoice Reminders (Module 4)
+    // ---------------------
+
+    reminderRules: defineEnt({
+      name: v.string(),
+      daysOverdue: v.number(),
+      subject: v.string(),
+      body: v.string(),
+      includeInvoicePdf: v.optional(v.boolean()),
+      isActive: v.optional(v.boolean()),
+    })
+      .field('organizationId', v.id('organization'), { index: true }),
+
+    invoiceReminders: defineEnt({
+      sentAt: v.number(),
+      status: v.union(
+        v.literal('pending'),
+        v.literal('sent'),
+        v.literal('failed'),
+      ),
+    })
+      .field('invoiceId', v.id('invoices'), { index: true })
+      .field('reminderRuleId', v.id('reminderRules'), { index: true })
+      .field('organizationId', v.id('organization'), { index: true })
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
 
     payments: defineEnt({

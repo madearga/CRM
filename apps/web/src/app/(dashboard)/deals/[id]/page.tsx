@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { STAGE_COLORS } from '@/lib/constants';
 import { formatCurrency } from '@/lib/format';
+import { ActivityTimeline } from '@/components/activities/activity-timeline';
 
 export default function DealDetailPage() {
   const params = useParams();
@@ -272,6 +273,9 @@ export default function DealDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Timeline */}
+      <ActivityTimeline entityType="deal" entityId={dealId} />
 
       {/* Lost Reason */}
       {deal.lostReason && (
