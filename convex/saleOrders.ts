@@ -166,20 +166,21 @@ export const list = createOrgPaginatedQuery()({
       page = page.filter((so: any) => !so.archivedAt);
     }
 
-    // Resolve names
+    // Resolve names (use Promise.all for parallel execution)
     const companyIds = [...new Set(page.map((so: any) => so.companyId).filter(Boolean))];
     const contactIds = [...new Set(page.map((so: any) => so.contactId).filter(Boolean))];
     const companyMap = new Map<string, string>();
     const contactMap = new Map<string, string>();
 
-    for (const id of companyIds) {
+    // Run queries in parallel for better performance
+    await Promise.all(companyIds.map(async (id) => {
       const c = await ctx.table('companies').get(id);
       if (c) companyMap.set(id, c.name);
-    }
-    for (const id of contactIds) {
+    }));
+    await Promise.all(contactIds.map(async (id) => {
       const c = await ctx.table('contacts').get(id);
       if (c) contactMap.set(id, c.fullName);
-    }
+    }));
 
     return {
       page: page.map((so: any) => ({

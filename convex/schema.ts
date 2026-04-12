@@ -528,6 +528,7 @@ const schema = defineEntSchema(
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_orderDate', ['organizationId', 'orderDate'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
+      .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_sale_orders', {
         searchField: 'number',
         filterFields: ['organizationId', 'state'],
