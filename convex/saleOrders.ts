@@ -471,11 +471,13 @@ export const update = createOrgMutation()({
       await recalculateTotals(ctx, so);
     }
 
-    // Recalculate total if discount changed
+    // Recalculate total if discount changed (after line recalc so subtotal is fresh)
     if (cleanUpdates.discountAmount !== undefined || cleanUpdates.discountType !== undefined) {
-      const newDiscountAmount: number = (cleanUpdates.discountAmount as number) ?? so.discountAmount ?? 0;
-      const newDiscountType: string = (cleanUpdates.discountType as string) ?? so.discountType ?? 'fixed';
-      const subtotal = so.subtotal;
+      // Re-read so to get fresh subtotal/taxAmount after possible line replacement
+      const freshSo = await ctx.table('saleOrders').getX(id);
+      const newDiscountAmount: number = (cleanUpdates.discountAmount as number) ?? freshSo.discountAmount ?? 0;
+      const newDiscountType: string = (cleanUpdates.discountType as string) ?? freshSo.discountType ?? 'fixed';
+      const subtotal = freshSo.subtotal;
 
       let discountTotal = 0;
       if (newDiscountAmount) {
@@ -486,7 +488,7 @@ export const update = createOrgMutation()({
         }
       }
 
-      const taxAmount = so.taxAmount ?? 0;
+      const taxAmount = freshSo.taxAmount ?? 0;
       (cleanUpdates as any).totalAmount = Math.round((subtotal - discountTotal + taxAmount) * 100) / 100;
     }
 
