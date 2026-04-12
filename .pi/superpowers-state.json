@@ -41,7 +41,13 @@
       "apps/web/src/components/sales/line-item-editor.tsx",
       "apps/web/src/components/sales/sale-order-form.tsx",
       "apps/web/src/app/(dashboard)/deals/[id]/page.tsx",
-      "convex/schema.ts"
+      "convex/schema.ts",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/styles.ts",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/invoice-pdf.tsx",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/quotation-pdf.tsx",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/components/pdf-download-button.tsx",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/app/(dashboard)/invoices/[id]/page.tsx",
+      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/app/(dashboard)/sales/[id]/page.tsx"
     ],
     "redVerificationPending": false
   },
