@@ -185,6 +185,6 @@ function calculateSubtotal(line: LineItem): number {
       subtotal -= line.discount;
     }
   }
-  if (line.taxAmount) subtotal += line.taxAmount;
+  // Tax shown in its own column — don't include here
   return Math.round(subtotal * 100) / 100;
 }

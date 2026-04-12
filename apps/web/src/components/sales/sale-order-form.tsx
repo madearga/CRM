@@ -88,7 +88,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
         if (l.discountType === 'percentage') lineTotal -= lineTotal * (l.discount / 100);
         else lineTotal -= l.discount;
       }
-      if (l.taxAmount) lineTotal += l.taxAmount;
+      // Tax summed separately below — don't include in subtotal
       return sum + lineTotal;
     }, 0);
 
