@@ -127,6 +127,55 @@ const SAMPLE_SALE_ORDERS = [
   },
 ];
 
+const SAMPLE_TAXES = [
+  { name: 'PPN 11%', rate: 0.11, type: 'percentage' as const, scope: 'both' as const, active: true },
+  { name: 'PPH 23 (2%)', rate: 0.02, type: 'percentage' as const, scope: 'purchase' as const, active: true },
+  { name: 'PPN 0%', rate: 0, type: 'percentage' as const, scope: 'both' as const, active: true },
+];
+
+const SAMPLE_PAYMENT_TERMS = [
+  { name: 'Immediate Payment', dueDays: 0, description: 'Payment due immediately' },
+  { name: 'Net 15', dueDays: 15, description: 'Payment due within 15 days' },
+  { name: 'Net 30', dueDays: 30, description: 'Payment due within 30 days' },
+  { name: 'Net 60', dueDays: 60, description: 'Payment due within 60 days' },
+  { name: '2/10 Net 30', dueDays: 30, discountDays: 10, discountPercent: 2, description: '2% discount if paid within 10 days, net 30' },
+];
+
+const SAMPLE_INVOICES = [
+  {
+    type: 'customer_invoice' as const,
+    state: 'paid' as const,
+    currency: 'IDR',
+    companyIndex: 2,
+    contactIndex: 4,
+    daysAgo: 35,
+    paymentStatus: 'paid' as const,
+    source: 'sale_order' as const,
+    saleOrderIndex: 1, // CloudFirst SO
+    lines: [
+      { productName: 'Cloud Architecture Review', quantity: 1, unitPrice: 5000 },
+      { productName: 'Migration Strategy', quantity: 1, unitPrice: 4000 },
+      { productName: 'Team Training (2 days)', quantity: 2, unitPrice: 1500 },
+    ],
+  },
+  {
+    type: 'customer_invoice' as const,
+    state: 'posted' as const,
+    currency: 'IDR',
+    companyIndex: 4,
+    contactIndex: 6,
+    daysAgo: 5,
+    paymentStatus: 'unpaid' as const,
+    source: 'sale_order' as const,
+    saleOrderIndex: 4, // PayEasy SO
+    lines: [
+      { productName: 'Payment Gateway Integration', quantity: 1, unitPrice: 6000 },
+      { productName: 'Transaction Processing Module', quantity: 1, unitPrice: 1500 },
+      { productName: 'Security Audit', quantity: 1, unitPrice: 500 },
+    ],
+  },
+];
+
 // Main seed function
 export const seed = createInternalMutation()({
   args: {},
@@ -167,6 +216,21 @@ export const cleanupSeedData = createInternalMutation()({
 
     const saleOrders = await ctx.table('saleOrders').take(1000);
     for (const s of saleOrders) await ctx.db.delete(s._id);
+
+    const paymentRecords = await ctx.table('payments').take(1000);
+    for (const p of paymentRecords) await ctx.db.delete(p._id);
+
+    const invoiceLines = await ctx.table('invoiceLines').take(1000);
+    for (const l of invoiceLines) await ctx.db.delete(l._id);
+
+    const invoices = await ctx.table('invoices').take(1000);
+    for (const i of invoices) await ctx.db.delete(i._id);
+
+    const taxes = await ctx.table('taxes').take(1000);
+    for (const t of taxes) await ctx.db.delete(t._id);
+
+    const paymentTerms = await ctx.table('paymentTerms').take(1000);
+    for (const pt of paymentTerms) await ctx.db.delete(pt._id);
 
     const deals = await ctx.table('deals').take(1000);
     for (const d of deals) await ctx.db.delete(d._id);
@@ -344,6 +408,90 @@ export const seedCrmData = createInternalMutation()({
       }
     }
     console.info(`  ✅ Created ${activityCount} activities`);
+
+    // 6. Create taxes
+    console.info('🧾 Creating taxes...');
+    const taxIds: Id<'taxes'>[] = [];
+    for (const tax of SAMPLE_TAXES) {
+      const id = await ctx.table('taxes').insert({
+        ...tax,
+        organizationId: orgId,
+      });
+      taxIds.push(id);
+    }
+    console.info(`  ✅ Created ${taxIds.length} taxes`);
+
+    // 7. Create payment terms
+    console.info('📅 Creating payment terms...');
+    const paymentTermIds: Id<'paymentTerms'>[] = [];
+    for (const term of SAMPLE_PAYMENT_TERMS) {
+      const id = await ctx.table('paymentTerms').insert({
+        ...term,
+        organizationId: orgId,
+      });
+      paymentTermIds.push(id);
+    }
+    console.info(`  ✅ Created ${paymentTermIds.length} payment terms`);
+
+    // 8. Create invoices
+    console.info('📄 Creating invoices...');
+    const invoiceIds: Id<'invoices'>[] = [];
+    for (const inv of SAMPLE_INVOICES) {
+      const { companyIndex, contactIndex, saleOrderIndex, daysAgo, lines, ...invData } = inv;
+      const now = Date.now();
+      const invoiceDate = now - daysAgo * 24 * 60 * 60 * 1000;
+      const dueDate = invoiceDate + 30 * 24 * 60 * 60 * 1000;
+
+      const number = await nextSequence(ctx, orgId, 'invoice', invoiceDate);
+
+      const lineSubtotals = lines.map((l) => ({
+        ...l,
+        subtotal: l.quantity * l.unitPrice,
+      }));
+
+      const subtotal = lineSubtotals.reduce((sum, l) => sum + l.subtotal, 0);
+
+      const invId = await ctx.table('invoices').insert({
+        ...invData,
+        number,
+        invoiceDate,
+        dueDate,
+        companyId: companyIds[companyIndex],
+        contactId: contactIds[contactIndex],
+        saleOrderId: saleOrderIds[saleOrderIndex],
+        subtotal,
+        taxAmount: 0,
+        totalAmount: subtotal,
+        amountDue: invData.state === 'paid' ? 0 : subtotal,
+        organizationId: orgId,
+        ownerId: adminUser._id,
+      });
+
+      for (const line of lineSubtotals) {
+        await ctx.table('invoiceLines').insert({
+          ...line,
+          invoiceId: invId,
+          organizationId: orgId,
+        });
+      }
+
+      // If paid, create a payment record
+      if (invData.state === 'paid') {
+        await ctx.table('payments').insert({
+          amount: subtotal,
+          paymentDate: invoiceDate + 2 * 24 * 60 * 60 * 1000,
+          method: 'bank_transfer',
+          state: 'confirmed',
+          invoiceId: invId,
+          companyId: companyIds[companyIndex],
+          organizationId: orgId,
+          ownerId: adminUser._id,
+        });
+      }
+
+      invoiceIds.push(invId);
+    }
+    console.info(`  ✅ Created ${invoiceIds.length} invoices`);
 
     return null;
   },
