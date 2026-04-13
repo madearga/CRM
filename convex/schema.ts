@@ -114,6 +114,7 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .field('ownerId', v.id('user'))
       .edge('owner', { to: 'user', field: 'ownerId' })
+      .edges('entries', { to: 'permissionEntries', ref: 'templateId' })
       .index('organizationId_name', ['organizationId', 'name']),
 
     permissionEntries: defineEnt({
@@ -195,6 +196,7 @@ const schema = defineEntSchema(
       .edges('quotationTemplates', { ref: 'ownerId' })
       .edges('subscriptionTemplates', { ref: 'ownerId' })
       .edges('permissionTemplates', { ref: 'ownerId' })
+      .edges('inviteLinks', { to: 'inviteLinks', ref: 'creatorId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually

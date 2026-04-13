@@ -29,12 +29,7 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/layout.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/general/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/page.tsx"
-    ],
+    "sourceFiles": [],
     "redVerificationPending": false
   },
   "debug": {
