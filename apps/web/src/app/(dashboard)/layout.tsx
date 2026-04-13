@@ -88,8 +88,10 @@ export default function DashboardLayout({
   const user = useCurrentUser();
   const { theme, setTheme } = useTheme();
   const perms = usePermissions();
+  const permsLoaded = Object.keys(perms).length > 0;
 
   const visibleNavItems = navItems.filter((item) => {
+    if (!permsLoaded) return true; // Show all until permissions resolve
     const feature = featureMap[item.href];
     if (!feature) return true;
     return perms[`${feature}:view`] ?? false;

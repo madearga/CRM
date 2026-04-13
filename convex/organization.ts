@@ -920,6 +920,10 @@ export const inviteMember = createAuthMutation({
         const invitation = await ctx.table('invitation').get(invitationId as Id<'invitation'>);
         if (invitation) {
           await invitation.patch({ roleTemplateId: args.roleTemplateId });
+        } else {
+          console.warn(
+            `[inviteMember] Could not patch roleTemplateId: invitation ${invitationId} not found after creation`,
+          );
         }
       }
     } catch (error: any) {

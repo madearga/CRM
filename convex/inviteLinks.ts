@@ -8,6 +8,7 @@ import {
   createPublicQuery,
   createAuthMutation,
 } from './functions';
+import { generateToken } from './inviteLinks';
 
 import type { Id } from './_generated/dataModel';
 
@@ -16,12 +17,9 @@ import type { Id } from './_generated/dataModel';
 // ---------------------------------------------------------------------------
 
 function generateToken(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 const DEFAULT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -207,7 +205,9 @@ export const joinViaLink = createAuthMutation({})({
       throw new ConvexError({ code: 'BAD_REQUEST', message: 'Invite link has reached max uses' });
     }
 
-    // Check if already a member
+    // TOCTOU note: Convex OCC provides document-level serialization. The usedCount
+    // patch below will fail if a concurrent mutation modifies the same link doc.
+    // The small race window for member insert across different docs is accepted.
     const existing = await ctx
       .table('member', 'organizationId_userId', (q: any) =>
         q

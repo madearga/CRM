@@ -15,7 +15,6 @@ const tabs = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const user = useCurrentUser();
   const perms = usePermissions();
 
   // Filter tabs by permission

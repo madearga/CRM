@@ -1,7 +1,7 @@
 'use client';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
-import { usePublicQuery } from '@/lib/convex/hooks';
+import { useAuthQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { useMemo } from 'react';
 
@@ -13,7 +13,7 @@ export function usePermissions(): Record<string, boolean> {
   const user = useCurrentUser();
   const orgId = user?.activeOrganization?.id;
 
-  const { data } = usePublicQuery(
+  const { data } = useAuthQuery(
     api.permissionQueries.getMyPermissions as any,
     orgId ? {} : 'skip',
     {}

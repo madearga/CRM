@@ -29,7 +29,15 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/convex/inviteLinks.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/lib/permissions/use-permission.ts",
+      "/Users/madearga/Desktop/crm/convex/functions.ts",
+      "/Users/madearga/Desktop/crm/convex/organization.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/layout.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/layout.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/\\(dashboard\\)/settings/layout.tsx"
+    ],
     "redVerificationPending": false
   },
   "debug": {
