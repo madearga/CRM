@@ -723,7 +723,7 @@ const schema = defineEntSchema(
       .edge('owner', { to: 'user', field: 'ownerId' })
 
       .edges('lines', { to: 'quotationTemplateLines', ref: 'templateId' })
-      .index('organizationId_name', ['organizationId'])
+      .index('organizationId_name', ['organizationId', 'name'])
       .searchIndex('search_templates', { searchField: 'name', filterFields: ['organizationId'] }),
 
     quotationTemplateLines: defineEnt({
@@ -790,7 +790,7 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .edges('rules', { to: 'priceRules', ref: 'pricelistId' })
       .edges('applicableCompanies', { to: 'companies', ref: 'pricelistId' })
-      .index('organizationId_active', ['organizationId'])
+      .index('organizationId_active', ['organizationId', 'isActive'])
       .searchIndex('search_pricelists', {
         searchField: 'name',
         filterFields: ['organizationId'],

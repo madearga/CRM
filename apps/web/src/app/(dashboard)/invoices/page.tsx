@@ -32,6 +32,7 @@ export default function InvoicesPage() {
     setType: setTypeFilter,
   } = useInvoicesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
+  const selectedIds = selections["invoices"] ?? new Set<string>();
 
   const { data: invoices, isLoading } = useAuthPaginatedQuery(api.invoices.list, {
     search: search || undefined,
