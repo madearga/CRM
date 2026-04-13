@@ -24,6 +24,7 @@ import { usePermissions } from '@/lib/permissions';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
+import { OnboardingOverlay } from '@/components/onboarding/onboarding-overlay';
 import { CommandPalette } from '@/components/command-palette';
 import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -89,6 +90,18 @@ export default function DashboardLayout({
   const { theme, setTheme } = useTheme();
   const perms = usePermissions();
   const permsLoaded = Object.keys(perms).length > 0;
+
+  // Show onboarding overlay if user is authenticated but has no active org
+  // Placeholder data has id === '0', so we exclude that
+  const needsOnboarding =
+    user &&
+    user.id &&
+    user.id !== ('0' as any) &&
+    !user.activeOrganization;
+
+  if (needsOnboarding) {
+    return <OnboardingOverlay />;
+  }
 
   const visibleNavItems = navItems.filter((item) => {
     if (!permsLoaded) return true; // Show all until permissions resolve

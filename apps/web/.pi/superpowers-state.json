@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "pending",
+      "brainstorm": "active",
       "plan": "pending",
-      "execute": "active",
+      "execute": "pending",
       "verify": "pending",
       "review": "pending",
       "finish": "pending"
     },
-    "currentPhase": "execute",
+    "currentPhase": "brainstorm",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -30,11 +30,9 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/invoices/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/subscriptions/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/companies/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/sales/page.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/components/providers.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/onboarding/onboarding-overlay.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/layout.tsx"
     ],
     "redVerificationPending": false
   },
