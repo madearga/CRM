@@ -73,6 +73,7 @@ const schema = defineEntSchema(
       createdAt: v.number(),
     })
       .field('role', v.string(), { index: true })
+      .field('permissionTemplateId', v.optional(v.id('permissionTemplates')))
       .edge('organization', { to: 'organization', field: 'organizationId' })
       .edge('user', { to: 'user', field: 'userId' })
       .index('organizationId_userId', ['organizationId', 'userId'])
@@ -84,6 +85,7 @@ const schema = defineEntSchema(
     })
       .field('email', v.string(), { index: true })
       .field('status', v.string(), { index: true })
+      .field('roleTemplateId', v.optional(v.id('permissionTemplates')))
       .edge('organization', { to: 'organization', field: 'organizationId' })
       .edge('inviter', { to: 'user', field: 'inviterId' })
       .index('email_organizationId_status', [
@@ -99,6 +101,44 @@ const schema = defineEntSchema(
         'email',
         'status',
       ]),
+
+    // ------------------------------
+    // Permission System
+    // ------------------------------
+    permissionTemplates: defineEnt({
+      isDefault: v.boolean(),
+    })
+      .field('name', v.string())
+      .field('description', v.optional(v.string()))
+      .field('color', v.optional(v.string()))
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('ownerId', v.id('user'))
+      .edge('owner', { to: 'user', field: 'ownerId' })
+      .index('organizationId_name', ['organizationId', 'name']),
+
+    permissionEntries: defineEnt({
+      feature: v.string(),
+      action: v.string(),
+      allowed: v.boolean(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('templateId', v.id('permissionTemplates'))
+      .edge('template', { to: 'permissionTemplates', field: 'templateId' })
+      .index('templateId_feature_action', ['templateId', 'feature', 'action']),
+
+    inviteLinks: defineEnt({
+      token: v.string(),
+      expiresAt: v.number(),
+      maxUses: v.optional(v.number()),
+      usedCount: v.number(),
+      roleTemplateId: v.id('permissionTemplates'),
+      status: v.string(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('creatorId', v.id('user'))
+      .edge('creator', { to: 'user', field: 'creatorId' })
+      .index('token', ['token'])
+      .index('organizationId_status', ['organizationId', 'status']),
 
     jwks: defineEnt({
       publicKey: v.string(),
