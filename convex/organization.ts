@@ -2,6 +2,7 @@ import type { Id } from './_generated/dataModel';
 
 import { hasPermission } from './authHelpers';
 import { listUserOrganizations } from './organizationHelpers';
+import { seedDefaultTemplates } from './permissionHelpers';
 import { asyncMap } from 'convex-helpers';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
@@ -132,6 +133,9 @@ export const createOrganization = createAuthMutation({
     await ctx.table('organization').getX(org.id as Id<'organization'>).patch({
       settings: { currency: DEFAULT_ORG_CURRENCY },
     });
+
+    // Seed default permission templates for the new organization
+    await seedDefaultTemplates(ctx, org.id as Id<'organization'>, ctx.user._id as Id<'user'>);
 
     // Set as active organization
     await setActiveOrganizationHandler(ctx, {
@@ -302,10 +306,27 @@ export const acceptInvitation = createAuthMutation({})({
       });
     }
 
+    // Save roleTemplateId before accepting (status will change)
+    const roleTemplateId = invitation.roleTemplateId;
+    const orgId = invitation.organizationId;
+
     await ctx.auth.api.acceptInvitation({
       body: { invitationId: args.invitationId },
       headers: ctx.auth.headers,
     });
+
+    // Assign permissionTemplateId to the newly created member
+    if (roleTemplateId && orgId) {
+      const members = await ctx
+        .table('member', 'organizationId_userId', (q: any) =>
+          q.eq('organizationId', orgId).eq('userId', ctx.user._id),
+        )
+        .take(1);
+
+      if (members[0]) {
+        await ctx.table('member').getX(members[0]._id).patch({ permissionTemplateId: roleTemplateId });
+      }
+    }
 
     return null;
   },
@@ -785,6 +806,7 @@ export const inviteMember = createAuthMutation({
   args: {
     email: z.string().email(),
     role: z.enum(['owner', 'member']),
+    roleTemplateId: zid('permissionTemplates').optional(),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
@@ -891,6 +913,14 @@ export const inviteMember = createAuthMutation({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create invitation',
         });
+      }
+
+      // Patch roleTemplateId onto the invitation if provided
+      if (args.roleTemplateId && invitationId) {
+        const invitation = await ctx.table('invitation').get(invitationId as Id<'invitation'>);
+        if (invitation) {
+          await invitation.patch({ roleTemplateId: args.roleTemplateId });
+        }
       }
     } catch (error: any) {
       throw new ConvexError({
