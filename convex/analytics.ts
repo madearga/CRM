@@ -25,6 +25,137 @@ function formatMonth(ms: number) {
 }
 
 // ---------------------------------------------------------------------------
+// 0. Overview KPIs
+// ---------------------------------------------------------------------------
+
+export const getOverview = createAuthQuery()({
+  args: {},
+  returns: z.object({
+    totalRevenue: z.number(),
+    outstandingAmount: z.number(),
+    overdueAmount: z.number(),
+    activeDeals: z.number(),
+    wonDeals: z.number(),
+    totalContacts: z.number(),
+    totalCompanies: z.number(),
+    conversionRate: z.number(),
+  }),
+  handler: async (ctx) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      return {
+        totalRevenue: 0,
+        outstandingAmount: 0,
+        overdueAmount: 0,
+        activeDeals: 0,
+        wonDeals: 0,
+        totalContacts: 0,
+        totalCompanies: 0,
+        conversionRate: 0,
+      };
+    }
+
+    // Count deals by stage
+    const deals = await ctx
+      .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(1000);
+    const activeDeals = deals.filter(
+      (d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost'
+    ).length;
+    const wonDeals = deals.filter((d) => !d.archivedAt && d.stage === 'won').length;
+    const totalDeals = deals.filter((d) => !d.archivedAt).length;
+    const conversionRate =
+      totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 1000) / 10 : 0;
+
+    // Revenue from paid invoices
+    const paidInvoices = await ctx
+      .table('invoices', 'organizationId_state', (q) =>
+        q.eq('organizationId', orgId).eq('state', 'paid')
+      )
+      .take(2000);
+    const totalRevenue = paidInvoices.reduce(
+      (sum, inv) => sum + (inv.totalAmount ?? 0),
+      0
+    );
+
+    // Outstanding (posted but unpaid)
+    const postedInvoices = await ctx
+      .table('invoices', 'organizationId_state', (q) =>
+        q.eq('organizationId', orgId).eq('state', 'posted')
+      )
+      .take(2000);
+    const outstandingAmount = postedInvoices.reduce(
+      (sum, inv) => sum + (inv.amountDue ?? 0),
+      0
+    );
+
+    // Overdue (posted + past dueDate)
+    const now = Date.now();
+    const overdueAmount = postedInvoices
+      .filter((inv) => inv.dueDate < now)
+      .reduce((sum, inv) => sum + (inv.amountDue ?? 0), 0);
+
+    // Counts
+    const contacts = await ctx
+      .table('contacts', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(1000);
+    const companies = await ctx
+      .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(1000);
+
+    return {
+      totalRevenue,
+      outstandingAmount,
+      overdueAmount,
+      activeDeals,
+      wonDeals,
+      totalContacts: contacts.length,
+      totalCompanies: companies.length,
+      conversionRate,
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// 0b. Deal Pipeline Summary
+// ---------------------------------------------------------------------------
+
+export const getDealPipeline = createAuthQuery()({
+  args: {},
+  returns: z.array(
+    z.object({
+      stage: z.string(),
+      count: z.number(),
+      value: z.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) return [];
+
+    const deals = await ctx
+      .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(1000);
+
+    const activeDeals = deals.filter((d) => !d.archivedAt);
+
+    const byStage = new Map<string, { count: number; value: number }>();
+    for (const deal of activeDeals) {
+      const stage = deal.stage ?? 'unknown';
+      const existing = byStage.get(stage) ?? { count: 0, value: 0 };
+      existing.count += 1;
+      existing.value += deal.value ?? 0;
+      byStage.set(stage, existing);
+    }
+
+    return Array.from(byStage.entries()).map(([stage, data]) => ({
+      stage,
+      ...data,
+    }));
+  },
+});
+
+// ---------------------------------------------------------------------------
 // 1. Revenue by Month (last 12 months)
 // ---------------------------------------------------------------------------
 

@@ -148,6 +148,10 @@ export default function DashboardPage() {
     api.analytics.monthlyComparison,
     {}
   );
+  const { data: analyticsOverview } = useAuthQuery(
+    api.analytics.getOverview,
+    {}
+  );
 
   const isLoading =
     overviewLoading || revenueLoading || salesLoading || forecastLoading;
@@ -269,6 +273,57 @@ export default function DashboardPage() {
             <CardTitle className="font-mono text-3xl">{conversionRate}%</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
               {comparisonData?.current.dealsCreated ?? 0} deals created
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 1b: Outstanding & Overdue KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
+        <Card className="transition-shadow hover:shadow-md border-l-4 border-l-orange-400">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription className="flex items-center gap-1.5">
+              <FileText className="h-4 w-4" />
+              Outstanding Invoices
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <CardTitle className="font-mono text-2xl text-orange-600 dark:text-orange-400">
+              {formatCurrency(analyticsOverview?.outstandingAmount ?? 0)}
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Posted invoices awaiting payment
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`transition-shadow hover:shadow-md border-l-4 ${
+            (analyticsOverview?.overdueAmount ?? 0) > 0
+              ? "border-l-red-500"
+              : "border-l-green-500"
+          }`}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              Overdue Amount
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <CardTitle
+              className={`font-mono text-2xl ${
+                (analyticsOverview?.overdueAmount ?? 0) > 0
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
+              {formatCurrency(analyticsOverview?.overdueAmount ?? 0)}
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {(analyticsOverview?.overdueAmount ?? 0) > 0
+                ? "Past due date — needs attention"
+                : "All invoices current 🎉"}
             </p>
           </CardContent>
         </Card>
