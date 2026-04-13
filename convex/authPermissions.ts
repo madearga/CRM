@@ -15,12 +15,25 @@ export const ac = createAccessControl(statement);
 
 const member = ac.newRole({
   ...memberAc.statements,
+  invitation: [],
   projects: ['create', 'update'],
 });
 
 const owner = ac.newRole({
   ...ownerAc.statements,
+  invitation: ['create', 'cancel'],
+  member: ['create', 'update', 'delete'],
+  organization: ['update', 'delete'],
   projects: ['create', 'update', 'delete'],
 });
 
-export const roles = { member, owner };
+const admin = ac.newRole({
+  ...ownerAc.statements,
+  invitation: ['create', 'cancel'],
+  member: ['create', 'update', 'delete'],
+  organization: ['update'],
+  ac: ['create', 'read', 'update', 'delete'],
+  projects: ['create', 'update', 'delete'],
+});
+
+export const roles = { admin, member, owner };

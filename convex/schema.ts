@@ -715,6 +715,7 @@ const schema = defineEntSchema(
       .edge('saleOrder', { to: 'saleOrders', field: 'saleOrderId', optional: true })
       .edge('subscription', { to: 'subscriptionTemplates', field: 'subscriptionTemplateId', optional: true })
       .edges('lines', { to: 'invoiceLines', ref: 'invoiceId' })
+      .edge('recurringInvoice', { to: 'recurringInvoices', field: 'recurringInvoiceId', optional: true })
       .edges('payments', { to: 'payments', ref: 'invoiceId' })
       .index('organizationId_state', ['organizationId', 'state'])
       .index('organizationId_type', ['organizationId', 'type'])
