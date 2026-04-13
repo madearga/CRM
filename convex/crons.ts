@@ -12,4 +12,12 @@ crons.weekly(
   {}
 );
 
+// Daily at 02:00 UTC — process recurring invoices that are due
+crons.daily(
+  'process-recurring-invoices',
+  { hourUTC: 2, minuteUTC: 0 },
+  internal.recurringInvoices.processDueRecurringInvoices,
+  {},
+);
+
 export default crons;

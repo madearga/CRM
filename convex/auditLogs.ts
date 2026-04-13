@@ -113,7 +113,7 @@ export async function createAuditLog(
   args: {
     organizationId: string;
     actorUserId: string;
-    entityType: 'company' | 'contact' | 'deal' | 'product' | 'saleOrder' | 'invoice' | 'purchaseOrder' | 'ticket' | 'expense' | 'employee' | 'task';
+    entityType: 'company' | 'contact' | 'deal' | 'product' | 'saleOrder' | 'invoice' | 'purchaseOrder' | 'ticket' | 'expense' | 'employee' | 'task' | 'recurringInvoice';
     entityId: string;
     action: string;
     before?: any;

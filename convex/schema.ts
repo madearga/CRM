@@ -195,6 +195,7 @@ const schema = defineEntSchema(
       .edges('payments', { ref: 'ownerId' })
       .edges('quotationTemplates', { ref: 'ownerId' })
       .edges('subscriptionTemplates', { ref: 'ownerId' })
+      .edges('recurringInvoices', { ref: 'ownerId' })
       .edges('permissionTemplates', { ref: 'ownerId' })
       .edges('inviteLinks', { to: 'inviteLinks', ref: 'creatorId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
@@ -254,6 +255,7 @@ const schema = defineEntSchema(
       .edges('invoices', { ref: 'companyId' })
       .edges('payments', { ref: 'companyId' })
       .edges('subscriptionTemplates', { ref: 'companyId' })
+      .edges('recurringInvoices', { ref: 'companyId' })
       .edge('pricelist', { to: 'pricelists', field: 'pricelistId', optional: true })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
@@ -294,6 +296,7 @@ const schema = defineEntSchema(
       .edges('saleOrders', { ref: 'contactId' })
       .edges('invoices', { ref: 'contactId' })
       .edges('subscriptionTemplates', { ref: 'contactId' })
+      .edges('recurringInvoices', { ref: 'contactId' })
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_email', ['organizationId', 'email'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
@@ -510,6 +513,7 @@ const schema = defineEntSchema(
       .edges('variants', { to: 'productVariants', ref: 'productId' })
       .edges('saleOrderLines', { ref: 'productId' })
       .edges('invoiceLines', { ref: 'productId' })
+      .edges('recurringInvoiceLines', { ref: 'productId' })
       .edges('priceRules', { ref: 'productId' })
 
       .index('organizationId_name', ['organizationId', 'name'])
@@ -699,6 +703,7 @@ const schema = defineEntSchema(
       notes: v.optional(v.string()),
       internalNotes: v.optional(v.string()),
       subscriptionTemplateId: v.optional(v.id('subscriptionTemplates')),
+      recurringInvoiceId: v.optional(v.id('recurringInvoices')),
       archivedAt: v.optional(v.number()),
     })
       .field('organizationId', v.id('organization'), { index: true })
@@ -742,6 +747,69 @@ const schema = defineEntSchema(
       .edge('product', { to: 'products', field: 'productId', optional: true })
       .edge('tax', { to: 'taxes', field: 'taxId', optional: true })
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
+
+    recurringInvoices: defineEnt({
+      number: v.string(),
+      name: v.optional(v.string()),
+      status: v.union(
+        v.literal('active'),
+        v.literal('paused'),
+        v.literal('expired'),
+      ),
+      frequency: v.union(
+        v.literal('weekly'),
+        v.literal('monthly'),
+        v.literal('quarterly'),
+        v.literal('yearly'),
+      ),
+      nextInvoiceDate: v.number(),
+      startDate: v.number(),
+      endDate: v.optional(v.number()),
+      maxOccurrences: v.optional(v.number()),
+      occurredCount: v.number(),
+      type: v.literal('customer_invoice'),
+      subtotal: v.number(),
+      discountAmount: v.optional(v.number()),
+      discountType: v.optional(v.union(
+        v.literal('percentage'),
+        v.literal('fixed'),
+      )),
+      taxAmount: v.optional(v.number()),
+      totalAmount: v.number(),
+      currency: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      internalNotes: v.optional(v.string()),
+      paymentTermId: v.optional(v.id('paymentTerms')),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('companyId', v.optional(v.id('companies')))
+      .field('contactId', v.optional(v.id('contacts')))
+      .field('ownerId', v.id('user'))
+      .edge('owner', { to: 'user', field: 'ownerId' })
+      .edge('company', { to: 'companies', field: 'companyId', optional: true })
+      .edge('contact', { to: 'contacts', field: 'contactId', optional: true })
+      .edges('lines', { to: 'recurringInvoiceLines', ref: 'recurringInvoiceId' })
+      .edges('generatedInvoices', { to: 'invoices', ref: 'recurringInvoiceId' })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('organizationId_nextInvoiceDate', ['organizationId', 'nextInvoiceDate'])
+      .index('nextInvoiceDate', ['nextInvoiceDate']),
+
+    recurringInvoiceLines: defineEnt({
+      productName: v.string(),
+      description: v.optional(v.string()),
+      quantity: v.number(),
+      unitPrice: v.number(),
+      discount: v.optional(v.number()),
+      discountType: v.optional(v.union(
+        v.literal('percentage'),
+        v.literal('fixed'),
+      )),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('recurringInvoiceId', v.id('recurringInvoices'))
+      .field('productId', v.optional(v.id('products')))
+      .edge('recurringInvoice', { to: 'recurringInvoices', field: 'recurringInvoiceId' })
+      .edge('product', { to: 'products', field: 'productId', optional: true }),
 
     // ---------------------
     // Quotation Templates (Module 4)
