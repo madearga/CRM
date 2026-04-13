@@ -6,11 +6,6 @@ import {
   Home,
   LogOut,
   LogIn,
-  Building2,
-  Users,
-  Handshake,
-  Activity,
-  Settings,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -24,15 +19,6 @@ import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/convex/hooks';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
-
-const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/companies', label: 'Companies', icon: Building2 },
-  { href: '/contacts', label: 'Contacts', icon: Users },
-  { href: '/deals', label: 'Deals', icon: Handshake },
-  { href: '/activities', label: 'Activities', icon: Activity },
-  { href: '/settings', label: 'Settings', icon: Settings },
-] as const;
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
@@ -79,8 +65,10 @@ export function BreadcrumbNav() {
 
     // Format segment name
     let displayName = segment.charAt(0).toUpperCase() + segment.slice(1);
-    const navItem = NAV_ITEMS.find((item) => item.href === href);
-    if (navItem) displayName = navItem.label;
+    // Handle IDs — just show a shortened version
+    if (segment.match(/^[a-z0-9]{20,}$/)) {
+      displayName = '...';
+    }
 
     if (isLast) {
       breadcrumbItems.push(
@@ -110,28 +98,6 @@ export function BreadcrumbNav() {
           <Breadcrumb>
             <BreadcrumbList>{breadcrumbItems}</BreadcrumbList>
           </Breadcrumb>
-
-          {/* Center - Quick Links */}
-          <div className="flex items-center gap-4">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${
-                    isActive
-                      ? 'text-foreground'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
 
           {/* Right side - Organization Switcher & Auth */}
           <div className="flex items-center gap-2">
