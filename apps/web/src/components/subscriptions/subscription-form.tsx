@@ -127,7 +127,7 @@ export function SubscriptionForm({ subscriptionId, initialData }: SubscriptionFo
     const intervalCount = parseInt(form.intervalCount) || 1;
     const billingDay = parseInt(form.billingDay) || 1;
 
-    let current = new Date(start.getFullYear(), start.getMonth(), billingDay);
+    const current = new Date(start.getFullYear(), start.getMonth(), billingDay);
     if (current.getTime() < start.getTime()) {
       // Move to next period
       current.setMonth(current.getMonth() + intervalCount);

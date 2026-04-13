@@ -54,6 +54,37 @@ export default function SaleOrderDetailPage() {
 
   const createInvoice = useAuthMutation(api.invoices.createFromSaleOrder);
 
+  const quotationPdfData: QuotationPDFData | null = useMemo(() => {
+    if (!so) return null;
+    return {
+      number: so.number,
+      state: so.state,
+      orderDate: so.orderDate,
+      validUntil: so.validUntil,
+      deliveryDate: so.deliveryDate,
+      companyName: so.companyName,
+      contactName: so.contactName,
+      lines: so.lines.map((l: any) => ({
+        productName: l.productName,
+        description: l.description,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        discount: l.discount,
+        discountType: l.discountType,
+        taxAmount: l.taxAmount,
+        subtotal: l.subtotal,
+      })),
+      subtotal: so.subtotal,
+      discountAmount: so.discountAmount,
+      discountType: so.discountType,
+      taxAmount: so.taxAmount,
+      totalAmount: so.totalAmount,
+      customerNotes: so.customerNotes,
+      internalNotes: so.internalNotes,
+      terms: so.terms,
+    };
+  }, [so]);
+
   const handleCreateInvoice = async () => {
     try {
       const invId = await createInvoice.mutateAsync({ saleOrderId: id as any });
@@ -121,34 +152,6 @@ export default function SaleOrderDetailPage() {
     );
   }
 
-  const quotationPdfData: QuotationPDFData = useMemo(() => ({
-    number: so.number,
-    state: so.state,
-    orderDate: so.orderDate,
-    validUntil: so.validUntil,
-    deliveryDate: so.deliveryDate,
-    companyName: so.companyName,
-    contactName: so.contactName,
-    lines: so.lines.map((l: any) => ({
-      productName: l.productName,
-      description: l.description,
-      quantity: l.quantity,
-      unitPrice: l.unitPrice,
-      discount: l.discount,
-      discountType: l.discountType,
-      taxAmount: l.taxAmount,
-      subtotal: l.subtotal,
-    })),
-    subtotal: so.subtotal,
-    discountAmount: so.discountAmount,
-    discountType: so.discountType,
-    taxAmount: so.taxAmount,
-    totalAmount: so.totalAmount,
-    customerNotes: so.customerNotes,
-    internalNotes: so.internalNotes,
-    terms: so.terms,
-  }), [so]);
-
   const actions = WORKFLOW_ACTIONS[so.state] ?? [];
 
   return (
@@ -189,7 +192,7 @@ export default function SaleOrderDetailPage() {
             </Button>
           )}
           <PdfDownloadButton
-            doc={<QuotationPDF data={quotationPdfData} />}
+            doc={<QuotationPDF data={quotationPdfData!} />}
             fileName={`${so.number}.pdf`}
           />
           {so.archivedAt ? (

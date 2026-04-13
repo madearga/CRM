@@ -16,7 +16,6 @@ import { ArrowLeft, ShoppingCart, Bookmark, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineItemEditor, type LineItem } from './line-item-editor';
 import { AmountSummary } from './amount-summary';
-import { useAuthQuery } from '@/lib/convex/hooks';
 
 interface CompanyOption { id: string; name: string }
 interface ContactOption { id: string; fullName: string }
