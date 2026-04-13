@@ -8,7 +8,6 @@ import {
   createPublicQuery,
   createAuthMutation,
 } from './functions';
-import { generateToken } from './inviteLinks';
 
 import type { Id } from './_generated/dataModel';
 
