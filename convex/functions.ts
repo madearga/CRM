@@ -1,5 +1,6 @@
  
 import { authClient, getAuth } from './auth';
+import { requirePermission } from './permissionHelpers';
 import { entsTableFactory } from 'convex-ents';
 import {
   customCtx,
@@ -357,7 +358,8 @@ export const createInternalMutation = ({
 export const createOrgQuery = ({
   devOnly,
   role,
-}: { devOnly?: boolean; role?: 'admin' } = {}) =>
+  permission,
+}: { devOnly?: boolean; role?: 'admin'; permission?: { feature: string; action: string } } = {}) =>
   zCustomQuery(
     query,
     customCtx(async (_ctx) => {
@@ -376,6 +378,10 @@ export const createOrgQuery = ({
         throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
       }
 
+      if (permission) {
+        await requirePermission(authedCtx, permission);
+      }
+
       return { ...authedCtx, orgId };
     })
   );
@@ -385,10 +391,12 @@ export const createOrgMutation = ({
   devOnly,
   rateLimit,
   role,
+  permission,
 }: {
   devOnly?: boolean;
   rateLimit?: string | null;
   role?: 'admin';
+  permission?: { feature: string; action: string };
 } = {}) =>
   zCustomMutation(
     mutation,
@@ -411,6 +419,10 @@ export const createOrgMutation = ({
       const orgId = user.activeOrganization?.id;
       if (!orgId) {
         throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+      }
+
+      if (permission) {
+        await requirePermission(authedCtx, permission);
       }
 
       return { ...authedCtx, orgId };
