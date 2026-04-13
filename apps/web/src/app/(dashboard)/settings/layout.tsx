@@ -4,22 +4,24 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/lib/convex/hooks';
+import { usePermissions } from '@/lib/permissions';
 
 const tabs = [
-  { title: 'General', href: '/settings/general' },
-  { title: 'Team', href: '/settings/team', ownerOnly: true },
-  { title: 'Pricelists', href: '/settings/pricelists' },
-  { title: 'Reminder Rules', href: '/settings/reminder-rules' },
+  { title: 'General', href: '/settings/general', feature: 'settings' },
+  { title: 'Team', href: '/settings/team', feature: 'team' },
+  { title: 'Pricelists', href: '/settings/pricelists', feature: 'settings' },
+  { title: 'Reminder Rules', href: '/settings/reminder-rules', feature: 'settings' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const user = useCurrentUser();
+  const perms = usePermissions();
 
-  // Filter tabs by permission (Team tab only for owner/admin for now)
+  // Filter tabs by permission
   const visibleTabs = tabs.filter((tab) => {
-    if (tab.ownerOnly) {
-      return user?.activeOrganization?.role === 'owner' || user?.activeOrganization?.role === 'admin';
+    if (tab.feature) {
+      return perms[`${tab.feature}:view`] ?? false;
     }
     return true;
   });

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
+import { usePermissions } from '@/lib/permissions';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
@@ -57,8 +58,22 @@ const navItems = [
   { title: 'Settings', href: '/settings', icon: Settings },
 ];
 
-function getPageTitle(pathname: string) {
-  const item = navItems.find((item) =>
+const featureMap: Record<string, string> = {
+  '/': 'dashboard',
+  '/companies': 'companies',
+  '/contacts': 'contacts',
+  '/deals': 'deals',
+  '/products': 'products',
+  '/sales': 'sales',
+  '/invoices': 'invoices',
+  '/subscriptions': 'subscriptions',
+  '/templates': 'templates',
+  '/activities': 'activities',
+  '/settings': 'settings',
+};
+
+function getPageTitle(pathname: string, items: typeof navItems) {
+  const item = items.find((item) =>
     item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
   );
   return item?.title ?? 'Dashboard';
@@ -72,6 +87,13 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const user = useCurrentUser();
   const { theme, setTheme } = useTheme();
+  const perms = usePermissions();
+
+  const visibleNavItems = navItems.filter((item) => {
+    const feature = featureMap[item.href];
+    if (!feature) return true;
+    return perms[`${feature}:view`] ?? false;
+  });
 
   return (
     <SidebarProvider>
@@ -93,7 +115,7 @@ export default function DashboardLayout({
             <SidebarGroupLabel className="uppercase tracking-[1.17px]">Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                   const isActive =
                     item.href === '/'
                       ? pathname === '/'
@@ -153,7 +175,7 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center gap-2 bg-black/80 px-4 backdrop-blur">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname)}</h1>
+          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname, visibleNavItems)}</h1>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
