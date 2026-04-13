@@ -30,7 +30,11 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/invoices/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/subscriptions/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/contacts/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/companies/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/sales/page.tsx"
     ],
     "redVerificationPending": false
   },

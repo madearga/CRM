@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Users, Plus, Search, Upload } from 'lucide-react';
+import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -96,6 +97,23 @@ export default function ContactsPage() {
     <div className="space-y-4">
       {/* Add */}
       <div className="flex items-center justify-end gap-2">
+        <DataTableExportButton
+          data={rows.map((r) => ({
+            name: r.fullName,
+            email: r.email ?? '',
+            phone: r.phone ?? '',
+            jobTitle: r.jobTitle ?? '',
+            lifecycleStage: r.lifecycleStage ?? '',
+          }))}
+          columns={[
+            { key: 'name', label: 'Name' },
+            { key: 'email', label: 'Email' },
+            { key: 'phone', label: 'Phone' },
+            { key: 'jobTitle', label: 'Job Title' },
+            { key: 'lifecycleStage', label: 'Stage' },
+          ]}
+          filename={`contacts-${new Date().toISOString().split('T')[0]}`}
+        />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="mr-1 h-4 w-4" />Add Contact</Button>

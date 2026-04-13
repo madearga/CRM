@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Building2, Plus, Search } from 'lucide-react';
+import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -102,7 +103,24 @@ export default function CompaniesPage() {
   return (
     <div className="space-y-4">
       {/* Header + Add */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <DataTableExportButton
+          data={rows.map((r) => ({
+            name: r.name,
+            website: r.website ?? '',
+            industry: r.industry ?? '',
+            country: r.country ?? '',
+            status: r.status ?? '',
+          }))}
+          columns={[
+            { key: 'name', label: 'Name' },
+            { key: 'website', label: 'Website' },
+            { key: 'industry', label: 'Industry' },
+            { key: 'country', label: 'Country' },
+            { key: 'status', label: 'Status' },
+          ]}
+          filename={`companies-${new Date().toISOString().split('T')[0]}`}
+        />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="mr-1 h-4 w-4" />Add Company</Button>

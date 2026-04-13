@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { RefreshCw, Plus, Search } from 'lucide-react';
+import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -90,6 +91,27 @@ export default function SubscriptionsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        <DataTableExportButton
+          data={rows.map((r) => ({
+            name: r.name,
+            interval: r.interval,
+            nextBillingDate: r.nextBillingDate ? new Date(r.nextBillingDate).toLocaleDateString() : '',
+            generatedCount: r.generatedCount,
+            state: r.state,
+            companyName: r.companyName ?? '',
+            contactName: r.contactName ?? '',
+          }))}
+          columns={[
+            { key: 'name', label: 'Name' },
+            { key: 'interval', label: 'Interval' },
+            { key: 'nextBillingDate', label: 'Next Billing' },
+            { key: 'generatedCount', label: 'Generated' },
+            { key: 'state', label: 'State' },
+            { key: 'companyName', label: 'Company' },
+            { key: 'contactName', label: 'Contact' },
+          ]}
+          filename={`subscriptions-${new Date().toISOString().split('T')[0]}`}
+        />
         <Button size="sm" onClick={() => router.push('/subscriptions/new')}>
           <Plus className="mr-1 h-4 w-4" />New Subscription
         </Button>

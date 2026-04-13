@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { ShoppingCart, Plus, Search } from 'lucide-react';
+import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -81,6 +82,27 @@ export default function SalesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        <DataTableExportButton
+          data={rows.map((r) => ({
+            number: r.number,
+            state: r.state,
+            orderDate: r.orderDate ? new Date(r.orderDate).toLocaleDateString() : '',
+            totalAmount: r.totalAmount,
+            companyName: r.companyName ?? '',
+            contactName: r.contactName ?? '',
+            invoiceStatus: r.invoiceStatus ?? '',
+          }))}
+          columns={[
+            { key: 'number', label: 'Order No.' },
+            { key: 'state', label: 'Status' },
+            { key: 'orderDate', label: 'Date' },
+            { key: 'totalAmount', label: 'Total' },
+            { key: 'companyName', label: 'Company' },
+            { key: 'contactName', label: 'Contact' },
+            { key: 'invoiceStatus', label: 'Invoice' },
+          ]}
+          filename={`sales-${new Date().toISOString().split('T')[0]}`}
+        />
         <Button size="sm" onClick={() => router.push('/sales/new')}>
           <Plus className="mr-1 h-4 w-4" />New Quotation
         </Button>

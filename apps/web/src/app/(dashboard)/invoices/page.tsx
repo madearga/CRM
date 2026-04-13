@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { FileText, Plus, Search } from 'lucide-react';
+import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
 import { DataTable, DataTableSkeleton } from '@/components/data-table';
@@ -97,6 +98,33 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        <DataTableExportButton
+          data={rows.map((r) => ({
+            number: r.number,
+            type: r.type,
+            state: r.state,
+            invoiceDate: r.invoiceDate ? new Date(r.invoiceDate).toLocaleDateString() : '',
+            dueDate: r.dueDate ? new Date(r.dueDate).toLocaleDateString() : '',
+            totalAmount: r.totalAmount,
+            amountDue: r.amountDue,
+            companyName: r.companyName ?? '',
+            contactName: r.contactName ?? '',
+            paymentStatus: r.paymentStatus ?? 'unpaid',
+          }))}
+          columns={[
+            { key: 'number', label: 'Invoice No.' },
+            { key: 'type', label: 'Type' },
+            { key: 'state', label: 'Status' },
+            { key: 'invoiceDate', label: 'Invoice Date' },
+            { key: 'dueDate', label: 'Due Date' },
+            { key: 'totalAmount', label: 'Total' },
+            { key: 'amountDue', label: 'Amount Due' },
+            { key: 'companyName', label: 'Company' },
+            { key: 'contactName', label: 'Contact' },
+            { key: 'paymentStatus', label: 'Payment' },
+          ]}
+          filename={`invoices-${new Date().toISOString().split('T')[0]}`}
+        />
         <Button size="sm" onClick={() => router.push('/invoices/new')}>
           <Plus className="mr-1 h-4 w-4" />New Invoice
         </Button>
