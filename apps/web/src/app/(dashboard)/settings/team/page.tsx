@@ -6,6 +6,7 @@ import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
 import { TeamMembersTab } from '@/components/team/team-members-tab';
 import { TeamInvitationsTab } from '@/components/team/team-invitations-tab';
 import { TeamInviteLinkTab } from '@/components/team/team-invite-link-tab';
+import { TeamRolesTab } from '@/components/team/team-roles-tab';
 
 const subTabs = [
   { value: 'members', label: 'Members' },
@@ -44,7 +45,7 @@ export default function TeamPage() {
       </TabsContent>
 
       <TabsContent value="roles" className="mt-4">
-        <div className="py-12 text-center text-muted-foreground">Coming soon.</div>
+        <TeamRolesTab />
       </TabsContent>
     </Tabs>
   );

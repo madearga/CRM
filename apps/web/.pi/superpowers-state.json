@@ -29,7 +29,9 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx"
+    ],
     "redVerificationPending": false
   },
   "debug": {
