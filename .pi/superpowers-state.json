@@ -30,24 +30,10 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "apps/web/src/app/(dashboard)/layout.tsx",
-      "apps/web/src/hooks/use-sales-params.ts",
-      "apps/web/src/app/(dashboard)/sales/columns.tsx",
-      "apps/web/src/app/(dashboard)/sales/page.tsx",
-      "apps/web/src/app/(dashboard)/sales/new/page.tsx",
-      "apps/web/src/app/(dashboard)/sales/[id]/page.tsx",
-      "apps/web/src/app/(dashboard)/sales/[id]/edit/page.tsx",
-      "apps/web/src/components/sales/amount-summary.tsx",
-      "apps/web/src/components/sales/line-item-editor.tsx",
-      "apps/web/src/components/sales/sale-order-form.tsx",
-      "apps/web/src/app/(dashboard)/deals/[id]/page.tsx",
-      "convex/schema.ts",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/styles.ts",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/invoice-pdf.tsx",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/pdf/quotation-pdf.tsx",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/components/pdf-download-button.tsx",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/app/(dashboard)/invoices/[id]/page.tsx",
-      "/Users/madearga/Desktop/crm-worktrees/feat-pdf-generation/apps/web/src/app/(dashboard)/sales/[id]/page.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/layout.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/general/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/page.tsx"
     ],
     "redVerificationPending": false
   },

@@ -175,7 +175,6 @@ const schema = defineEntSchema(
       .edges('accounts', { to: 'account', ref: 'userId' })
       .edges('members', { to: 'member', ref: 'userId' })
       .edges('invitations', { to: 'invitation', ref: 'inviterId' })
-      .edges('saleOrders', { to: 'saleOrders', ref: 'ownerId' })
       .edge('lastActiveOrganization', {
         to: 'organization',
         field: 'lastActiveOrganizationId',
@@ -195,6 +194,7 @@ const schema = defineEntSchema(
       .edges('payments', { ref: 'ownerId' })
       .edges('quotationTemplates', { ref: 'ownerId' })
       .edges('subscriptionTemplates', { ref: 'ownerId' })
+      .edges('permissionTemplates', { ref: 'ownerId' })
       // Note: activities use polymorphic entityType/entityId, queried via index
       // User's activities are fetched via organizationId_entityType_entityId index
       // No edges for activities — they're queried manually

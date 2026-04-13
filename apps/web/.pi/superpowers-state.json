@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "skipped",
-      "plan": "skipped",
-      "execute": "complete",
-      "verify": "skipped",
-      "review": "active",
+      "brainstorm": "pending",
+      "plan": "pending",
+      "execute": "active",
+      "verify": "pending",
+      "review": "pending",
       "finish": "pending"
     },
-    "currentPhase": "review",
+    "currentPhase": "execute",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -20,7 +20,7 @@
     "prompted": {
       "brainstorm": false,
       "plan": false,
-      "execute": true,
+      "execute": false,
       "verify": false,
       "review": false,
       "finish": false
@@ -29,9 +29,7 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/schema.ts"
-    ],
+    "sourceFiles": [],
     "redVerificationPending": false
   },
   "debug": {
