@@ -93,11 +93,10 @@ export default function DashboardLayout({
 
   // Show onboarding overlay if user is authenticated but has no active org
   // Placeholder data has id === '0', so we exclude that
-  const needsOnboarding =
-    user &&
-    user.id &&
-    user.id !== ('0' as any) &&
-    !user.activeOrganization;
+  const isLoggedIn =
+    user && user.id && user.id !== ('0' as any);
+
+  const needsOnboarding = isLoggedIn && !user.activeOrganization;
 
   if (needsOnboarding) {
     return <OnboardingOverlay />;
@@ -152,37 +151,50 @@ export default function DashboardLayout({
         </SidebarContent>
 
         <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <Avatar className="size-7">
-                  <AvatarImage src={user?.image ?? undefined} />
-                  <AvatarFallback className="text-xs">
-                    {user?.name
-                      ?.split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase() ?? '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex-1 truncate text-sm font-medium uppercase tracking-[0.96px]">
-                  {user?.name ?? 'User'}
-                </span>
-              </div>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                {theme === 'dark' ? <Sun /> : <Moon />}
-                <span className="uppercase tracking-[1.17px]">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => signOut()}>
-                <LogOut />
-                <span className="uppercase tracking-[1.17px]">Sign out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          {isLoggedIn ? (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <Avatar className="size-7">
+                    <AvatarImage src={user?.image ?? undefined} />
+                    <AvatarFallback className="text-xs">
+                      {user?.name
+                        ?.split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase() ?? '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="flex-1 truncate text-sm font-medium uppercase tracking-[0.96px]">
+                    {user?.name ?? 'User'}
+                  </span>
+                </div>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                  {theme === 'dark' ? <Sun /> : <Moon />}
+                  <span className="uppercase tracking-[1.17px]">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => signOut()}>
+                  <LogOut />
+                  <span className="uppercase tracking-[1.17px]">Sign out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          ) : (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/login">
+                    <LogOut style={{ transform: 'rotate(180deg)' }} />
+                    <span className="uppercase tracking-[1.17px]">Sign in</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
         </SidebarFooter>
       </Sidebar>
 
