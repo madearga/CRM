@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OrderDetailPage() {
   const router = useRouter();
-  const { orderNumber } = useParams<{ orderNumber: string }>();
+  const { id: orderNumber } = useParams<{ id: string }>();
   const isAuth = useIsAuth();
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;

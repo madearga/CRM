@@ -26,14 +26,14 @@ import { ProductImageGallery } from '@/components/shop/product-image-gallery';
 const ORG_SLUG = 'default';
 
 export default function ProductDetailPage() {
-  const params = useParams<{ slug: string }>();
+  const params = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
 
   // Fetch product by slug
   const { data: product, isLoading, isError } = usePublicQuery(
     api.commerce.products.getBySlug,
-    { organizationSlug: ORG_SLUG, slug: params.slug }
+    { organizationSlug: ORG_SLUG, slug: params.id }
   );
 
   // Related products (same category)
@@ -59,7 +59,7 @@ export default function ProductDetailPage() {
   const relatedProducts: ProductCardData[] = useMemo(
     () =>
       (relatedRaw?.data ?? [])
-        .filter((p) => p.slug !== params.slug)
+        .filter((p) => p.slug !== params.id)
         .slice(0, 4)
         .map((p) => ({
           _id: p.id,
@@ -71,7 +71,7 @@ export default function ProductDetailPage() {
           category: p.categoryName,
           organizationSlug: ORG_SLUG,
         })),
-    [relatedRaw, params.slug]
+    [relatedRaw, params.id]
   );
 
   if (isLoading) {
