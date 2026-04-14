@@ -12,6 +12,7 @@ const tabs = [
   { title: 'Recurring Invoices', href: '/settings/recurring-invoices', feature: 'settings' },
   { title: 'Pricelists', href: '/settings/pricelists', feature: 'settings'},
   { title: 'Reminder Rules', href: '/settings/reminder-rules', feature: 'settings' },
+  { title: 'Shop', href: '/settings/shop', feature: 'settings' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
