@@ -26,7 +26,7 @@ function apiBase(config: ProviderConfig): string {
 
 /** Base64-encoded Basic auth header value from the server key. */
 function basicAuth(serverKey: string): string {
-  return `Basic ${Buffer.from(serverKey + ':').toString('base64')}`;
+  return `Basic ${btoa(serverKey + ':')}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -30,9 +30,8 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/commerce/shopSettings.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/shop/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/layout.tsx"
+      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/helpers.ts"
     ],
     "redVerificationPending": false
   },

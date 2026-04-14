@@ -323,25 +323,30 @@ export const handlePaymentWebhook = httpAction(async (ctx, request) => {
   const statusCode: string = parsed.status_code ?? '';
   const signatureKey: string = parsed.signature_key ?? '';
 
-  // Verify Midtrans signature
-  const serverKey = process.env.MIDTRANS_SERVER_KEY ?? '';
-  if (serverKey && signatureKey) {
-    const expectedInput = [orderNumber, statusCode, grossAmount, serverKey].join('');
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(serverKey),
-      { name: 'HMAC', hash: 'SHA-512' },
-      false,
-      ['sign'],
-    );
-    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(expectedInput));
-    const computed = Array.from(new Uint8Array(sig))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-    if (computed !== signatureKey) {
-      return Response.json({ error: 'Signature verification failed' }, { status: 401 });
-    }
+  // Verify Midtrans signature (mandatory)
+  const serverKey = process.env.MIDTRANS_SERVER_KEY;
+  if (!serverKey) {
+    console.error('MIDTRANS_SERVER_KEY not configured');
+    return Response.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+  if (!signatureKey) {
+    return Response.json({ error: 'Missing signature' }, { status: 401 });
+  }
+  const expectedInput = [orderNumber, statusCode, grossAmount, serverKey].join('');
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(serverKey),
+    { name: 'HMAC', hash: 'SHA-512' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(expectedInput));
+  const computed = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  if (computed !== signatureKey) {
+    return Response.json({ error: 'Signature verification failed' }, { status: 401 });
   }
 
   try {
@@ -430,6 +435,11 @@ export const processWebhook = createInternalMutation()({
     const mapped = statusMap[args.transactionStatus];
     if (!mapped) {
       throw new ConvexError({ code: 'BAD_REQUEST', message: `Unknown status: ${args.transactionStatus}` });
+    }
+
+    // Idempotency: skip if already in target state (duplicate webhook)
+    if (order.status === mapped.status && order.paymentStatus === mapped.paymentStatus) {
+      return { success: true };
     }
 
     // Update order
