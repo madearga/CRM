@@ -1,7 +1,7 @@
 # Customer Portal & Headless Commerce — Design Spec
 
 **Date:** 2026-04-14
-**Status:** Approved
+**Status:** In Review — P0 fixes applied from staff engineer review
 **Phases:** 3 (Portal → Store Integration → Full Headless)
 
 ---
@@ -82,18 +82,19 @@ Add a customer-facing e-commerce portal to the CRM app and build a headless comm
 customers: defineEnt({
   name: v.string(),
   email: v.string(),
-  phone: v.optional(v.string()),
-  address: v.optional(v.string()),
-  city: v.optional(v.string()),
-  postalCode: v.optional(v.string()),
-  avatarUrl: v.optional(v.string()),
-  socialProvider: v.optional(v.string()), // 'google' | 'facebook'
-  socialId: v.optional(v.string()),
+  phone: v.optional(v.union(v.string(), v.null())),  // P1-fix: better-auth compat
+  address: v.optional(v.union(v.string(), v.null())),
+  city: v.optional(v.union(v.string(), v.null())),
+  postalCode: v.optional(v.union(v.string(), v.null())),
+  avatarUrl: v.optional(v.union(v.string(), v.null())),
+  socialProvider: v.optional(v.union(v.string(), v.null())),
+  socialId: v.optional(v.union(v.string(), v.null())),
 })
   .field('organizationId', v.id('organization'), { index: true })
   .field('userId', v.optional(v.id('user'))) // link to CRM user if exists
+  .field('contactId', v.optional(v.id('contacts'))) // P1-fix: explicit link to CRM contact
   .index('organizationId_email', ['organizationId', 'email'])
-  .index('organizationId_socialProvider', ['organizationId', 'socialProvider'])
+  .index('organizationId_socialProvider', ['organizationId', 'socialProvider', 'socialId'])
 
 // === CART ===
 carts: defineEnt({
@@ -101,8 +102,10 @@ carts: defineEnt({
 })
   .field('organizationId', v.id('organization'), { index: true })
   .field('customerId', v.id('customers'), { index: true })
-  .field('sessionId', v.optional(v.string())) // for guest before login
+  .field('sessionId', v.optional(v.union(v.string(), v.null()))) // for guest before login
+  .field('currency', v.optional(v.string())) // P2-fix: currency tracking
   .index('organizationId_customerId_status', ['organizationId', 'customerId', 'status'])
+  .index('sessionId', ['sessionId']) // P1-fix: for guest cart lookup
 
 // === CART ITEMS ===
 cartItems: defineEnt({
@@ -112,11 +115,12 @@ cartItems: defineEnt({
   .field('productId', v.id('products'))
   .field('variantId', v.optional(v.id('productVariants')))
   .field('unitPrice', v.number()) // price snapshot at time of adding
+  .field('organizationId', v.id('organization'), { index: true }) // P1-fix: consistent with schema pattern
   .index('cartId', ['cartId'])
 
 // === SHOP ORDERS (separate from CRM saleOrders) ===
 shopOrders: defineEnt({
-  orderNumber: v.string(), // auto-generated: ORD-20260414-XXXX
+  orderNumber: v.string(), // atomic-generated: ORD-20260414-XXXX
   status: v.union(
     v.literal('pending_payment'),
     v.literal('paid'),
@@ -137,7 +141,8 @@ shopOrders: defineEnt({
   shippingCost: v.optional(v.number()),
   discountAmount: v.optional(v.number()),
   totalAmount: v.number(),
-  notes: v.optional(v.string()),
+  currency: v.string(), // P2-fix: explicit currency
+  notes: v.optional(v.union(v.string(), v.null())),
 })
   .field('organizationId', v.id('organization'), { index: true })
   .field('customerId', v.id('customers'), { index: true })
@@ -153,6 +158,11 @@ shopOrders: defineEnt({
     city: v.string(),
     postalCode: v.string(),
   })))
+  .field('orderTimeline', v.optional(v.array(v.object({  // P2-fix: order timeline
+    status: v.string(),
+    timestamp: v.number(),
+    note: v.optional(v.string()),
+  }))))
   .index('organizationId_status', ['organizationId', 'status'])
   .index('organizationId_orderNumber', ['organizationId', 'orderNumber'])
   .index('organizationId_customerId', ['organizationId', 'customerId'])
@@ -167,6 +177,7 @@ shopOrderItems: defineEnt({
   .field('shopOrderId', v.id('shopOrders'), { index: true })
   .field('productId', v.id('products'))
   .field('variantId', v.optional(v.id('productVariants')))
+  .field('organizationId', v.id('organization'), { index: true }) // P1-fix: consistent
   .index('shopOrderId', ['shopOrderId'])
 
 // === CONNECTED STORES (Phase 2) ===
@@ -175,8 +186,8 @@ connectedStores: defineEnt({
   url: v.string(),
   apiKey: v.string(), // hashed
   apiKeyPrefix: v.string(), // for display: "tm_****xxxx"
-  webhookUrl: v.optional(v.string()),
-  webhookSecret: v.optional(v.string()),
+  webhookUrl: v.optional(v.union(v.string(), v.null())),
+  webhookSecret: v.optional(v.union(v.string(), v.null())),
   status: v.union(v.literal('active'), v.literal('suspended'), v.literal('disconnected')),
   lastSyncAt: v.optional(v.number()),
 })
@@ -188,7 +199,12 @@ connectedStores: defineEnt({
 paymentProviders: defineEnt({
   provider: v.string(), // 'midtrans' | 'stripe'
   isActive: v.boolean(),
-  config: v.record(v.string(), v.string()), // serverKey, clientKey, etc (encrypted)
+  // P0-fix: secrets stored in Convex environment variables, NOT in DB
+  // config only stores non-sensitive settings (sandboxMode, webhookUrl, etc)
+  config: v.record(v.string(), v.string()), // non-sensitive config only
+  // Secrets accessed via process.env at runtime:
+  //   MIDTRANS_SERVER_KEY_<orgId> → Convex env var
+  //   MIDTRANS_CLIENT_KEY_<orgId> → public (NEXT_PUBLIC_)
   sandboxMode: v.optional(v.boolean()),
 })
   .field('organizationId', v.id('organization'), { index: true })
@@ -198,15 +214,30 @@ paymentProviders: defineEnt({
 // Add to existing products entity:
 //   visibleInShop: v.optional(v.boolean()),  // default false
 //   slug: v.optional(v.string()),            // URL-friendly product slug
+//   stock: v.optional(v.number()),           // P0-fix: inventory tracking
+//   images: v.optional(v.array(v.string())),  // P2-fix: multiple images
+
+// === ORDER NUMBER COUNTER (atomic generation) ===
+// P0-fix: use a separate entity for atomic order number generation
+orderCounters: defineEnt({
+  counter: v.number(),
+  date: v.string(), // YYYY-MM-DD
+})
+  .field('organizationId', v.id('organization'), { index: true })
+  .index('organizationId_date', ['organizationId', 'date'])
 ```
 
 **Design decisions:**
 - `shopOrders` separate from `saleOrders` — e-commerce flow vs CRM sales, can be linked via `saleOrderId`
-- `customers` separate from `contacts` — customer = portal buyer, contact = CRM contact, linkable later
+- `customers` separate from `contacts` with explicit `contactId` link — avoids data duplication, CRM contacts stay authoritative
 - Price snapshots in cart items & order items — prices change, orders must preserve purchase price
 - `connectedStores` ready for Phase 2 but doesn't block Phase 1
 - Product `visibleInShop` flag — owner controls which products appear in portal
 - Product `slug` — URL-friendly identifier for public product pages
+- **P0-fix: `stock` field on products** — inventory tracking, checked during checkout with atomic decrement
+- **P0-fix: `orderCounters` entity** — atomic order number generation per org per day
+- **P0-fix: Payment secrets in Convex env vars** — not stored in database records
+- **P1-fix: `organizationId` on all line items** — consistent with schema pattern for scoped queries
 
 ---
 
@@ -270,6 +301,9 @@ export const addItem = mutation({
     variantId: v.optional(v.id('productVariants')),
     quantity: v.number(),
   },
+  // P0-fix: Verify caller owns the cart (customer or sessionId match)
+  // P1-fix: Check stock before adding
+  // P1-fix: If same product+variant exists in cart, increment quantity (dedup)
   // Get or create active cart, add item, snapshot price
 })
 
@@ -294,18 +328,19 @@ export const mergeGuestCart = mutation({
 ### convex/commerce/customers.ts
 
 ```typescript
-// Called after social login
+// P0-fix: Derive identity from authenticated session, NOT from client args
+// After better-auth social login completes, this is called with the session user
 export const registerOrLogin = mutation({
   args: {
     organizationSlug: v.string(),
-    name: v.string(),
-    email: v.string(),
-    socialProvider: v.string(),
-    socialId: v.string(),
-    avatarUrl: v.optional(v.string()),
+    // name, email, socialProvider, socialId derived from ctx.auth
+    // NOT passed from client — prevents impersonation
   },
-  // Upsert: create customer if new, return existing if already registered
-  // Link to CRM user if same email exists
+  // 1. Get user from ctx.auth (authenticated session)
+  // 2. Extract name, email from session
+  // 3. Upsert: create customer if new, return existing if already registered
+  // 4. Auto-create CRM contact if not exists (link via contactId)
+  // 5. Link to CRM user if same email exists
 })
 
 export const getProfile = query({
@@ -345,29 +380,44 @@ export const initiateCheckout = mutation({
     }),
     notes: v.optional(v.string()),
   },
+  // P0-fix: Verify caller owns the cart
+  // P0-fix: Atomic stock check + reserve (decrement stock for each item)
+  // P0-fix: Atomic order number generation via orderCounters entity
+  // P1-fix: Verify prices haven't changed since cart was built
   // 1. Validate cart (stock, price changes)
-  // 2. Create shopOrder (pending_payment)
-  // 3. Call paymentProvider.initiatePayment(order)
-  // 4. Return { orderId, paymentData: { snapToken, redirectUrl } }
-  // 5. Mark cart as 'converted'
+  // 2. Generate order number: ORD-YYYYMMDD-XXXX (atomic counter)
+  // 3. Create shopOrder (pending_payment)
+  // 4. Decrement product stock for each item
+  // 5. Call paymentProvider.initiatePayment(order)
+  // 6. Return { orderId, paymentData: { snapToken, redirectUrl } }
+  // 7. Mark cart as 'converted'
+  // On failure: rollback stock reservation
 })
 
-export const handlePaymentCallback = mutation({
-  args: {
-    organizationSlug: v.string(),
-    orderId: v.id('shopOrders'),
-    provider: v.string(),
-    paymentData: v.record(v.string(), v.any()),
-  },
-  // 1. Verify payment with provider
-  // 2. Update shopOrder status + paymentStatus
-  // 3. Auto-create saleOrder in CRM (link via saleOrderId)
-  // 4. Auto-create contact in CRM if not exists
+// P0-fix: This MUST be an httpAction (HTTP endpoint), NOT a mutation
+// Payment callbacks come from Midtrans server, not from client
+export const handlePaymentWebhook = httpAction(async (ctx, request) => {
+  // 1. Parse webhook body from Midtrans
+  // 2. Verify HMAC-SHA256 signature using server key (from Convex env)
+  // 3. Find shopOrder by paymentRef (midtrans order ID)
+  // 4. Update shopOrder status + paymentStatus
+  // 5. Auto-create saleOrder in CRM (link via saleOrderId)
+  // 6. Auto-create contact in CRM if not exists
+  // 7. Return 200 OK
+});
+
+// Client-side: poll or use Convex subscription to detect payment status change
+export const checkPaymentStatus = query({
+  args: { orderId: v.id('shopOrders') },
+  // Returns current paymentStatus — UI polls this after payment
+  // P0-fix: verify caller owns this order
 })
 
 export const cancelOrder = mutation({
   args: { orderId: v.id('shopOrders') },
+  // P0-fix: Verify caller owns this order
   // Only if status is pending_payment
+  // Restore stock for each item
 })
 
 export const getOrderDetail = query({
