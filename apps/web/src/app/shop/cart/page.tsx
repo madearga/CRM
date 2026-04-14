@@ -8,7 +8,7 @@ import { CartItemRow, type CartItemData } from '@/components/shop/cart-item-row'
 import { CartSummary } from '@/components/shop/cart-summary';
 import { usePublicQuery, usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
 import { useConvexAuth } from 'convex/react';
-import { FunctionReference } from 'convex/server';
+import { api } from '@convex/_generated/api';
 
 const ORG_SLUG = 'default';
 const SESSION_KEY = 'shop_session_id';
@@ -35,7 +35,7 @@ export default function CartPage() {
 
   // Merge guest cart on login
   const mergeGuestCart = usePublicMutation(
-    'commerce/cart:mergeGuestCart' as unknown as FunctionReference<'mutation', 'public', any, any>,
+    api.commerce.cart.mergeGuestCart as any,
     {
     onSuccess: () => {
       setMerged(true);
@@ -68,7 +68,7 @@ export default function CartPage() {
   );
 
   const { data: cart, isLoading, isError } = usePublicQuery(
-    'commerce/cart:getCart' as unknown as FunctionReference<'query', 'public', any, any>,
+    api.commerce.cart.getCart,
     cartQueryArgs,
   );
 

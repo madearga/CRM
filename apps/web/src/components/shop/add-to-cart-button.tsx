@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { FunctionReference } from 'convex/server';
 import { useMutation } from '@tanstack/react-query';
 import { useConvexMutation } from '@convex-dev/react-query';
+import { api } from '@convex/_generated/api';
 
 interface AddToCartButtonProps {
   productId: string;
@@ -25,8 +25,8 @@ export function AddToCartButton({
 }: AddToCartButtonProps) {
   const addItem = useMutation({
     mutationFn: useConvexMutation(
-      'commerce/cart:addItem' as unknown as FunctionReference<'mutation', 'public', any, any>
-    ) as any,
+      api.commerce.cart.addItem as any
+    ),
   });
 
   const handleClick = () => {

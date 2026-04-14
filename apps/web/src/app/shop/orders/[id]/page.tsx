@@ -25,7 +25,7 @@ export default function OrderDetailPage() {
     orderNumber && orgSlug ? { orderNumber, organizationSlug: orgSlug } : 'skip',
   );
 
-  const cancelOrder = usePublicMutation(api.commerce.orders.cancelOrder as any);
+  const cancelOrder = usePublicMutation(api.commerce.checkout.cancelOrder as any);
 
   if (!isAuth) {
     return (
@@ -118,7 +118,7 @@ export default function OrderDetailPage() {
             disabled={cancelOrder.isPending}
             onClick={async () => {
               try {
-                await cancelOrder.mutateAsync({ orderNumber: order.orderNumber, organizationSlug: orgSlug } as any);
+                await cancelOrder.mutateAsync({ orderId: order.id } as any);
                 router.push('/shop/orders');
               } catch {
                 /* handled by mutation */

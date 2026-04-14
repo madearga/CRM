@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { formatIDR } from '@/lib/commerce/format-currency';
 import { usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
-import { FunctionReference } from 'convex/server';
+import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
 import { Loader2, Trash2 } from 'lucide-react';
 
@@ -44,7 +44,7 @@ export function CartSummary({
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   const clearCart = usePublicMutation(
-    'commerce/cart:clearCart' as unknown as FunctionReference<'mutation', 'public', any, any>,
+    api.commerce.cart.clearCart as any,
     {
     onSuccess: () => {
       setClearDialogOpen(false);

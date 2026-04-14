@@ -21,19 +21,19 @@ export default function CheckoutPage() {
 
   // Cart data
   const { data: cart, isLoading: cartLoading } = usePublicQuery(
-    api.commerce_cart.getCart as any,
+    api.commerce.cart.getCart as any,
     { organizationSlug: ORG_SLUG } as any,
   );
 
   // Customer profile for pre-fill
   const { data: customerProfile } = usePublicQuery(
-    api.commerce_customers.getProfile as any,
+    api.commerce.customers.getProfile as any,
     isAuthenticated ? { organizationSlug: ORG_SLUG } : ('skip' as any),
   );
 
   // Checkout mutation
   const initiateCheckoutMutation = usePublicMutation(
-    api.commerce_checkout.initiateCheckout as any,
+    api.commerce.checkout.initiateCheckout as any,
   );
 
   const [submitting, setSubmitting] = useState(false);

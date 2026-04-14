@@ -18,7 +18,7 @@ export default function CheckoutFailedPage() {
   const [cancelling, setCancelling] = useState(false);
 
   const cancelOrderMutation = usePublicMutation(
-    api.commerce_checkout.cancelOrder as any,
+    api.commerce.checkout.cancelOrder as any,
   );
 
   async function handleRetry() {

@@ -6,7 +6,7 @@ import { Minus, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatIDR } from '@/lib/commerce/format-currency';
 import { usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
-import { FunctionReference } from 'convex/server';
+import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
 
 export interface CartItemData {
@@ -34,7 +34,7 @@ export function CartItemRow({ item, sessionId, onUpdated }: CartItemRowProps) {
   const [removing, setRemoving] = useState(false);
 
   const updateQuantity = usePublicMutation(
-    'commerce/cart:updateQuantity' as unknown as FunctionReference<'mutation', 'public', any, any>,
+    api.commerce.cart.updateQuantity as any,
     {
     onSuccess: () => {
       onUpdated?.();
@@ -46,7 +46,7 @@ export function CartItemRow({ item, sessionId, onUpdated }: CartItemRowProps) {
   });
 
   const removeItem = usePublicMutation(
-    'commerce/cart:removeItem' as unknown as FunctionReference<'mutation', 'public', any, any>,
+    api.commerce.cart.removeItem as any,
     {
     onSuccess: () => {
       setRemoving(true);
