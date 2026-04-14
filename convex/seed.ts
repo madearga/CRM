@@ -536,3 +536,211 @@ export const seedCrmData = createInternalMutation()({
     return null;
   },
 });
+
+/**
+ * Seed shop products and categories for testing the online store.
+ * Run: npx convex run seed:seedShopData
+ */
+export const seedShopData = createInternalMutation({
+  args: {},
+  returns: z.object({
+    categories: z.number(),
+    products: z.number(),
+  }),
+  handler: async (ctx) => {
+    const adminEmail = getAdminConfig().adminEmail;
+    const admin = await ctx.table('user').get('email', adminEmail);
+    if (!admin) throw new Error('Admin user not found. Run seed first.');
+
+    const org = await ctx
+      .table('organization', 'slug', (q: any) => q.eq('slug', 'workspace'))
+      .first();
+    if (!org) throw new Error('Organization not found. Run seed first.');
+    const orgId = org._id;
+    const userId = admin._id;
+
+    // --- Categories ---
+    const categoryData = [
+      { name: 'Elektronik', description: 'Perangkat elektronik dan aksesoris' },
+      { name: 'Pakaian', description: 'Baju, celana, dan aksesoris fashion' },
+      { name: 'Makanan & Minuman', description: 'Produk F&B lokal' },
+      { name: 'Peralatan Rumah', description: 'Peralatan dan perlengkapan rumah tangga' },
+      { name: 'Olahraga', description: 'Peralatan dan apparel olahraga' },
+    ];
+
+    const categoryIds: Record<string, any> = {};
+    for (const cat of categoryData) {
+      const existing = await ctx
+        .table('productCategories', 'organizationId_parentId', (q: any) =>
+          q.eq('organizationId', orgId)
+        )
+        .filter((q: any) => q.eq(q.field('name'), cat.name))
+        .first();
+      if (existing) {
+        categoryIds[cat.name] = existing._id;
+      } else {
+        categoryIds[cat.name] = await ctx.table('productCategories').insert({
+          name: cat.name,
+          description: cat.description,
+          active: true,
+          organizationId: orgId,
+        });
+      }
+    }
+    console.info(`  ✅ Ensured ${categoryData.length} categories`);
+
+    // --- Products ---
+    const productsData = [
+      {
+        name: 'Earbuds Pro TWS',
+        type: 'storable' as const,
+        description: 'Earbuds wireless ANC, baterai 30 jam, IPX5',
+        price: 450000,
+        cost: 200000,
+        sku: 'EB-PRO-001',
+        unit: 'pcs',
+        tags: ['bestseller', 'wireless'],
+        category: 'Elektronik',
+      },
+      {
+        name: 'Kaos Polos Premium',
+        type: 'storable' as const,
+        description: 'Katun combed 30s, nyaman sehari-hari',
+        price: 89000,
+        cost: 35000,
+        sku: 'KP-PLS-001',
+        unit: 'pcs',
+        tags: ['bestseller'],
+        category: 'Pakaian',
+      },
+      {
+        name: 'Kopi Arabika Gayo 250g',
+        type: 'storable' as const,
+        description: 'Single origin, medium roast, specialty grade',
+        price: 75000,
+        cost: 30000,
+        sku: 'KF-GYO-250',
+        unit: 'pcs',
+        tags: ['lokal', 'bestseller'],
+        category: 'Makanan & Minuman',
+      },
+      {
+        name: 'Tumbler Stainless 750ml',
+        type: 'storable' as const,
+        description: 'Vacuum insulated, keep cold 24h / hot 12h',
+        price: 125000,
+        cost: 50000,
+        sku: 'TB-SS-750',
+        unit: 'pcs',
+        tags: ['bestseller'],
+        category: 'Peralatan Rumah',
+      },
+      {
+        name: 'Yoga Mat 8mm',
+        type: 'storable' as const,
+        description: 'TPE eco-friendly, anti-slip, 183x61cm',
+        price: 199000,
+        cost: 80000,
+        sku: 'YM-TPE-008',
+        unit: 'pcs',
+        tags: ['wellness'],
+        category: 'Olahraga',
+      },
+      {
+        name: 'Charger USB-C 65W GaN',
+        type: 'storable' as const,
+        description: 'Fast charging, compact, universal compatibility',
+        price: 185000,
+        cost: 75000,
+        sku: 'CH-GAN-065',
+        unit: 'pcs',
+        tags: ['fast-charging'],
+        category: 'Elektronik',
+      },
+      {
+        name: 'Hoodie Oversize',
+        type: 'storable' as const,
+        description: 'Fleece premium, cocok untuk weather Indonesia',
+        price: 159000,
+        cost: 60000,
+        sku: 'HD-OVS-001',
+        unit: 'pcs',
+        tags: ['fashion'],
+        category: 'Pakaian',
+      },
+      {
+        name: 'Sambal Bawang Crispy 200g',
+        type: 'storable' as const,
+        description: 'Homestyle, rendah sodium, tanpa pengawet',
+        price: 45000,
+        cost: 15000,
+        sku: 'SM-BWG-200',
+        unit: 'pcs',
+        tags: ['lokal', 'bestseller'],
+        category: 'Makanan & Minuman',
+      },
+      {
+        name: 'Diffuser Aromatherapy 300ml',
+        type: 'storable' as const,
+        description: 'Ultrasonik, LED 7 warna, auto-off',
+        price: 175000,
+        cost: 65000,
+        sku: 'DF-ATH-300',
+        unit: 'pcs',
+        tags: ['home', 'wellness'],
+        category: 'Peralatan Rumah',
+      },
+      {
+        name: 'Resistance Band Set 5 Level',
+        type: 'storable' as const,
+        description: 'Latex, 5 level resistance, termasuk carry bag',
+        price: 95000,
+        cost: 30000,
+        sku: 'RB-SET-005',
+        unit: 'set',
+        tags: ['home-workout'],
+        category: 'Olahraga',
+      },
+    ];
+
+    let created = 0;
+    for (const p of productsData) {
+      // Skip if SKU already exists
+      const existing = await ctx
+        .table('products', 'organizationId_category', (q: any) =>
+          q.eq('organizationId', orgId)
+        )
+        .filter((q: any) => q.eq(q.field('sku'), p.sku))
+        .first();
+      if (existing) continue;
+
+      const categoryId = categoryIds[p.category];
+      const productId = await ctx.table('products').insert({
+        name: p.name,
+        type: p.type,
+        description: p.description,
+        price: p.price,
+        cost: p.cost,
+        sku: p.sku,
+        unit: p.unit,
+        tags: p.tags,
+        category: categoryId,
+        active: true,
+        organizationId: orgId,
+        ownerId: userId,
+      });
+
+      // Auto-create default variant
+      await ctx.table('productVariants').insert({
+        name: p.name,
+        productId,
+        organizationId: orgId,
+      });
+
+      created++;
+    }
+    console.info(`  ✅ Created ${created} products (${productsData.length - created} already existed)`);
+
+    return { categories: categoryData.length, products: created };
+  },
+});
