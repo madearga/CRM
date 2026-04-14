@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
+import { getOrgId, resolveCustomerId, verifyCartOwnership } from './helpers';
 import {
   createPublicMutation,
   createPublicQuery,
@@ -11,11 +12,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Resolve organization ID from slug. */
-async function getOrgId(ctx: any, slug: string) {
-  const org = await ctx.table('organization').get('slug', slug);
-  if (!org) throw new ConvexError({ code: 'NOT_FOUND', message: 'Organization not found' });
-  return org._id;
-}
+// Use imported getOrgId from helpers.ts
 
 /** Find active cart for an authenticated customer. */
 async function findActiveCustomerCart(ctx: any, orgId: any, customerId: any) {
@@ -81,24 +78,10 @@ async function getOrCreateCart(
 }
 
 /** Resolve the customer ID for the current user (if any). */
-async function resolveCustomerId(ctx: any, orgId: any, userId: any | null) {
-  if (!userId) return null;
-  const customers = await ctx
-    .table('customers', 'organizationId_email', (q: any) =>
-      q.eq('organizationId', orgId)
-    );
-  // Find customer linked to this user
-  // @ts-ignore — ents typing
-  const match = customers.find((c: any) => c.userId === userId);
-  return match?._id ?? null;
-}
+// Use imported resolveCustomerId from helpers.ts
 
 /** Verify the caller owns the cart. Throws if not. */
-function verifyCartOwnership(cart: any, customerId: any | null, sessionId: string | undefined) {
-  if (customerId && cart.customerId === customerId) return;
-  if (sessionId && cart.sessionId === sessionId) return;
-  throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your cart' });
-}
+// Use imported verifyCartOwnership from helpers.ts
 
 /** Load cart items with product details. */
 async function loadCartItems(ctx: any, cartId: any) {

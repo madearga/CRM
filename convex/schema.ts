@@ -1049,6 +1049,7 @@ const schema = defineEntSchema(
       .field('userId', v.optional(v.id('user')))
       .field('contactId', v.optional(v.id('contacts')))
       .index('organizationId_email', ['organizationId', 'email'])
+      .index('organizationId_userId', ['organizationId', 'userId'])
       .index('organizationId_socialProvider', ['organizationId', 'socialProvider', 'socialId']),
 
     // Shopping carts
@@ -1121,6 +1122,7 @@ const schema = defineEntSchema(
       }))))
       .index('organizationId_status', ['organizationId', 'status'])
       .index('organizationId_orderNumber', ['organizationId', 'orderNumber'])
+      .index('orderNumber', ['orderNumber'])
       .index('organizationId_customerId', ['organizationId', 'customerId'])
       .edges('items', { to: 'shopOrderItems', ref: 'shopOrderId' }),
 

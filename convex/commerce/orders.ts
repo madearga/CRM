@@ -6,21 +6,15 @@ import {
   createOrgPaginatedQuery,
   createPublicQuery,
 } from '../functions';
+import { getOrgId, resolveCustomerId, timelineEntry } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve customer ID for authenticated user. */
-async function resolveCustomerId(ctx: any, orgId: any, userId: any | null) {
-  if (!userId) return null;
-  const customers = await ctx
-    .table('customers', 'organizationId_email', (q: any) => q.eq('organizationId', orgId));
-  const match = customers.find((c: any) => c.userId === userId);
-  return match?._id ?? null;
-}
+// resolveCustomerId, getOrgId, timelineEntry — imported from ./helpers
 
-/** Resolve org from slug. */
+/** Resolve org from slug (returns full org object, not just id). */
 async function getOrg(ctx: any, slug: string) {
   const org = await ctx.table('organization').get('slug', slug);
   if (!org) throw new ConvexError({ code: 'NOT_FOUND', message: 'Organization not found' });
@@ -35,11 +29,6 @@ async function verifyOrderOwnership(ctx: any, order: any) {
   if (!customerId || order.customerId !== customerId) {
     throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your order' });
   }
-}
-
-/** Timeline entry helper. */
-function timelineEntry(status: string, note?: string) {
-  return { status, timestamp: Date.now(), note };
 }
 
 // ---------------------------------------------------------------------------

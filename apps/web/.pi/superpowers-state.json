@@ -30,11 +30,12 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/cart/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/add-to-cart-button.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/cart-item-row.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/cart-summary.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/orders/[id]/page.tsx"
+      "/Users/madearga/Desktop/crm/convex/schema.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/helpers.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/cart.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/orders.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/layout.tsx"
     ],
     "redVerificationPending": false
   },

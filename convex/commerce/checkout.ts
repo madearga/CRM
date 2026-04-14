@@ -8,18 +8,12 @@ import {
   createPublicQuery,
   createInternalMutation,
 } from '../functions';
+import { getOrgId, resolveCustomerId, verifyCartOwnership, timelineEntry } from './helpers';
 import { getPaymentProvider, getProviderConfig } from './payments/index';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Resolve organization ID from slug. */
-async function getOrgId(ctx: any, slug: string) {
-  const org = await ctx.table('organization').get('slug', slug);
-  if (!org) throw new ConvexError({ code: 'NOT_FOUND', message: 'Organization not found' });
-  return org._id;
-}
 
 /** Find active cart by customer or session. */
 async function findActiveCart(ctx: any, orgId: any, customerId: any | null, sessionId?: string) {
@@ -42,21 +36,7 @@ async function findActiveCart(ctx: any, orgId: any, customerId: any | null, sess
   return null;
 }
 
-/** Resolve customer ID for authenticated user. */
-async function resolveCustomerId(ctx: any, orgId: any, userId: any | null) {
-  if (!userId) return null;
-  const customers = await ctx
-    .table('customers', 'organizationId_email', (q: any) => q.eq('organizationId', orgId));
-  const match = customers.find((c: any) => c.userId === userId);
-  return match?._id ?? null;
-}
-
-/** Verify caller owns the cart. */
-function verifyCartOwnership(cart: any, customerId: any | null, sessionId?: string) {
-  if (customerId && cart.customerId === customerId) return;
-  if (sessionId && cart.sessionId === sessionId) return;
-  throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your cart' });
-}
+// getOrgId, resolveCustomerId, verifyCartOwnership, timelineEntry — imported from ./helpers
 
 /** Format date as YYYYMMDD. */
 function dateKey(ts: number): string {
@@ -72,11 +52,6 @@ async function restoreStock(ctx: any, items: Array<{ productId: any; quantity: n
       await product.patch({ stock: product.stock + item.quantity });
     }
   }
-}
-
-/** Timeline entry helper. */
-function timelineEntry(status: string, note?: string) {
-  return { status, timestamp: Date.now(), note };
 }
 
 // ---------------------------------------------------------------------------
@@ -387,37 +362,18 @@ export const processWebhook = createInternalMutation()({
   },
   returns: z.object({ success: z.boolean() }),
   handler: async (ctx, args) => {
-    // We need to find the order by orderNumber, but our index is compound (orgId + orderNumber).
-    // Strategy: iterate all active midtrans providers, then query per org.
-    let order: any = null;
-    let ppRecord: any = null;
-
-    const allProviders = await ctx
-      .table('paymentProviders', 'organizationId_provider', (q: any) =>
-        q.eq('provider', 'midtrans'),
-      );
-
-    for (const pp of allProviders) {
-      if (!pp.isActive) continue;
-      const found = await ctx
-        .table('shopOrders', 'organizationId_orderNumber', (q: any) =>
-          q.eq('organizationId', pp.organizationId).eq('orderNumber', args.orderNumber),
-        )
-        .first();
-      if (found) {
-        order = found;
-        ppRecord = pp;
-        break;
-      }
-    }
+    // Find order directly by orderNumber using global index (O(1) instead of O(orgs))
+    const order = await ctx
+      .table('shopOrders', 'orderNumber', (q: any) =>
+        q.eq('orderNumber', args.orderNumber),
+      )
+      .first();
 
     if (!order) {
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Order not found' });
     }
 
     const orgId = order.organizationId;
-
-    // ppRecord was already found during the provider-lookup loop above.
     // Signature verification is done in the httpAction layer (crypto.subtle
     // is available there but not inside mutations).
 
@@ -445,8 +401,8 @@ export const processWebhook = createInternalMutation()({
     // Update order
     const currentTimeline = order.orderTimeline ?? [];
     await order.patch({
-      status: mapped.status,
-      paymentStatus: mapped.paymentStatus,
+      status: mapped.status as any,
+      paymentStatus: mapped.paymentStatus as any,
       paymentRef: args.transactionId,
       orderTimeline: [...currentTimeline, timelineEntry(mapped.status, `Payment ${args.transactionStatus}`)],
     });

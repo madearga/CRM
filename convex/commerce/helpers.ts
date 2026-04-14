@@ -7,12 +7,14 @@ export async function getOrgId(ctx: any, slug: string) {
   return org._id;
 }
 
-/** Resolve customer ID for authenticated user. */
+/** Resolve customer ID for authenticated user. Uses indexed query. */
 export async function resolveCustomerId(ctx: any, orgId: any, userId: any | null) {
   if (!userId) return null;
-  const customers = await ctx
-    .table('customers', 'organizationId_email', (q: any) => q.eq('organizationId', orgId));
-  const match = customers.find((c: any) => c.userId === userId);
+  const match = await ctx
+    .table('customers', 'organizationId_userId', (q: any) =>
+      q.eq('organizationId', orgId).eq('userId', userId),
+    )
+    .first();
   return match?._id ?? null;
 }
 
