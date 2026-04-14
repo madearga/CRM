@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "active",
+      "brainstorm": "complete",
       "plan": "pending",
-      "execute": "pending",
+      "execute": "active",
       "verify": "pending",
       "review": "pending",
       "finish": "pending"
     },
-    "currentPhase": "brainstorm",
+    "currentPhase": "execute",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -18,7 +18,7 @@
       "finish": null
     },
     "prompted": {
-      "brainstorm": false,
+      "brainstorm": true,
       "plan": false,
       "execute": false,
       "verify": false,
@@ -30,9 +30,8 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/components/providers.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/onboarding/onboarding-overlay.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/layout.tsx"
+      "/Users/madearga/Desktop/crm/convex/schema.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts"
     ],
     "redVerificationPending": false
   },

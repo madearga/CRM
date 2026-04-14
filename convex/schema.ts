@@ -507,6 +507,11 @@ const schema = defineEntSchema(
       tags: v.optional(v.array(v.string())),
       notes: v.optional(v.string()),
       archivedAt: v.optional(v.number()),
+      // Commerce portal fields
+      visibleInShop: v.optional(v.boolean()),
+      slug: v.optional(v.string()),
+      stock: v.optional(v.number()),
+      images: v.optional(v.array(v.string())),
     })
       .field('organizationId', v.id('organization'), { index: true })
       .edge('owner', { to: 'user', field: 'ownerId' })
@@ -515,11 +520,15 @@ const schema = defineEntSchema(
       .edges('invoiceLines', { ref: 'productId' })
       .edges('recurringInvoiceLines', { ref: 'productId' })
       .edges('priceRules', { ref: 'productId' })
+      .edges('cartItems', { ref: 'productId' })
+      .edges('shopOrderItems', { ref: 'productId' })
 
       .index('organizationId_name', ['organizationId', 'name'])
       .index('organizationId_category', ['organizationId', 'category'])
       .edge('categoryRef', { to: 'productCategories', field: 'category', optional: true })
       .index('organizationId_type', ['organizationId', 'type'])
+      .index('organizationId_slug', ['organizationId', 'slug'])
+      .index('organizationId_visibleInShop', ['organizationId', 'visibleInShop'])
       .searchIndex('search_products', {
         searchField: 'name',
         filterFields: ['organizationId', 'type', 'category'],
@@ -539,6 +548,7 @@ const schema = defineEntSchema(
       .field('productId', v.id('products'))
       .edge('product', { to: 'products', field: 'productId' })
       .edges('saleOrderLines', { ref: 'productVariantId' })
+      .edges('shopOrderItems', { ref: 'variantId' })
       .index('organizationId_productId', ['organizationId', 'productId'])
       .searchIndex('search_product_variants', {
         searchField: 'name',
@@ -1018,6 +1028,149 @@ const schema = defineEntSchema(
       .edge('company', { to: 'companies', field: 'companyId', optional: true })
       .index('organizationId_paymentDate', ['organizationId', 'paymentDate'])
       .index('organizationId_invoiceId', ['organizationId', 'invoiceId']),
+
+    // ============================================================
+    // COMMERCE / CUSTOMER PORTAL ENTITIES
+    // ============================================================
+
+    // Customers — portal buyers, separate from CRM contacts
+    customers: defineEnt({
+      name: v.string(),
+      email: v.string(),
+      phone: v.optional(v.union(v.string(), v.null())),
+      address: v.optional(v.union(v.string(), v.null())),
+      city: v.optional(v.union(v.string(), v.null())),
+      postalCode: v.optional(v.union(v.string(), v.null())),
+      avatarUrl: v.optional(v.union(v.string(), v.null())),
+      socialProvider: v.optional(v.union(v.string(), v.null())),
+      socialId: v.optional(v.union(v.string(), v.null())),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('userId', v.optional(v.id('user')))
+      .field('contactId', v.optional(v.id('contacts')))
+      .index('organizationId_email', ['organizationId', 'email'])
+      .index('organizationId_socialProvider', ['organizationId', 'socialProvider', 'socialId']),
+
+    // Shopping carts
+    carts: defineEnt({
+      status: v.union(v.literal('active'), v.literal('converted'), v.literal('abandoned')),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('customerId', v.id('customers'), { index: true })
+      .field('sessionId', v.optional(v.union(v.string(), v.null())))
+      .index('organizationId_customerId_status', ['organizationId', 'customerId', 'status'])
+      .index('sessionId', ['sessionId'])
+      .edges('cart', { to: 'cartItems', ref: 'cartId' }),
+
+    // Cart line items
+    cartItems: defineEnt({
+      quantity: v.number(),
+    })
+      .field('cartId', v.id('carts'))
+      .field('productId', v.id('products'))
+      .field('variantId', v.optional(v.id('productVariants')))
+      .field('unitPrice', v.number())
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('product', { to: 'products', field: 'productId' })
+      .edge('cart', { to: 'carts', field: 'cartId' }),
+
+    // Shop orders — separate from CRM saleOrders
+    shopOrders: defineEnt({
+      orderNumber: v.string(),
+      status: v.union(
+        v.literal('pending_payment'),
+        v.literal('paid'),
+        v.literal('processing'),
+        v.literal('shipped'),
+        v.literal('delivered'),
+        v.literal('cancelled'),
+        v.literal('expired'),
+      ),
+      paymentStatus: v.union(
+        v.literal('pending'),
+        v.literal('paid'),
+        v.literal('failed'),
+        v.literal('expired'),
+        v.literal('refunded'),
+      ),
+      subtotal: v.number(),
+      shippingCost: v.optional(v.number()),
+      discountAmount: v.optional(v.number()),
+      totalAmount: v.number(),
+      currency: v.string(),
+      notes: v.optional(v.union(v.string(), v.null())),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('customerId', v.id('customers'), { index: true })
+      .field('saleOrderId', v.optional(v.id('saleOrders')))
+      .field('sourceStoreId', v.optional(v.id('connectedStores')))
+      .field('paymentProvider', v.optional(v.string()))
+      .field('paymentRef', v.optional(v.string()))
+      .field('paymentData', v.optional(v.record(v.string(), v.any())))
+      .field('shippingAddress', v.optional(v.object({
+        recipientName: v.string(),
+        phone: v.string(),
+        address: v.string(),
+        city: v.string(),
+        postalCode: v.string(),
+      })))
+      .field('orderTimeline', v.optional(v.array(v.object({
+        status: v.string(),
+        timestamp: v.number(),
+        note: v.optional(v.string()),
+      }))))
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('organizationId_orderNumber', ['organizationId', 'orderNumber'])
+      .index('organizationId_customerId', ['organizationId', 'customerId'])
+      .edges('items', { to: 'shopOrderItems', ref: 'shopOrderId' }),
+
+    // Shop order line items
+    shopOrderItems: defineEnt({
+      productName: v.string(),
+      productPrice: v.number(),
+      quantity: v.number(),
+      subtotal: v.number(),
+    })
+      .field('shopOrderId', v.id('shopOrders'))
+      .field('productId', v.id('products'))
+      .field('variantId', v.optional(v.id('productVariants')))
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('product', { to: 'products', field: 'productId' })
+      .edge('variant', { to: 'productVariants', field: 'variantId', optional: true })
+      .edge('shopOrder', { to: 'shopOrders', field: 'shopOrderId' }),
+
+    // Atomic order number counter per org per day
+    orderCounters: defineEnt({
+      counter: v.number(),
+      date: v.string(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('organizationId_date', ['organizationId', 'date']),
+
+    // Connected stores (Phase 2 — defined now, used later)
+    connectedStores: defineEnt({
+      name: v.string(),
+      url: v.string(),
+      apiKey: v.string(),
+      apiKeyPrefix: v.string(),
+      webhookUrl: v.optional(v.union(v.string(), v.null())),
+      webhookSecret: v.optional(v.union(v.string(), v.null())),
+      status: v.union(v.literal('active'), v.literal('suspended'), v.literal('disconnected')),
+      lastSyncAt: v.optional(v.number()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('apiKey', ['apiKey']),
+
+    // Payment provider configs per org
+    paymentProviders: defineEnt({
+      provider: v.string(),
+      isActive: v.boolean(),
+      config: v.record(v.string(), v.string()),
+      sandboxMode: v.optional(v.boolean()),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('organizationId_provider', ['organizationId', 'provider']),
   },
   {
     schemaValidation: true,
