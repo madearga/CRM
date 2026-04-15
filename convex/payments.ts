@@ -54,29 +54,28 @@ export const list = createOrgPaginatedQuery()({
       return true;
     });
 
-    const enriched = await Promise.all(
-      results.map(async (p: any) => {
-        let companyName: string | undefined;
-        if (p.companyId) {
-          try {
-            const company = await ctx.table('companies').get(p.companyId);
-            companyName = company?.name;
-          } catch {}
-        }
-        return {
-          id: p._id,
-          amount: p.amount,
-          paymentDate: p.paymentDate,
-          method: p.method,
-          reference: p.reference,
-          memo: p.memo,
-          state: p.state,
-          invoiceId: p.invoiceId,
-          companyId: p.companyId,
-          companyName,
-        };
-      })
-    );
+    // Batch company name resolution (avoid N+1)
+    const companyIds = [...new Set(results.map((p: any) => p.companyId).filter(Boolean))];
+    const companyMap = new Map<string, string>();
+    await Promise.all(companyIds.map(async (id) => {
+      try {
+        const c = await ctx.table('companies').get(id);
+        if (c) companyMap.set(id, c.name);
+      } catch {}
+    }));
+
+    const enriched = results.map((p: any) => ({
+      id: p._id,
+      amount: p.amount,
+      paymentDate: p.paymentDate,
+      method: p.method,
+      reference: p.reference,
+      memo: p.memo,
+      state: p.state,
+      invoiceId: p.invoiceId,
+      companyId: p.companyId,
+      companyName: p.companyId ? companyMap.get(p.companyId) : undefined,
+    }));
 
     // Sort by paymentDate desc (index should have it sorted asc by default, so we reverse or sort)
     enriched.sort((a, b) => b.paymentDate - a.paymentDate);

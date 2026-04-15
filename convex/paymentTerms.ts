@@ -29,9 +29,10 @@ export const list = createOrgPaginatedQuery()({
     isDone: z.boolean(),
   }),
   handler: async (ctx, args) => {
-    const all = await ctx.table('paymentTerms').take(100);
-    let results = all.filter((pt: any) => {
-      if (pt.organizationId !== ctx.orgId) return false;
+    const all = await ctx.table('paymentTerms', 'organizationId', (q) =>
+      q.eq('organizationId', ctx.orgId)
+    );
+    const results = all.filter((pt: any) => {
       if (args.search && !pt.name.toLowerCase().includes(args.search.toLowerCase())) return false;
       return true;
     });
@@ -90,6 +91,17 @@ export const remove = createOrgMutation()({
     const pt = await ctx.table('paymentTerms').getX(args.id);
     if (pt.organizationId !== ctx.orgId) {
       throw new ConvexError('Unauthorized');
+    }
+    // Check if payment term is used in any invoices
+    const invoices = await ctx.table('invoices', 'organizationId_state', (q) =>
+      q.eq('organizationId', ctx.orgId)
+    );
+    const used = invoices.some((inv: any) => inv.paymentTermId === args.id);
+    if (used) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: `Cannot delete payment term "${pt.name}": still used by invoices`,
+      });
     }
     await pt.delete();
     return null;

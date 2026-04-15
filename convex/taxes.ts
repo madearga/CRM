@@ -32,9 +32,10 @@ export const list = createOrgPaginatedQuery()({
     isDone: z.boolean(),
   }),
   handler: async (ctx, args) => {
-    const all = await ctx.table('taxes').take(100);
-    let results = all.filter((t: any) => {
-      if (t.organizationId !== ctx.orgId) return false;
+    const all = await ctx.table('taxes', 'organizationId', (q) =>
+      q.eq('organizationId', ctx.orgId)
+    );
+    const results = all.filter((t: any) => {
       if (args.scope && t.scope !== args.scope && t.scope !== 'both') return false;
       if (args.search && !t.name.toLowerCase().includes(args.search.toLowerCase())) return false;
       return true;
@@ -94,6 +95,16 @@ export const remove = createOrgMutation()({
     const tax = await ctx.table('taxes').getX(args.id);
     if (tax.organizationId !== ctx.orgId) {
       throw new ConvexError('Unauthorized');
+    }
+    // Check if tax is used in any invoice lines
+    const invoiceLines = await ctx.table('invoiceLines')
+      .filter((q: any) => q.eq(q.field('taxId'), args.id))
+      .take(1);
+    if (invoiceLines.length > 0) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: `Cannot delete tax "${tax.name}": still used by invoice lines`,
+      });
     }
     await tax.delete();
     return null;
