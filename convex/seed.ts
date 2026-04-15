@@ -607,6 +607,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['bestseller', 'wireless'],
         category: 'Elektronik',
+        imageUrl: 'https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=600&h=600&fit=crop',
       },
       {
         name: 'Kaos Polos Premium',
@@ -618,6 +619,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['bestseller'],
         category: 'Pakaian',
+        imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
       },
       {
         name: 'Kopi Arabika Gayo 250g',
@@ -629,6 +631,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['lokal', 'bestseller'],
         category: 'Makanan & Minuman',
+        imageUrl: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&h=600&fit=crop',
       },
       {
         name: 'Tumbler Stainless 750ml',
@@ -640,6 +643,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['bestseller'],
         category: 'Peralatan Rumah',
+        imageUrl: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&h=600&fit=crop',
       },
       {
         name: 'Yoga Mat 8mm',
@@ -651,6 +655,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['wellness'],
         category: 'Olahraga',
+        imageUrl: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=600&h=600&fit=crop',
       },
       {
         name: 'Charger USB-C 65W GaN',
@@ -662,6 +667,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['fast-charging'],
         category: 'Elektronik',
+        imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600&h=600&fit=crop',
       },
       {
         name: 'Hoodie Oversize',
@@ -673,6 +679,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['fashion'],
         category: 'Pakaian',
+        imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=600&fit=crop',
       },
       {
         name: 'Sambal Bawang Crispy 200g',
@@ -684,6 +691,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['lokal', 'bestseller'],
         category: 'Makanan & Minuman',
+        imageUrl: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=600&h=600&fit=crop',
       },
       {
         name: 'Diffuser Aromatherapy 300ml',
@@ -695,6 +703,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'pcs',
         tags: ['home', 'wellness'],
         category: 'Peralatan Rumah',
+        imageUrl: 'https://images.unsplash.com/photo-1602928321679-560bb453f190?w=600&h=600&fit=crop',
       },
       {
         name: 'Resistance Band Set 5 Level',
@@ -706,6 +715,7 @@ export const seedShopData = createInternalMutation()({
         unit: 'set',
         tags: ['home-workout'],
         category: 'Olahraga',
+        imageUrl: 'https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&h=600&fit=crop',
       },
     ];
 
@@ -733,13 +743,20 @@ export const seedShopData = createInternalMutation()({
         )
         .filter((q: any) => q.eq(q.field('sku'), p.sku))
         .first();
-      if (existing) continue;
+      if (existing) {
+        // Patch image if missing
+        if (p.imageUrl && !(existing as any).imageUrl) {
+          await (existing as any).patch({ imageUrl: p.imageUrl });
+        }
+        continue;
+      }
 
       const categoryId = categoryIds[p.category];
       const productId = await ctx.table('products').insert({
         name: p.name,
         type: p.type,
         description: p.description,
+        imageUrl: p.imageUrl,
         price: p.price,
         cost: p.cost,
         sku: p.sku,
