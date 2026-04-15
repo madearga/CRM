@@ -16,8 +16,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, MoreHorizontal, Edit, Trash2, Search, CalendarDays } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Trash2, Search, CalendarDays, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ui, getErrorMessage } from '@/lib/ui-messages';
 
 type PaymentTerm = {
   id: Id<'paymentTerms'>;
@@ -31,7 +33,8 @@ type PaymentTerm = {
 export default function PaymentTermsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<PaymentTerm | null>(null);
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -39,6 +42,8 @@ export default function PaymentTermsPage() {
     discountDays: 0,
     discountPercent: 0,
   });
+
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const { data, isLoading } = useAuthPaginatedQuery(
     api.paymentTerms.list,
@@ -72,9 +77,10 @@ export default function PaymentTermsPage() {
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
-      toast.error('Name is required');
+      ui.error.validation('Nama termin wajib diisi.');
       return;
     }
+    setSubmitting(true);
     try {
       const payload = {
         name: form.name,
@@ -85,47 +91,60 @@ export default function PaymentTermsPage() {
       };
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, ...payload });
-        toast.success('Payment term updated');
+        ui.success.updated(`Termin "${form.name}"`);
       } else {
         await createMutation.mutateAsync(payload);
-        toast.success('Payment term created');
+        ui.success.created(`Termin "${form.name}"`);
       }
       setDialogOpen(false);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(e, 'Gagal menyimpan termin pembayaran.'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: Id<'paymentTerms'>) => {
-    if (!confirm('Delete this payment term?')) return;
+  const handleDelete = async (pt: PaymentTerm) => {
+    const ok = await confirm({
+      title: 'Hapus Termin Pembayaran',
+      description: `Termin "${pt.name}" akan dihapus secara permanen. Invoice yang sudah menggunakan termin ini tidak akan terpengaruh.`,
+      confirmLabel: 'Hapus',
+      variant: 'destructive',
+    });
+    if (!ok) return;
+
     try {
-      await removeMutation.mutateAsync({ id });
-      toast.success('Payment term deleted');
+      await removeMutation.mutateAsync({ id: pt.id });
+      ui.success.deleted(`Termin "${pt.name}"`);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
-      toast.error(msg);
+      const msg = getErrorMessage(e);
+      if (msg.includes('used') || msg.includes('digunakan')) {
+        ui.error.inUse(`Termin "${pt.name}"`);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Payment Terms</h1>
+          <h1 className="text-2xl font-bold">Termin Pembayaran</h1>
           <p className="text-sm text-muted-foreground">
-            Manage payment due dates and early payment discounts.
+            Kelola jatuh tempo dan diskon bayar cepat.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" /> New Payment Term
+        <Button onClick={openCreate} disabled={submitting}>
+          <Plus className="mr-1 h-4 w-4" /> Tambah Termin
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search payment terms..."
+          placeholder="Cari termin pembayaran..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -137,10 +156,10 @@ export default function PaymentTermsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-center">Due Days</TableHead>
-                <TableHead className="text-center">Early Pay Discount</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Deskripsi</TableHead>
+                <TableHead className="text-center">Jatuh Tempo</TableHead>
+                <TableHead className="text-center">Diskon Bayar Cepat</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
@@ -148,13 +167,30 @@ export default function PaymentTermsPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    Loading...
+                    Memuat data termin...
                   </TableCell>
                 </TableRow>
               ) : terms.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    No payment terms found. Create one to get started.
+                  <TableCell colSpan={5} className="py-12">
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <FileWarning className="h-10 w-10 text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {search ? 'Tidak ada termin yang cocok' : 'Belum ada termin pembayaran'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {search
+                            ? `Tidak ditemukan termin dengan kata kunci "${search}".`
+                            : 'Buat termin seperti "Net 30" untuk mengatur jatuh tempo invoice.'}
+                        </p>
+                      </div>
+                      {!search && (
+                        <Button variant="outline" size="sm" onClick={openCreate}>
+                          <Plus className="mr-1 h-4 w-4" /> Tambah Termin
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -171,7 +207,7 @@ export default function PaymentTermsPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {pt.dueDays === 0 ? (
-                        <span className="font-medium text-green-600">Immediate</span>
+                        <span className="font-medium text-green-600">Langsung Bayar</span>
                       ) : (
                         <span>Net {pt.dueDays}</span>
                       )}
@@ -179,7 +215,7 @@ export default function PaymentTermsPage() {
                     <TableCell className="text-center">
                       {pt.discountDays && pt.discountPercent ? (
                         <span className="text-sm">
-                          {pt.discountPercent}% off if paid within {pt.discountDays} days
+                          Diskon {pt.discountPercent}% jika dibayar dalam {pt.discountDays} hari
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -198,9 +234,9 @@ export default function PaymentTermsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => handleDelete(pt.id)}
+                            onClick={() => handleDelete(pt)}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -217,27 +253,27 @@ export default function PaymentTermsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Payment Term' : 'New Payment Term'}</DialogTitle>
+            <DialogTitle>{editing ? 'Edit Termin' : 'Tambah Termin'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium">Nama</label>
               <Input
-                placeholder="e.g. Net 30"
+                placeholder="contoh: Net 30"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Description</label>
+              <label className="text-sm font-medium">Deskripsi</label>
               <Input
-                placeholder="Payment due within 30 days"
+                placeholder="Pembayaran dalam 30 hari"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Due Days</label>
+              <label className="text-sm font-medium">Jatuh Tempo (hari)</label>
               <Input
                 type="number"
                 min={0}
@@ -245,12 +281,12 @@ export default function PaymentTermsPage() {
                 onChange={(e) => setForm({ ...form, dueDays: parseInt(e.target.value) || 0 })}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {form.dueDays === 0 ? 'Payment due immediately' : `Payment due within ${form.dueDays} days`}
+                {form.dueDays === 0 ? 'Pembayaran langsung' : `Pembayaran dalam ${form.dueDays} hari`}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">Discount Days</label>
+                <label className="text-sm font-medium">Diskon (hari)</label>
                 <Input
                   type="number"
                   min={0}
@@ -260,7 +296,7 @@ export default function PaymentTermsPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Discount %</label>
+                <label className="text-sm font-medium">Diskon (%)</label>
                 <Input
                   type="number"
                   min={0}
@@ -273,13 +309,15 @@ export default function PaymentTermsPage() {
             </div>
             {form.discountDays > 0 && form.discountPercent > 0 && (
               <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                {form.discountPercent}% discount if paid within {form.discountDays} days
+                💡 Diskon {form.discountPercent}% jika dibayar dalam {form.discountDays} hari pertama
               </p>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{editing ? 'Update' : 'Create'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Menyimpan...' : editing ? 'Perbarui' : 'Buat'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

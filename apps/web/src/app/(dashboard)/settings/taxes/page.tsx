@@ -20,8 +20,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoreHorizontal, Edit, Trash2, Search, Percent } from 'lucide-react';
-import { toast } from 'sonner';
+import { Plus, MoreHorizontal, Edit, Trash2, Search, Percent, FileWarning } from 'lucide-react';
+import { useConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ui, getErrorMessage } from '@/lib/ui-messages';
 
 const scopeBadge: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   sales: { label: 'Sales', variant: 'default' },
@@ -44,14 +45,17 @@ type Tax = {
 export default function TaxesPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<Tax | null>(null);
   const [form, setForm] = useState({
     name: '',
     rate: 0,
-    type: 'percentage' as 'percentage' | 'fixed',
-    scope: 'both' as 'sales' | 'purchase' | 'both',
+    type: 'percentage' as TaxType,
+    scope: 'both' as TaxScope,
     active: true,
   });
+
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const { data, isLoading } = useAuthPaginatedQuery(
     api.taxes.list,
@@ -85,63 +89,81 @@ export default function TaxesPage() {
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
-      toast.error('Name is required');
+      ui.error.validation('Nama pajak wajib diisi.');
       return;
     }
+    setSubmitting(true);
     try {
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, ...form });
-        toast.success('Tax updated');
+        ui.success.updated(`Pajak "${form.name}"`);
       } else {
         await createMutation.mutateAsync(form);
-        toast.success('Tax created');
+        ui.success.created(`Pajak "${form.name}"`);
       }
       setDialogOpen(false);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(e, 'Gagal menyimpan pajak. Coba lagi.'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: Id<'taxes'>) => {
-    if (!confirm('Delete this tax?')) return;
+  const handleDelete = async (tax: Tax) => {
+    const ok = await confirm({
+      title: 'Hapus Pajak',
+      description: `Pajak "${tax.name}" akan dihapus secara permanen. Tindakan ini tidak bisa dibatalkan.`,
+      confirmLabel: 'Hapus',
+      variant: 'destructive',
+    });
+    if (!ok) return;
+
     try {
-      await removeMutation.mutateAsync({ id });
-      toast.success('Tax deleted');
+      await removeMutation.mutateAsync({ id: tax.id });
+      ui.success.deleted(`Pajak "${tax.name}"`);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
-      toast.error(msg);
+      const msg = getErrorMessage(e);
+      if (msg.includes('used') || msg.includes('digunakan')) {
+        ui.error.inUse(`Pajak "${tax.name}"`);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
   const handleToggleActive = async (tax: Tax) => {
+    const willActivate = !tax.active;
     try {
-      await updateMutation.mutateAsync({ id: tax.id, active: !tax.active });
-      toast.success(tax.active ? 'Tax deactivated' : 'Tax activated');
+      await updateMutation.mutateAsync({ id: tax.id, active: willActivate });
+      if (willActivate) {
+        ui.success.activated(`Pajak "${tax.name}"`);
+      } else {
+        ui.success.deactivated(`Pajak "${tax.name}"`);
+      }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(e, 'Gagal mengubah status pajak.'));
     }
   };
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Taxes</h1>
+          <h1 className="text-2xl font-bold">Pajak</h1>
           <p className="text-sm text-muted-foreground">
-            Manage tax rates for sales and purchases.
+            Kelola tarif pajak untuk penjualan dan pembelian.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" /> New Tax
+        <Button onClick={openCreate} disabled={submitting}>
+          <Plus className="mr-1 h-4 w-4" /> Tambah Pajak
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search taxes..."
+          placeholder="Cari pajak..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -153,10 +175,10 @@ export default function TaxesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Rate</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Scope</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Tarif</TableHead>
+                <TableHead>Tipe</TableHead>
+                <TableHead>Cakupan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -165,13 +187,30 @@ export default function TaxesPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Loading...
+                    Memuat data pajak...
                   </TableCell>
                 </TableRow>
               ) : taxes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No taxes found. Create one to get started.
+                  <TableCell colSpan={6} className="py-12">
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <FileWarning className="h-10 w-10 text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {search ? 'Tidak ada pajak yang cocok' : 'Belum ada pajak'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {search
+                            ? `Tidak ditemukan pajak dengan kata kunci "${search}".`
+                            : 'Buat pajak pertama Anda untuk mulai menghitung pajak pada invoice.'}
+                        </p>
+                      </div>
+                      {!search && (
+                        <Button variant="outline" size="sm" onClick={openCreate}>
+                          <Plus className="mr-1 h-4 w-4" /> Tambah Pajak
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -181,18 +220,16 @@ export default function TaxesPage() {
                     <TableRow key={tax.id}>
                       <TableCell className="font-medium">{tax.name}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          {tax.type === 'percentage' ? (
-                            <>{(tax.rate * 100).toFixed(tax.rate * 100 % 1 === 0 ? 0 : 2)}%</>
-                          ) : (
-                            <>Rp {tax.rate.toLocaleString()}</>
-                          )}
-                        </div>
+                        {tax.type === 'percentage' ? (
+                          <>{(tax.rate * 100).toFixed(tax.rate * 100 % 1 === 0 ? 0 : 2)}%</>
+                        ) : (
+                          <>Rp {tax.rate.toLocaleString()}</>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="gap-1">
                           <Percent className="h-3 w-3" />
-                          {tax.type === 'percentage' ? 'Percentage' : 'Fixed'}
+                          {tax.type === 'percentage' ? 'Persentase' : 'Nominal Tetap'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -202,14 +239,15 @@ export default function TaxesPage() {
                         <button
                           onClick={() => handleToggleActive(tax)}
                           className="cursor-pointer"
+                          title={tax.active !== false ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
                         >
                           {tax.active !== false ? (
                             <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
-                              Active
+                              Aktif
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-muted-foreground">
-                              Inactive
+                              Nonaktif
                             </Badge>
                           )}
                         </button>
@@ -227,9 +265,9 @@ export default function TaxesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => handleDelete(tax.id)}
+                              onClick={() => handleDelete(tax)}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              <Trash2 className="mr-2 h-4 w-4" /> Hapus
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -247,20 +285,20 @@ export default function TaxesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Tax' : 'New Tax'}</DialogTitle>
+            <DialogTitle>{editing ? 'Edit Pajak' : 'Tambah Pajak'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium">Nama</label>
               <Input
-                placeholder="e.g. PPN 11%"
+                placeholder="contoh: PPN 11%"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">Rate</label>
+                <label className="text-sm font-medium">Tarif</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -274,38 +312,43 @@ export default function TaxesPage() {
                   }}
                 />
                 {form.type === 'percentage' && (
-                  <p className="text-xs text-muted-foreground mt-1">Enter percentage (e.g. 11 for 11%)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Masukkan persentase (contoh: 11 untuk 11%)</p>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium">Type</label>
-                <Select value={form.type} onValueChange={(v: any) => setForm({ ...form, type: v, rate: 0 })}>
+                <label className="text-sm font-medium">Tipe</label>
+                <Select value={form.type} onValueChange={(v: TaxType) => setForm({ ...form, type: v, rate: 0 })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="percentage">Percentage</SelectItem>
-                    <SelectItem value="fixed">Fixed Amount</SelectItem>
+                    <SelectItem value="percentage">Persentase</SelectItem>
+                    <SelectItem value="fixed">Nominal Tetap</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Scope</label>
-              <Select value={form.scope} onValueChange={(v: any) => setForm({ ...form, scope: v })}>
+              <label className="text-sm font-medium">Cakupan</label>
+              <Select value={form.scope} onValueChange={(v: TaxScope) => setForm({ ...form, scope: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="both">Both (Sales & Purchase)</SelectItem>
-                  <SelectItem value="sales">Sales Only</SelectItem>
-                  <SelectItem value="purchase">Purchase Only</SelectItem>
+                  <SelectItem value="both">Penjualan & Pembelian</SelectItem>
+                  <SelectItem value="sales">Hanya Penjualan</SelectItem>
+                  <SelectItem value="purchase">Hanya Pembelian</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{editing ? 'Update' : 'Create'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Menyimpan...' : editing ? 'Perbarui' : 'Buat'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+// Need toast import for error fallback
+import { toast } from 'sonner';

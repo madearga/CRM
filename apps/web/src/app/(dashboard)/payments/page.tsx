@@ -17,15 +17,17 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, XCircle, Landmark } from 'lucide-react';
+import { Search, MoreHorizontal, XCircle, Landmark, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
-import { PaymentMethodBadge } from '@/components/invoices/payment-method-badge';
 import { formatCurrency } from '@/lib/format';
+import { PaymentMethodBadge } from '@/components/invoices/payment-method-badge';
+import { useConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ui, getErrorMessage } from '@/lib/ui-messages';
 
 const stateConfig: Record<string, { label: string; color: string }> = {
-  confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
+  confirmed: { label: 'Terkonfirmasi', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
+  cancelled: { label: 'Dibatalkan', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
 };
 
 type PaymentMethod = 'bank_transfer' | 'cash' | 'credit_card' | 'debit_card' | 'e_wallet' | 'cheque' | 'other';
@@ -47,6 +49,8 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('');
 
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+
   const { data, isLoading } = useAuthPaginatedQuery(
     api.payments.list,
     {
@@ -60,17 +64,6 @@ export default function PaymentsPage() {
 
   const payments = data ?? [];
 
-  const handleCancel = async (id: Id<'payments'>) => {
-    if (!confirm('Cancel this payment? This will reverse the payment and update the linked invoice.')) return;
-    try {
-      await cancelMutation.mutateAsync({ id });
-      toast.success('Payment cancelled');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed to cancel';
-      toast.error(msg);
-    }
-  };
-
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -81,23 +74,41 @@ export default function PaymentsPage() {
   const confirmedPayments = payments.filter((p: Payment) => p.state === 'confirmed');
   const pageTotal = confirmedPayments.reduce((sum, p) => sum + p.amount, 0);
 
+  const handleCancel = async (payment: Payment) => {
+    const ok = await confirm({
+      title: 'Batalkan Pembayaran',
+      description: `Pembayaran sebesar ${formatCurrency(payment.amount)} akan dibatalkan. Invoice terkait akan diperbarui dan sisa tagihan dikembalikan.`,
+      confirmLabel: 'Batalkan Pembayaran',
+      variant: 'destructive',
+    });
+    if (!ok) return;
+
+    try {
+      await cancelMutation.mutateAsync({ id: payment.id });
+      ui.success.cancelled('Pembayaran');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, 'Gagal membatalkan pembayaran.'));
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Landmark className="h-6 w-6" />
-            Payments
+            Pembayaran
           </h1>
           <p className="text-sm text-muted-foreground">
-            Track incoming and outgoing payments.
+            Lacak pembayaran masuk dan keluar.
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-muted-foreground">Total Confirmed</p>
+          <p className="text-sm text-muted-foreground">Total Terkonfirmasi</p>
           <p className="text-xl font-bold">{formatCurrency(pageTotal)}</p>
           {payments.length >= 50 && (
-            <p className="text-xs text-muted-foreground">Showing first page</p>
+            <p className="text-xs text-muted-foreground">Menampilkan halaman pertama</p>
           )}
         </div>
       </div>
@@ -106,7 +117,7 @@ export default function PaymentsPage() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by reference..."
+            placeholder="Cari berdasarkan referensi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -114,17 +125,17 @@ export default function PaymentsPage() {
         </div>
         <Select value={methodFilter || 'all'} onValueChange={setMethodFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Methods" />
+            <SelectValue placeholder="Semua Metode" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Methods</SelectItem>
-            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-            <SelectItem value="cash">Cash</SelectItem>
-            <SelectItem value="credit_card">Credit Card</SelectItem>
-            <SelectItem value="debit_card">Debit Card</SelectItem>
+            <SelectItem value="all">Semua Metode</SelectItem>
+            <SelectItem value="bank_transfer">Transfer Bank</SelectItem>
+            <SelectItem value="cash">Tunai</SelectItem>
+            <SelectItem value="credit_card">Kartu Kredit</SelectItem>
+            <SelectItem value="debit_card">Kartu Debit</SelectItem>
             <SelectItem value="e_wallet">E-Wallet</SelectItem>
-            <SelectItem value="cheque">Cheque</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="cheque">Cek</SelectItem>
+            <SelectItem value="other">Lainnya</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -134,11 +145,11 @@ export default function PaymentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Perusahaan</TableHead>
+                <TableHead>Metode</TableHead>
+                <TableHead>Referensi</TableHead>
+                <TableHead>Jumlah</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -147,13 +158,25 @@ export default function PaymentsPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Loading...
+                    Memuat data pembayaran...
                   </TableCell>
                 </TableRow>
               ) : payments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No payments found. Payments are registered from invoice detail pages.
+                  <TableCell colSpan={7} className="py-12">
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <FileWarning className="h-10 w-10 text-muted-foreground/50" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {search || methodFilter ? 'Tidak ada pembayaran yang cocok' : 'Belum ada pembayaran'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {search || methodFilter
+                            ? 'Coba ubah filter atau kata kunci pencarian.'
+                            : 'Pembayaran dicatat dari halaman detail invoice.'}
+                        </p>
+                      </div>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -190,9 +213,9 @@ export default function PaymentsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => handleCancel(p.id)}
+                                onClick={() => handleCancel(p)}
                               >
-                                <XCircle className="mr-2 h-4 w-4" /> Cancel Payment
+                                <XCircle className="mr-2 h-4 w-4" /> Batalkan Pembayaran
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

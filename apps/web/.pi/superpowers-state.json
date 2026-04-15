@@ -29,7 +29,13 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/apps/web/src/components/ui/confirm-dialog.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/lib/ui-messages.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/taxes/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/payment-terms/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/payments/page.tsx"
+    ],
     "redVerificationPending": false
   },
   "debug": {
