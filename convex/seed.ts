@@ -541,7 +541,7 @@ export const seedCrmData = createInternalMutation()({
  * Seed shop products and categories for testing the online store.
  * Run: npx convex run seed:seedShopData
  */
-export const seedShopData = createInternalMutation({
+export const seedShopData = createInternalMutation()({
   args: {},
   returns: z.object({
     categories: z.number(),
@@ -552,11 +552,17 @@ export const seedShopData = createInternalMutation({
     const admin = await ctx.table('user').get('email', adminEmail);
     if (!admin) throw new Error('Admin user not found. Run seed first.');
 
-    const org = await ctx
-      .table('organization', 'slug', (q: any) => q.eq('slug', 'workspace'))
-      .first();
-    if (!org) throw new Error('Organization not found. Run seed first.');
-    const orgId = org._id;
+    // Find org from admin's lastActiveOrganizationId
+    const orgId = admin.lastActiveOrganizationId;
+    if (!orgId) throw new Error('Admin has no active organization. Run seed first.');
+    const org = await ctx.table('organization').get(orgId);
+    if (!org) throw new Error('Organization not found.');
+
+    // Set org slug to 'default' so the online shop can find it
+    if (org.slug !== 'default') {
+      await org.patch({ slug: 'default' });
+      console.info(`  ✅ Updated org slug to 'default'`);
+    }
     const userId = admin._id;
 
     // --- Categories ---
@@ -703,6 +709,21 @@ export const seedShopData = createInternalMutation({
       },
     ];
 
+    // Patch existing products to add visibleInShop if missing
+    const existingProducts = await ctx
+      .table('products', 'organizationId_visibleInShop', (q: any) =>
+        q.eq('organizationId', orgId)
+      )
+      .take(1000);
+    let patched = 0;
+    for (const ep of existingProducts) {
+      if ((ep as any).visibleInShop === undefined || (ep as any).visibleInShop === null) {
+        await (ep as any).patch({ visibleInShop: true });
+        patched++;
+      }
+    }
+    if (patched > 0) console.info(`  ✅ Patched ${patched} existing products with visibleInShop: true`);
+
     let created = 0;
     for (const p of productsData) {
       // Skip if SKU already exists
@@ -726,6 +747,7 @@ export const seedShopData = createInternalMutation({
         tags: p.tags,
         category: categoryId,
         active: true,
+        visibleInShop: true,
         organizationId: orgId,
         ownerId: userId,
       });
