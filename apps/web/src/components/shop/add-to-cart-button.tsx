@@ -21,7 +21,12 @@ const SESSION_KEY = 'shop_session_id';
 
 function getSessionId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
-  return localStorage.getItem(SESSION_KEY) ?? undefined;
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
 }
 
 export function AddToCartButton({
