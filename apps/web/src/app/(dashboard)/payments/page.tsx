@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
+import type { Id } from '@convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -19,11 +20,27 @@ import {
 import { Search, MoreHorizontal, XCircle, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { PaymentMethodBadge } from '@/components/invoices/payment-method-badge';
+import { formatCurrency } from '@/lib/format';
 
 const stateConfig: Record<string, { label: string; color: string }> = {
   confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
+};
+
+type PaymentMethod = 'bank_transfer' | 'cash' | 'credit_card' | 'debit_card' | 'e_wallet' | 'cheque' | 'other';
+
+type Payment = {
+  id: Id<'payments'>;
+  amount: number;
+  paymentDate: number;
+  method: PaymentMethod;
+  reference?: string;
+  memo?: string;
+  state: 'draft' | 'confirmed' | 'cancelled';
+  invoiceId?: Id<'invoices'>;
+  companyId?: Id<'companies'>;
+  companyName?: string;
 };
 
 export default function PaymentsPage() {
@@ -34,7 +51,7 @@ export default function PaymentsPage() {
     api.payments.list,
     {
       search: search || undefined,
-      method: methodFilter && methodFilter !== 'all' ? methodFilter as any : undefined,
+      method: methodFilter && methodFilter !== 'all' ? (methodFilter as PaymentMethod) : undefined,
     },
     { initialNumItems: 50 },
   );
@@ -43,35 +60,26 @@ export default function PaymentsPage() {
 
   const payments = data ?? [];
 
-  const handleCancel = async (id: any) => {
+  const handleCancel = async (id: Id<'payments'>) => {
     if (!confirm('Cancel this payment? This will reverse the payment and update the linked invoice.')) return;
     try {
       await cancelMutation.mutateAsync({ id });
       toast.success('Payment cancelled');
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed to cancel');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed to cancel';
+      toast.error(msg);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleDateString('id-ID', {
+  const formatDate = (ts: number) =>
+    new Date(ts).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
-  };
 
-  const totalAmount = payments
-    .filter((p: any) => p.state === 'confirmed')
-    .reduce((sum: number, p: any) => sum + p.amount, 0);
+  const confirmedPayments = payments.filter((p: Payment) => p.state === 'confirmed');
+  const pageTotal = confirmedPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -87,7 +95,10 @@ export default function PaymentsPage() {
         </div>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Total Confirmed</p>
-          <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
+          <p className="text-xl font-bold">{formatCurrency(pageTotal)}</p>
+          {payments.length >= 50 && (
+            <p className="text-xs text-muted-foreground">Showing first page</p>
+          )}
         </div>
       </div>
 
@@ -146,7 +157,7 @@ export default function PaymentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                payments.map((p: any) => {
+                payments.map((p: Payment) => {
                   const sc = stateConfig[p.state] ?? stateConfig.draft;
                   return (
                     <TableRow key={p.id}>

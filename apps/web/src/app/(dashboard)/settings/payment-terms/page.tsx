@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
+import type { Id } from '@convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +18,15 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, MoreHorizontal, Edit, Trash2, Search, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
+
+type PaymentTerm = {
+  id: Id<'paymentTerms'>;
+  name: string;
+  description?: string;
+  dueDays: number;
+  discountDays?: number;
+  discountPercent?: number;
+};
 
 export default function PaymentTermsPage() {
   const [search, setSearch] = useState('');
@@ -48,7 +58,7 @@ export default function PaymentTermsPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (pt: any) => {
+  const openEdit = (pt: PaymentTerm) => {
     setEditing(pt);
     setForm({
       name: pt.name,
@@ -81,18 +91,20 @@ export default function PaymentTermsPage() {
         toast.success('Payment term created');
       }
       setDialogOpen(false);
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
+      toast.error(msg);
     }
   };
 
-  const handleDelete = async (id: any) => {
+  const handleDelete = async (id: Id<'paymentTerms'>) => {
     if (!confirm('Delete this payment term?')) return;
     try {
       await removeMutation.mutateAsync({ id });
       toast.success('Payment term deleted');
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
+      toast.error(msg);
     }
   };
 
@@ -146,7 +158,7 @@ export default function PaymentTermsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                terms.map((pt: any) => (
+                terms.map((pt: PaymentTerm) => (
                   <TableRow key={pt.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">

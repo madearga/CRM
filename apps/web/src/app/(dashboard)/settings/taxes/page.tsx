@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
+import type { Id } from '@convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,18 @@ const scopeBadge: Record<string, { label: string; variant: 'default' | 'secondar
   sales: { label: 'Sales', variant: 'default' },
   purchase: { label: 'Purchase', variant: 'secondary' },
   both: { label: 'Both', variant: 'outline' },
+};
+
+type TaxScope = 'sales' | 'purchase' | 'both';
+type TaxType = 'percentage' | 'fixed';
+
+type Tax = {
+  id: Id<'taxes'>;
+  name: string;
+  rate: number;
+  type: TaxType;
+  scope: TaxScope;
+  active?: boolean;
 };
 
 export default function TaxesPage() {
@@ -58,7 +71,7 @@ export default function TaxesPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (tax: any) => {
+  const openEdit = (tax: Tax) => {
     setEditing(tax);
     setForm({
       name: tax.name,
@@ -84,27 +97,30 @@ export default function TaxesPage() {
         toast.success('Tax created');
       }
       setDialogOpen(false);
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
+      toast.error(msg);
     }
   };
 
-  const handleDelete = async (id: any) => {
+  const handleDelete = async (id: Id<'taxes'>) => {
     if (!confirm('Delete this tax?')) return;
     try {
       await removeMutation.mutateAsync({ id });
       toast.success('Tax deleted');
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
+      toast.error(msg);
     }
   };
 
-  const handleToggleActive = async (tax: any) => {
+  const handleToggleActive = async (tax: Tax) => {
     try {
       await updateMutation.mutateAsync({ id: tax.id, active: !tax.active });
       toast.success(tax.active ? 'Tax deactivated' : 'Tax activated');
-    } catch (e: any) {
-      toast.error(e.data?.message ?? 'Failed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as any)?.data?.message ?? 'Failed';
+      toast.error(msg);
     }
   };
 
@@ -159,7 +175,7 @@ export default function TaxesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                taxes.map((tax: any) => {
+                taxes.map((tax: Tax) => {
                   const sb = scopeBadge[tax.scope] ?? { label: tax.scope, variant: 'outline' as const };
                   return (
                     <TableRow key={tax.id}>
