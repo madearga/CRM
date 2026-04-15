@@ -1,32 +1,73 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStatus } from '@/lib/convex/hooks/convex-hooks';
-import { usePublicQuery, usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
+import { useAuthStatus, useAuthQuery, usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
 import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogIn } from 'lucide-react';
 import { CheckoutForm, type CheckoutFormValues, type CartItemDisplay } from '@/components/shop/checkout-form';
-import { formatIDR } from '@/lib/commerce/format-currency';
 import { payWithSnap } from '@/lib/commerce/midtrans-snap';
 import { signIn } from '@/lib/convex/auth-client';
 
 const ORG_SLUG = 'default';
 
+const SESSION_KEY = 'shop_session_id';
+
+function getOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuthStatus();
+  const [sessionId, setSessionId] = useState('');
+  const [merged, setMerged] = useState(false);
+  const [userReady, setUserReady] = useState(false);
 
-  // Cart data
-  const { data: cart, isLoading: cartLoading } = usePublicQuery(
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
+
+  // Merge guest cart on login (same pattern as cart page)
+  const mergeGuestCart = usePublicMutation(
+    api.commerce.cart.mergeGuestCart as any,
+  );
+
+  useEffect(() => {
+    if (isAuthenticated && !merged && sessionId) {
+      setMerged(true);
+      mergeGuestCart
+        .mutateAsync({ organizationSlug: ORG_SLUG, sessionId } as any)
+        .then(() => setUserReady(true))
+        .catch(() => {
+          // Non-critical — cart might be empty or already merged
+          setUserReady(true);
+        });
+    } else if (!isAuthenticated) {
+      setMerged(false);
+      setUserReady(false);
+    } else if (isAuthenticated && !sessionId) {
+      // Already authenticated, no guest session to merge
+      setUserReady(true);
+    }
+  }, [isAuthenticated, merged, sessionId]);
+
+  // Use auth query so ctx.userId is sent to backend → cart found for authenticated user
+  const { data: cart, isLoading: cartLoading } = useAuthQuery(
     api.commerce.cart.getCart as any,
     { organizationSlug: ORG_SLUG } as any,
   );
 
   // Customer profile for pre-fill
-  const { data: customerProfile } = usePublicQuery(
+  const { data: customerProfile } = useAuthQuery(
     api.commerce.customers.getProfile as any,
     isAuthenticated ? { organizationSlug: ORG_SLUG } : ('skip' as any),
   );
@@ -60,6 +101,15 @@ export default function CheckoutPage() {
           <LogIn className="mr-2 size-4" />
           Sign in with Google
         </Button>
+      </div>
+    );
+  }
+
+  // Wait for merge to complete before showing cart
+  if (!userReady) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -123,7 +173,6 @@ export default function CheckoutPage() {
           router.push(`/shop/checkout/pending?order=${orderNumber}`);
         },
         onClose: () => {
-          // User closed the popup without completing
           router.push(`/shop/checkout/pending?order=${orderNumber}`);
         },
         onError: () => {

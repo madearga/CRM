@@ -2,10 +2,9 @@ import { z } from 'zod';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { getOrgId, resolveCustomerId, verifyCartOwnership } from './helpers';
-import {
-  createPublicMutation,
-  createPublicQuery,
-} from '../functions';
+import { createPublicMutation, createPublicQuery } from '../functions';
+import { authClient } from '../auth';
+import { getAuth } from '../auth';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -354,8 +353,30 @@ export const mergeGuestCart = createPublicMutation()({
     }
 
     const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
-    if (!customerId) {
-      throw new ConvexError({ code: 'NOT_FOUND', message: 'Customer profile not found' });
+
+    // Auto-create customer record for first-time buyers
+    let resolvedCustomerId = customerId;
+    if (!resolvedCustomerId) {
+      // Try to get user email from auth session
+      let email = `user-${ctx.userId}@placeholder`;
+      let name = 'Customer';
+      try {
+        const headers = await authClient.getHeaders(ctx);
+        const session = await getAuth(ctx).api.getSession({ headers });
+        if (session?.user) {
+          email = session.user.email ?? email;
+          name = session.user.name ?? name;
+        }
+      } catch {
+        // Non-critical — proceed with placeholder
+      }
+      const newCustomer = await ctx.table('customers').insert({
+        name,
+        email,
+        organizationId: orgId,
+        userId: ctx.userId,
+      } as any);
+      resolvedCustomerId = (newCustomer as any)._id;
     }
 
     // Find guest cart
@@ -363,7 +384,7 @@ export const mergeGuestCart = createPublicMutation()({
     if (!guestCart) return true; // Nothing to merge
 
     // Get or create authenticated cart
-    const authedCart = await getOrCreateCart(ctx, orgId, customerId, undefined);
+    const authedCart = await getOrCreateCart(ctx, orgId, resolvedCustomerId, undefined);
 
     // Load guest items
     const guestItems = await ctx

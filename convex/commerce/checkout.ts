@@ -79,8 +79,22 @@ export const initiateCheckout = createPublicMutation()({
   handler: async (ctx, args) => {
     const orgId = await getOrgId(ctx, args.organizationSlug);
 
-    // Resolve customer
-    const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
+    // Resolve or create customer for authenticated user
+    let customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
+    if (!customerId && ctx.userId) {
+      // First-time buyer: create customer from shipping address
+      const newCustomer = await ctx.table('customers').insert({
+        name: args.shippingAddress.recipientName,
+        email: `user-${ctx.userId}@placeholder`,
+        phone: args.shippingAddress.phone,
+        address: args.shippingAddress.address,
+        city: args.shippingAddress.city,
+        postalCode: args.shippingAddress.postalCode,
+        organizationId: orgId,
+        userId: ctx.userId,
+      } as any);
+      customerId = (newCustomer as any)._id;
+    }
 
     // Find active cart
     const cart = await findActiveCart(ctx, orgId, customerId, args.sessionId);

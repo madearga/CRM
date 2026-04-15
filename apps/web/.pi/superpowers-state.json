@@ -30,7 +30,9 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/add-to-cart-button.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/checkout/page.tsx",
+      "/Users/madearga/Desktop/crm/convex/commerce/cart.ts",
+      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts"
     ],
     "redVerificationPending": false
   },
