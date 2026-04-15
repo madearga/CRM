@@ -30,9 +30,11 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/checkout/page.tsx",
-      "/Users/madearga/Desktop/crm/convex/commerce/cart.ts",
-      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/taxes/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/payment-terms/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/payments/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/layout.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/layout.tsx"
     ],
     "redVerificationPending": false
   },

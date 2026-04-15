@@ -17,6 +17,7 @@ import {
   Users,
   LayoutTemplate,
   RefreshCw,
+  Landmark,
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
@@ -53,6 +54,7 @@ const navItems = [
   { title: 'Products', href: '/products', icon: Package },
   { title: 'Sales', href: '/sales', icon: ShoppingCart },
   { title: 'Invoices', href: '/invoices', icon: FileText },
+  { title: 'Payments', href: '/payments', icon: Landmark },
   { title: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
   { title: 'Templates', href: '/templates', icon: LayoutTemplate },
   { title: 'Activities', href: '/activities', icon: Activity },
@@ -67,6 +69,7 @@ const featureMap: Record<string, string> = {
   '/products': 'products',
   '/sales': 'sales',
   '/invoices': 'invoices',
+  '/payments': 'payments',
   '/subscriptions': 'subscriptions',
   '/templates': 'templates',
   '/activities': 'activities',

@@ -9,6 +9,8 @@ import { usePermissions } from '@/lib/permissions';
 const tabs = [
   { title: 'General', href: '/settings/general', feature: 'settings' },
   { title: 'Team', href: '/settings/team', feature: 'team' },
+  { title: 'Taxes', href: '/settings/taxes', feature: 'settings' },
+  { title: 'Payment Terms', href: '/settings/payment-terms', feature: 'settings' },
   { title: 'Recurring Invoices', href: '/settings/recurring-invoices', feature: 'settings' },
   { title: 'Pricelists', href: '/settings/pricelists', feature: 'settings'},
   { title: 'Reminder Rules', href: '/settings/reminder-rules', feature: 'settings' },
