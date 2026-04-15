@@ -30,13 +30,7 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/products/[id]/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/cart/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/checkout-form.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/orders/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/product-grid.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/page.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/add-to-cart-button.tsx"
     ],
     "redVerificationPending": false
   },

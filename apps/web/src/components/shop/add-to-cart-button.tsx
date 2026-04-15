@@ -14,6 +14,14 @@ interface AddToCartButtonProps {
   organizationSlug: string;
   disabled?: boolean;
   onSuccess?: () => void;
+  sessionId?: string;
+}
+
+const SESSION_KEY = 'shop_session_id';
+
+function getSessionId(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return localStorage.getItem(SESSION_KEY) ?? undefined;
 }
 
 export function AddToCartButton({
@@ -22,12 +30,15 @@ export function AddToCartButton({
   organizationSlug,
   disabled = false,
   onSuccess,
+  sessionId,
 }: AddToCartButtonProps) {
   const addItem = useMutation({
     mutationFn: useConvexMutation(
       api.commerce.cart.addItem as any
     ),
   });
+
+  const effectiveSessionId = sessionId ?? getSessionId();
 
   const handleClick = () => {
     addItem
@@ -36,6 +47,7 @@ export function AddToCartButton({
         productId: productId as any,
         variantId: variantId as any,
         quantity: 1,
+        sessionId: effectiveSessionId,
       } as any)
       .then(() => {
         toast.success('Added to cart');
