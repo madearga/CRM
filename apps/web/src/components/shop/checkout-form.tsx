@@ -85,7 +85,8 @@ export function CheckoutForm({
   defaultValues,
 }: CheckoutFormProps) {
   const form = useForm<CheckoutFormValues>({
-    resolver: zodResolver(checkoutSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(checkoutSchema) as any,
     defaultValues: {
       shippingAddress: {
         recipientName: defaultValues?.recipientName ?? '',
@@ -206,7 +207,8 @@ export function CheckoutForm({
 
       {/* Order Summary */}
       <div className="lg:col-span-1">
-        <div className="rounded-lg border bg-card p-6 space-y-4">
+        {/* Desktop: sidebar card */}
+        <div className="hidden lg:block rounded-lg border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Order Summary</h2>
 
           <div className="space-y-3">
@@ -263,6 +265,31 @@ export function CheckoutForm({
               'Pay with Midtrans'
             )}
           </Button>
+        </div>
+
+        {/* Mobile: sticky bottom bar */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur p-4 lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</p>
+              <p className="text-lg font-bold">{formatIDR(total)}</p>
+            </div>
+            <Button
+              type="submit"
+              form="checkout-form"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Pay Now'
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

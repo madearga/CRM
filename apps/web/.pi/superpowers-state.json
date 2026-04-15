@@ -1,14 +1,14 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "complete",
+      "brainstorm": "active",
       "plan": "pending",
-      "execute": "active",
+      "execute": "pending",
       "verify": "pending",
       "review": "pending",
       "finish": "pending"
     },
-    "currentPhase": "execute",
+    "currentPhase": "brainstorm",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
@@ -18,7 +18,7 @@
       "finish": null
     },
     "prompted": {
-      "brainstorm": true,
+      "brainstorm": false,
       "plan": false,
       "execute": false,
       "verify": false,
@@ -30,12 +30,13 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/schema.ts",
-      "/Users/madearga/Desktop/crm/convex/commerce/helpers.ts",
-      "/Users/madearga/Desktop/crm/convex/commerce/cart.ts",
-      "/Users/madearga/Desktop/crm/convex/commerce/checkout.ts",
-      "/Users/madearga/Desktop/crm/convex/commerce/orders.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/layout.tsx"
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/products/[id]/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/cart/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/checkout-form.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/team/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/orders/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/product-grid.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/page.tsx"
     ],
     "redVerificationPending": false
   },

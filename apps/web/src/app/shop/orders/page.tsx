@@ -21,7 +21,8 @@ export default function OrdersPage() {
 
   const { data, isLoading } = useAuthPaginatedQuery(
     api.commerce.customers.getOrders,
-    orgSlug ? { organizationSlug: orgSlug, paginationOpts: { numItems: 20, cursor: null } } : 'skip',
+    orgSlug ? { organizationSlug: orgSlug } : 'skip',
+    { initialNumItems: 20 },
   );
 
   if (!isAuth) {
@@ -37,7 +38,7 @@ export default function OrdersPage() {
     );
   }
 
-  const orders = data?.page ?? [];
+  const orders = data ?? [];
 
   if (!isLoading && orders.length === 0) {
     return (

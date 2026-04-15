@@ -16,12 +16,12 @@ const ORG_SLUG = 'default';
 
 export default function ShopHomePage() {
   // Featured products (top 8)
-  const { data: featuredResult, isLoading: featuredLoading } =
-    usePublicPaginatedQuery(
-      api.commerce.products.listPublished,
-      { organizationSlug: ORG_SLUG },
-      { initialNumItems: 8 }
-    );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: featuredResult, isLoading: featuredLoading } = usePublicPaginatedQuery(
+    api.commerce.products.listPublished,
+    { organizationSlug: ORG_SLUG },
+    { initialNumItems: 8 }
+  ) as any;
 
   // Categories
   const { data: categories, isLoading: catLoading } = usePublicQuery(

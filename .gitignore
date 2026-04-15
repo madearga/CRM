@@ -7,3 +7,4 @@ dist
 convex/_generated
 *.tsbuildinfo
 .DS_Store
+.superpowers/

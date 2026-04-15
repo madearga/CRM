@@ -9,6 +9,7 @@ import { CartSummary } from '@/components/shop/cart-summary';
 import { usePublicQuery, usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
 import { useConvexAuth } from 'convex/react';
 import { api } from '@convex/_generated/api';
+import { formatIDR } from '@/lib/commerce/format-currency';
 
 const ORG_SLUG = 'default';
 const SESSION_KEY = 'shop_session_id';
@@ -129,11 +130,13 @@ export default function CartPage() {
               }}
             />
           ))}
+          {/* Mobile spacer for sticky summary */}
+          <div className="h-32 lg:hidden" />
         </div>
 
         {/* Summary Sidebar */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24">
+          <div className="sticky top-24 hidden lg:block">
             <CartSummary
               subtotal={subtotal}
               shippingCost={shippingCost}
@@ -146,6 +149,23 @@ export default function CartPage() {
               }}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Sticky Cart Summary — mobile only */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur p-4 lg:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {items.reduce((acc, i) => acc + i.quantity, 0)} item{items.reduce((acc, i) => acc + i.quantity, 0) !== 1 ? 's' : ''}
+            </p>
+            <p className="text-lg font-bold">{formatIDR(totalAmount)}</p>
+          </div>
+          <Button asChild size="lg">
+            <Link href={`/shop/checkout${isAuthenticated ? '' : `?session=${sessionId}`}`}>
+              Checkout
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductCard, type ProductCardData } from '@/components/shop/product-card';
+export type { ProductCardData };
 
 interface ProductGridProps {
   products: ProductCardData[];

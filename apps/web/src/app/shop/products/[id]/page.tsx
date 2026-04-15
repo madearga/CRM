@@ -37,13 +37,14 @@ export default function ProductDetailPage() {
   );
 
   // Related products (same category)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: relatedRaw, isLoading: relatedLoading } = usePublicPaginatedQuery(
     api.commerce.products.listPublished,
     product?.category
       ? { organizationSlug: ORG_SLUG, category: product.category as any }
       : 'skip',
     { initialNumItems: 4 }
-  );
+  ) as any;
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -214,8 +215,8 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Add to Cart */}
-          <div className="mt-6">
+          {/* Add to Cart — hidden on mobile, shown in sticky bar */}
+          <div className="mt-6 hidden md:block">
             {product.variants && product.variants.length > 0 && !selectedVariantId ? (
               <Button className="w-full" size="lg" disabled>
                 Select a variant
@@ -249,6 +250,31 @@ export default function ProductDetailPage() {
                 </Badge>
               ))}
             </div>
+          )}
+
+          {/* Mobile spacer for sticky CTA */}
+          <div className="h-20 md:hidden" />
+        </div>
+      </div>
+
+      {/* Sticky CTA — mobile only */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur p-4 md:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium">{product.name}</p>
+            <p className="text-lg font-bold text-primary">{formatIDR(product.price ?? 0)}</p>
+          </div>
+          {product.variants && product.variants.length > 0 && !selectedVariantId ? (
+            <Button size="lg" disabled>
+              Select variant
+            </Button>
+          ) : (
+            <AddToCartButton
+              productId={product.id}
+              variantId={selectedVariantId}
+              organizationSlug={ORG_SLUG}
+              disabled={!inStock}
+            />
           )}
         </div>
       </div>

@@ -45,7 +45,7 @@ export default function TeamPage() {
       </TabsContent>
 
       <TabsContent value="roles" className="mt-4">
-        <TeamRolesTab />
+        <TeamRolesTab canManage={canManage} />
       </TabsContent>
     </Tabs>
   );
