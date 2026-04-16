@@ -91,8 +91,9 @@ export const list = createOrgPaginatedQuery()({
         .paginate(args.paginationOpts);
     } else {
       result = await ctx
-        .table('contacts', 'organizationId', (q) => q.eq('organizationId', orgId))
-        .filter((q) => q.eq(q.field('archivedAt'), undefined))
+        .table('contacts', 'organizationId_archivedAt', (q) =>
+          q.eq('organizationId', orgId).eq('archivedAt', undefined)
+        )
         .paginate(args.paginationOpts);
     }
 

@@ -260,6 +260,7 @@ const schema = defineEntSchema(
       // Activities queried via organizationId_entityType_entityId index (polymorphic)
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_name', ['organizationId', 'name'])
+      .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_companies', {
         searchField: 'name',
         filterFields: ['organizationId'],
@@ -304,6 +305,7 @@ const schema = defineEntSchema(
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_externalId', ['organizationId', 'externalId'])
+      .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_contacts', {
         searchField: 'fullName',
         filterFields: ['organizationId', 'companyId'],
@@ -418,6 +420,7 @@ const schema = defineEntSchema(
         'entityId',
       ])
       .index('assigneeId_dueAt', ['assigneeId', 'dueAt'])
+      .index('assigneeId_organizationId_dueAt', ['assigneeId', 'organizationId', 'dueAt'])
       .index('organizationId_createdAt', ['organizationId', 'createdAt'])
       .index('organizationId_status_scheduledAt', ['organizationId', 'status', 'scheduledAt']),
 
@@ -535,6 +538,7 @@ const schema = defineEntSchema(
       .index('organizationId_slug', ['organizationId', 'slug'])
       .index('organizationId_visibleInShop', ['organizationId', 'visibleInShop'])
       .index('organizationId_externalId', ['organizationId', 'externalId'])
+      .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_products', {
         searchField: 'name',
         filterFields: ['organizationId', 'type', 'category'],
@@ -741,6 +745,7 @@ const schema = defineEntSchema(
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_invoiceDate', ['organizationId', 'invoiceDate'])
       .index('organizationId_dueDate', ['organizationId', 'dueDate'])
+      .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_invoices', {
         searchField: 'number',
         filterFields: ['organizationId', 'state', 'type'],

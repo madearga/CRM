@@ -172,10 +172,17 @@ export const list = createOrgPaginatedQuery()({
           q.eq('organizationId', orgId).eq('type', args.type)
         )
         .paginate(args.paginationOpts);
-    } else {
+    } else if (args.includeArchived) {
       result = await ctx
         .table('invoices', 'organizationId_invoiceDate', (q: any) =>
           q.eq('organizationId', orgId)
+        )
+        .order('desc')
+        .paginate(args.paginationOpts);
+    } else {
+      result = await ctx
+        .table('invoices', 'organizationId_archivedAt', (q: any) =>
+          q.eq('organizationId', orgId).eq('archivedAt', undefined)
         )
         .order('desc')
         .paginate(args.paginationOpts);

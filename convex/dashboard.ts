@@ -122,15 +122,12 @@ export const overview = createAuthQuery()({
     // Upcoming activities (next 10 with dueAt)
     const now = Date.now();
     const upcomingActivities = await ctx
-      .table('activities', 'assigneeId_dueAt', (q) =>
-        q.eq('assigneeId', ctx.user._id).gt('dueAt', now)
+      .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
+        q.eq('assigneeId', ctx.user._id)
+          .eq('organizationId', orgId)
+          .gt('dueAt', now)
       )
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('organizationId'), orgId),
-          q.eq(q.field('completedAt'), undefined)
-        )
-      )
+      .filter((q) => q.eq(q.field('completedAt'), undefined))
       .take(10)
       .map((a) => ({
         id: a._id,
@@ -143,13 +140,19 @@ export const overview = createAuthQuery()({
 
     // Aging deals — deals stuck in a stage beyond historical average
     const DAY_MS = 86_400_000;
-    const allDealsForAging = await ctx
-      .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
-      .take(500);
-    const activeDeals = allDealsForAging.filter((d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost');
+    // Fetch active and won deals separately using targeted queries
+    const [activeDealsRaw, wonDealsRaw] = await Promise.all([
+      ctx
+        .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
+        .take(200),
+      ctx
+        .table('deals', 'organizationId_stage', (q) => q.eq('organizationId', orgId).eq('stage', 'won'))
+        .take(100),
+    ]);
+    const activeDeals = activeDealsRaw.filter((d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost');
 
     let avgDaysPerStage = 14;
-    const wonDeals = allDealsForAging.filter((d) => d.stage === 'won' && (d as any).stageEnteredAt);
+    const wonDeals = wonDealsRaw.filter((d) => (d as any).stageEnteredAt);
     if (wonDeals.length >= 3) {
       const totalDays = wonDeals.reduce((sum, d) => {
         const cycleDays = d.wonAt && (d as any).stageEnteredAt
@@ -212,17 +215,22 @@ export const agingDeals = createAuthQuery()({
     const now = Date.now();
     const DAY_MS = 86_400_000;
 
-    // Fetch all active deals for the org
-    const allDeals = await ctx
-      .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
-      .take(500);
+    // Fetch active and won deals separately using targeted queries
+    const [activeDealsRaw, wonDealsRaw] = await Promise.all([
+      ctx
+        .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
+        .take(200),
+      ctx
+        .table('deals', 'organizationId_stage', (q) => q.eq('organizationId', orgId).eq('stage', 'won'))
+        .take(100),
+    ]);
 
-    const activeDeals = allDeals.filter((d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost');
+    const activeDeals = activeDealsRaw.filter((d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost');
 
     if (activeDeals.length === 0) return [];
 
     // Compute average days per stage from all won deals (historical baseline)
-    const wonDeals = allDeals.filter((d) => d.stage === 'won' && d.stageEnteredAt);
+    const wonDeals = wonDealsRaw.filter((d) => d.stageEnteredAt);
     let avgDaysPerStage = 14; // default: 14 days
 
     if (wonDeals.length >= 3) {

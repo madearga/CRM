@@ -47,15 +47,19 @@ export const list = createOrgPaginatedQuery()({
           q.search('name', args.search!).eq('organizationId', orgId)
         )
         .paginate(args.paginationOpts);
-    } else {
+    } else if (args.includeArchived) {
       result = await ctx
         .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
         .paginate(args.paginationOpts);
+    } else {
+      result = await ctx
+        .table('companies', 'organizationId_archivedAt', (q) =>
+          q.eq('organizationId', orgId).eq('archivedAt', undefined)
+        )
+        .paginate(args.paginationOpts);
     }
 
-    const page = args.includeArchived
-      ? result.page
-      : result.page.filter((c) => !c.archivedAt);
+    const page = result.page;
 
     return {
       page: page.map((c) => ({

@@ -83,10 +83,16 @@ export const list = createOrgPaginatedQuery()({
           )
           .paginate(args.paginationOpts);
       }
-    } else {
+    } else if (args.includeArchived) {
       result = await ctx
         .table('products', 'organizationId_name', (q: any) =>
           q.eq('organizationId', orgId)
+        )
+        .paginate(args.paginationOpts);
+    } else {
+      result = await ctx
+        .table('products', 'organizationId_archivedAt', (q: any) =>
+          q.eq('organizationId', orgId).eq('archivedAt', undefined)
         )
         .paginate(args.paginationOpts);
     }
@@ -106,10 +112,12 @@ export const list = createOrgPaginatedQuery()({
     // Resolve category names
     const categoryIds = [...new Set(page.map((p: any) => p.category).filter(Boolean))];
     const categoryMap = new Map<string, string>();
-    for (const catId of categoryIds) {
-      const cat = await ctx.table('productCategories').get(catId);
-      if (cat) categoryMap.set(catId, cat.name);
-    }
+    await Promise.all(
+      categoryIds.map(async (catId) => {
+        const cat = await ctx.table('productCategories').get(catId);
+        if (cat) categoryMap.set(catId, cat.name);
+      })
+    );
 
     return {
       page: page.map((p: any) => ({
