@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ConvexError } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { createOrgQuery, createOrgMutation } from './functions';
 import { internalQuery, internalMutation } from './_generated/server';
 import { validateExternalUrl, SSRFError } from './helpers/validateExternalUrl';
@@ -90,21 +90,22 @@ export const get = createOrgQuery()({
 
 /** Internal query to look up a plugin by ID (no org context). */
 export const getInternal = internalQuery({
-  args: { id: z.string() },
-  returns: z
-    .object({
-      id: z.string(),
-      organizationId: z.string(),
-      apiKey: z.string(),
-    })
-    .nullable(),
+  args: { id: v.string() },
+  returns: v.union(
+    v.object({
+      id: v.string(),
+      organizationId: v.string(),
+      apiKey: v.string(),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     const plugin = await ctx.db.get(args.id as any);
     if (!plugin) return null;
     return {
-      id: plugin._id,
-      organizationId: plugin.organizationId,
-      apiKey: plugin.apiKey,
+      id: plugin._id as any as string,
+      organizationId: (plugin as any).organizationId,
+      apiKey: (plugin as any).apiKey,
     };
   },
 });
@@ -535,16 +536,15 @@ export const triggerSync = createOrgMutation({})({
 /** Process incoming webhook event from external plugin. */
 export const processWebhook = internalMutation({
   args: {
-    event: z.string(),
-    orgId: z.string(),
-    data: z.any(),
+    event: v.string(),
+    orgId: v.string(),
+    data: v.any(),
   },
   handler: async (ctx, args) => {
     // Route event to handler
     switch (args.event) {
       case 'order.created': {
-        // Create sale order from external data
-        const orderData = args.data;
+        const orderData = args.data as Record<string, any>;
         await ctx.db.insert('saleOrders', {
           organizationId: args.orgId as any,
           number: orderData.orderNumber ?? orderData.id,
@@ -567,7 +567,7 @@ export const processWebhook = internalMutation({
         break;
       }
       case 'customer.created': {
-        const customerData = args.data;
+        const customerData = args.data as Record<string, any>;
         await ctx.db.insert('contacts', {
           organizationId: args.orgId as any,
           fullName: customerData.name ?? 'Unknown',
