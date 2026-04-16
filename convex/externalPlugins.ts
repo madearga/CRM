@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ConvexError } from 'convex/values';
 import { createOrgQuery, createOrgMutation } from './functions';
+import { internalQuery, internalMutation } from './_generated/server';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,7 +64,6 @@ export const get = createOrgQuery()({
       id: z.string(),
       name: z.string(),
       url: z.string(),
-      apiKey: z.string(),
       status: z.string(),
       lastSyncAt: z.number().optional(),
       lastError: z.string().optional(),
@@ -78,12 +78,32 @@ export const get = createOrgQuery()({
       id: plugin._id,
       name: plugin.name,
       url: plugin.url,
-      apiKey: plugin.apiKey,
       status: plugin.status,
       lastSyncAt: plugin.lastSyncAt ?? undefined,
       lastError: plugin.lastError ?? undefined,
       pluginInstanceId: plugin.pluginInstanceId,
       manifest: plugin.manifest ?? undefined,
+    };
+  },
+});
+
+/** Internal query to look up a plugin by ID (no org context). */
+export const getInternal = internalQuery({
+  args: { id: z.string() },
+  returns: z
+    .object({
+      id: z.string(),
+      organizationId: z.string(),
+      apiKey: z.string(),
+    })
+    .nullable(),
+  handler: async (ctx, args) => {
+    const plugin = await ctx.db.get(args.id as any);
+    if (!plugin) return null;
+    return {
+      id: plugin._id,
+      organizationId: plugin.organizationId,
+      apiKey: plugin.apiKey,
     };
   },
 });
@@ -491,26 +511,27 @@ export const triggerSync = createOrgMutation({})({
 // ---------------------------------------------------------------------------
 
 /** Process incoming webhook event from external plugin. */
-export const processWebhook = createOrgMutation({})({
+export const processWebhook = internalMutation({
   args: {
     event: z.string(),
     orgId: z.string(),
     data: z.any(),
-    idempotencyKey: z.string().optional(),
   },
-  returns: z.object({ received: z.boolean() }),
   handler: async (ctx, args) => {
     // Route event to handler
     switch (args.event) {
       case 'order.created': {
         // Create sale order from external data
         const orderData = args.data;
-        await ctx.table('saleOrders').insert({
+        await ctx.db.insert('saleOrders', {
           organizationId: args.orgId as any,
-          orderNumber: orderData.orderNumber ?? orderData.id,
-          status: 'pending',
+          number: orderData.orderNumber ?? orderData.id,
+          state: 'confirmed',
+          orderDate: Date.now(),
+          subtotal: orderData.totalAmount ?? 0,
           totalAmount: orderData.totalAmount ?? 0,
-          notes: `Synced from external plugin. Order ID: ${orderData.id}`,
+          customerNotes: `Synced from external plugin. Order ID: ${orderData.id}`,
+          source: 'manual',
           externalId: orderData.id,
         } as any);
         break;
@@ -525,11 +546,12 @@ export const processWebhook = createOrgMutation({})({
       }
       case 'customer.created': {
         const customerData = args.data;
-        await ctx.table('contacts').insert({
+        await ctx.db.insert('contacts', {
           organizationId: args.orgId as any,
-          name: customerData.name,
-          email: customerData.email,
+          fullName: customerData.name ?? 'Unknown',
+          email: customerData.email ?? '',
           phone: customerData.phone,
+          lifecycleStage: 'customer',
           notes: 'Synced from external plugin',
           externalId: customerData.id,
         } as any);
@@ -538,7 +560,5 @@ export const processWebhook = createOrgMutation({})({
       default:
         console.warn(`Unknown webhook event: ${args.event}`);
     }
-
-    return { received: true };
   },
 });
