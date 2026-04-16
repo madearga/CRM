@@ -373,6 +373,14 @@ export const triggerSync = createOrgMutation({})({
       });
     }
 
+    // Rate limit: 5-minute cooldown between syncs
+    if (plugin.lastSyncAt && Date.now() - plugin.lastSyncAt < 5 * 60 * 1000) {
+      throw new ConvexError({
+        code: 'RATE_LIMITED',
+        message: 'Sync terlalu sering. Tunggu beberapa menit.',
+      });
+    }
+
     // Schedule the sync action
     const startTime = Date.now();
 
@@ -390,7 +398,7 @@ export const triggerSync = createOrgMutation({})({
       }
 
       const result = await response.json();
-      const data = result.data ?? [];
+      const data = (result.data ?? []).slice(0, 200);
       const durationMs = Date.now() - startTime;
 
       // Upsert data based on table type
