@@ -363,42 +363,86 @@ export const triggerSync = createOrgMutation({})({
       let syncedCount = 0;
       if (args.table === 'products') {
         for (const item of data) {
-          await ctx.table('products').insert({
-            organizationId: ctx.orgId,
-            name: item.name,
+          const existing = await ctx
+            .table('products', 'organizationId_externalId', (q) =>
+              q.eq('organizationId', ctx.orgId).eq('externalId', String(item.id))
+            )
+            .first();
+          const fields = {
+            name: item.name ?? 'Unnamed Product',
+            type: 'storable' as const,
             description: item.description,
             price: item.price,
             imageUrl: item.imageUrl,
             stock: item.stock,
             slug: item.slug,
             visibleInShop: true,
-            externalId: item.id,
+            externalId: String(item.id),
             externalPluginId: plugin._id,
-          } as any);
+            organizationId: ctx.orgId,
+            ownerId: ctx.userId as any,
+          };
+          if (existing) {
+            await existing.patch(fields);
+          } else {
+            await ctx.table('products').insert(fields as any);
+          }
           syncedCount++;
         }
       } else if (args.table === 'orders') {
         for (const item of data) {
-          await ctx.table('saleOrders').insert({
-            organizationId: ctx.orgId,
-            orderNumber: item.orderNumber ?? item.id,
-            status: item.status ?? 'pending',
-            totalAmount: item.totalAmount ?? item.total,
-            externalId: item.id,
+          const existing = await ctx
+            .table('saleOrders', 'organizationId_externalId', (q) =>
+              q.eq('organizationId', ctx.orgId).eq('externalId', String(item.id))
+            )
+            .first();
+          const stateMap: Record<string, string> = {
+            completed: 'done',
+            cancelled: 'cancel',
+          };
+          const state = (stateMap[item.status] ?? 'confirmed') as any;
+          const fields = {
+            number: item.orderNumber ?? item.id ?? String(item.id),
+            state,
+            orderDate: item.orderDate ?? item.createdAt ?? Date.now(),
+            subtotal: item.subtotal ?? item.totalAmount ?? item.total ?? 0,
+            totalAmount: item.totalAmount ?? item.total ?? 0,
+            customerNotes: item.customerNotes ?? item.notes,
+            source: 'manual' as const,
+            externalId: String(item.id),
             externalPluginId: plugin._id,
-          } as any);
+            organizationId: ctx.orgId,
+            ownerId: ctx.userId as any,
+          };
+          if (existing) {
+            await existing.patch(fields);
+          } else {
+            await ctx.table('saleOrders').insert(fields as any);
+          }
           syncedCount++;
         }
       } else if (args.table === 'customers') {
         for (const item of data) {
-          await ctx.table('contacts').insert({
-            organizationId: ctx.orgId,
-            name: item.name,
-            email: item.email,
+          const existing = await ctx
+            .table('contacts', 'organizationId_externalId', (q) =>
+              q.eq('organizationId', ctx.orgId).eq('externalId', String(item.id))
+            )
+            .first();
+          const fields = {
+            fullName: item.name ?? item.fullName ?? 'Unknown',
+            email: item.email ?? '',
             phone: item.phone,
-            externalId: item.id,
+            lifecycleStage: 'customer' as const,
+            externalId: String(item.id),
             externalPluginId: plugin._id,
-          } as any);
+            organizationId: ctx.orgId,
+            ownerId: ctx.userId as any,
+          };
+          if (existing) {
+            await existing.patch(fields);
+          } else {
+            await ctx.table('contacts').insert(fields as any);
+          }
           syncedCount++;
         }
       }
