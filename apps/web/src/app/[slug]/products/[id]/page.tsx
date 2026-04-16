@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
           The product you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <Button asChild className="mt-4">
-          <Link href={`/shop/${slug}/products`}>Back to Products</Link>
+          <Link href={`/${slug}/products`}>Back to Products</Link>
         </Button>
       </div>
     );
@@ -114,18 +114,18 @@ export default function ProductDetailPage() {
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href={`/shop/${slug}`}>Home</BreadcrumbLink>
+            <BreadcrumbLink href={`/${slug}`}>Home</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href={`/shop/${slug}/products`}>Products</BreadcrumbLink>
+            <BreadcrumbLink href={`/${slug}/products`}>Products</BreadcrumbLink>
           </BreadcrumbItem>
           {product.categoryName && (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink
-                  href={`/shop/${slug}/products?category=${product.category}`}
+                  href={`/${slug}/products?category=${product.category}`}
                 >
                   {product.categoryName}
                 </BreadcrumbLink>

@@ -90,7 +90,7 @@ export default function ProductsCatalogPage() {
       } else {
         params.delete('category');
       }
-      router.push(`/shop/${slug}/products?${params.toString()}`);
+      router.push(`/${slug}/products?${params.toString()}`);
     },
     [searchParams, router]
   );
@@ -103,13 +103,13 @@ export default function ProductsCatalogPage() {
       } else {
         params.delete('q');
       }
-      router.push(`/shop/${slug}/products?${params.toString()}`);
+      router.push(`/${slug}/products?${params.toString()}`);
     },
     [searchParams, router]
   );
 
   const clearFilters = useCallback(() => {
-    router.push(`/shop/${slug}/products`);
+    router.push(`/${slug}/products`);
   }, [router]);
 
   const activeFilterCount = [categoryId, searchQuery].filter(Boolean).length;

@@ -27,7 +27,7 @@ export default function CheckoutFailedPage() {
     try {
       // Re-initiate checkout to get a new snap token
       // For now, redirect back to checkout page
-      router.push(`/shop/${slug}/checkout`);
+      router.push(`/${slug}/checkout`);
     } catch {
       toast.error('Failed to retry payment.');
     } finally {
@@ -46,7 +46,7 @@ export default function CheckoutFailedPage() {
       // Note: cancelOrder requires orderId. The URL has orderNumber.
       // Best-effort: redirect to orders detail where cancellation UI exists.
       toast.success('Order cancelled.');
-      router.push(`/shop/${slug}/cart`);
+      router.push(`/${slug}/cart`);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to cancel order.');
     } finally {
@@ -98,7 +98,7 @@ export default function CheckoutFailedPage() {
         </Button>
 
         <Button variant="outline" asChild>
-          <Link href={`/shop/${slug}/cart`}>Back to Cart</Link>
+          <Link href={`/${slug}/cart`}>Back to Cart</Link>
         </Button>
       </div>
     </div>

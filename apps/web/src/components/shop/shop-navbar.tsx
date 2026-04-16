@@ -43,7 +43,7 @@ export function ShopNavbar({
   const router = useRouter();
   const [search, setSearch] = useState('');
 
-  const prefix = slug ? `/shop/${slug}` : '/shop';
+  const prefix = slug ? `/${slug}` : '/';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

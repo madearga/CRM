@@ -30,16 +30,10 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "/Users/madearga/Desktop/crm/convex/migrations/activateAllPlugins.ts",
-      "/Users/madearga/Desktop/crm/convex/products.ts",
-      "/Users/madearga/Desktop/crm/convex/organization.ts",
-      "/Users/madearga/Desktop/crm/convex/onboarding.ts",
-      "/Users/madearga/Desktop/crm/convex/schema.ts",
       "/Users/madearga/Desktop/crm/convex/plugins.ts",
-      "/Users/madearga/Desktop/crm/apps/web/src/lib/plugins/types.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/shop-navbar.tsx",
       "/Users/madearga/Desktop/crm/apps/web/src/app/(dashboard)/settings/plugins/page.tsx",
-      "/Users/madearga/Desktop/crm/apps/web/src/middleware.ts",
-      "/Users/madearga/Desktop/crm/convex/migrations/debugProducts.ts"
+      "/Users/madearga/Desktop/crm/apps/web/src/middleware.ts"
     ],
     "redVerificationPending": false
   },

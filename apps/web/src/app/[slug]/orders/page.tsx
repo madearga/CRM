@@ -32,7 +32,7 @@ export default function OrdersPage() {
         <Package className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">Sign in to view orders</h2>
         <p className="mt-2 text-muted-foreground">You need to be logged in to see your order history.</p>
-        <Button className="mt-4" onClick={() => router.push(`/shop/${slug}`)}>
+        <Button className="mt-4" onClick={() => router.push(`/${slug}`)}>
           Go to Shop
         </Button>
       </div>
@@ -47,7 +47,7 @@ export default function OrdersPage() {
         <ShoppingBag className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">No orders yet</h2>
         <p className="mt-2 text-muted-foreground">When you place your first order, it will appear here.</p>
-        <Link href={`/shop/${slug}`}>
+        <Link href={`/${slug}`}>
           <Button className="mt-4">Browse Products</Button>
         </Link>
       </div>
@@ -67,7 +67,7 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Link key={order.orderNumber} href={`/shop/${slug}/orders/${order.orderNumber}`}>
+            <Link key={order.orderNumber} href={`/${slug}/orders/${order.orderNumber}`}>
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="space-y-1">

@@ -25,7 +25,7 @@ export default function AuthCallbackPage() {
   const mergeGuestCart = usePublicMutation(api.commerce.cart.mergeGuestCart as any);
 
   // Determine redirect destination
-  const redirectTo = searchParams.get('redirect') || '/shop/${slug}/account';
+  const redirectTo = searchParams.get('redirect') || '/${slug}/account';
   const sessionId = typeof window !== 'undefined'
     ? localStorage.getItem('shop_session_id')
     : null;
@@ -78,7 +78,7 @@ export default function AuthCallbackPage() {
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <button
               className="mt-4 text-sm text-blue-600 underline"
-              onClick={() => router.push(`/shop/${slug}`)}
+              onClick={() => router.push(`/${slug}`)}
             >
               Return to Shop
             </button>

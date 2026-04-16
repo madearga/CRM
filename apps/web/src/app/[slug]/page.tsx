@@ -57,7 +57,7 @@ export default function ShopHomePage() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
-              <Link href={`/shop/${slug}/products`}>
+              <Link href={`/${slug}/products`}>
                 Browse Products <ArrowRight className="ml-2 size-4" />
               </Link>
             </Button>
@@ -73,7 +73,7 @@ export default function ShopHomePage() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Featured Products</h2>
           <Link
-            href={`/shop/${slug}/products`}
+            href={`/${slug}/products`}
             className="text-sm font-medium text-primary hover:underline"
           >
             View all <ArrowRight className="inline size-3" />
@@ -102,7 +102,7 @@ export default function ShopHomePage() {
               : (categories ?? []).map((cat) => (
                   <Link
                     key={cat.id}
-                    href={`/shop/${slug}/products?category=${cat.id}`}
+                    href={`/${slug}/products?category=${cat.id}`}
                     className="group flex flex-col items-center justify-center rounded-lg border bg-background p-6 transition-shadow hover:shadow-md"
                   >
                     <span className="text-base font-semibold group-hover:text-primary">
@@ -127,7 +127,7 @@ export default function ShopHomePage() {
             Shop now and save on delivery!
           </p>
           <Button asChild variant="secondary" size="lg" className="mt-6">
-            <Link href={`/shop/${slug}/products`}>Shop Now</Link>
+            <Link href={`/${slug}/products`}>Shop Now</Link>
           </Button>
         </div>
       </section>

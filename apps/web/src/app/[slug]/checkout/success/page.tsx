@@ -33,13 +33,13 @@ export default function CheckoutSuccessPage() {
       <div className="flex flex-col gap-3 sm:flex-row">
         {orderNumber && (
           <Button asChild>
-            <Link href={`/shop/${slug}/orders/${orderNumber}`}>
+            <Link href={`/${slug}/orders/${orderNumber}`}>
               View Order Details
             </Link>
           </Button>
         )}
         <Button variant="outline" asChild>
-          <Link href={`/shop/${slug}/products`}>Continue Shopping</Link>
+          <Link href={`/${slug}/products`}>Continue Shopping</Link>
         </Button>
       </div>
     </div>

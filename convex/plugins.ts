@@ -6,6 +6,24 @@ import {
   createPublicQuery,
 } from './functions';
 
+// Reserved slugs that conflict with dashboard/api routes
+const RESERVED_SLUGS = [
+  'dashboard', 'settings', 'products', 'companies', 'contacts', 'deals',
+  'invoices', 'payments', 'sales', 'sales-orders', 'subscriptions',
+  'templates', 'activities', 'analytics', 'api', 'invite', 'login',
+  'org', 'shop', 'admin', 'onboarding', 'auth', 'callback',
+  '_next', 'static', 'favicon', 'robots', 'sitemap', 'manifest',
+];
+
+function validateSlugNotReserved(slug: string) {
+  if (RESERVED_SLUGS.includes(slug)) {
+    throw new ConvexError({
+      code: 'BAD_REQUEST',
+      message: `Slug "${slug}" tidak tersedia (reserved)`,
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -93,7 +111,7 @@ export const upsert = createOrgMutation()({
   },
   returns: z.object({ success: z.boolean() }),
   handler: async (ctx, args) => {
-    // Server-side slug format validation
+    // Server-side slug format + reserved validation
     if (args.publicSlug !== undefined && args.publicSlug !== '') {
       if (!SLUG_REGEX.test(args.publicSlug)) {
         throw new ConvexError({
@@ -101,6 +119,7 @@ export const upsert = createOrgMutation()({
           message: 'Slug hanya boleh huruf kecil, angka, dan tanda hubung (min 2 karakter)',
         });
       }
+      validateSlugNotReserved(args.publicSlug);
     }
 
     const existing = await ctx

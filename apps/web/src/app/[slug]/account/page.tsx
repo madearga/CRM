@@ -63,7 +63,7 @@ export default function AccountPage() {
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
         <Package className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">Sign in to view your account</h2>
-        <Button className="mt-4" onClick={() => router.push(`/shop/${slug}`)}>
+        <Button className="mt-4" onClick={() => router.push(`/${slug}`)}>
           Go to Shop
         </Button>
       </div>
@@ -90,7 +90,7 @@ export default function AccountPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push(`/shop/${slug}`);
+    router.push(`/${slug}`);
   };
 
   return (
@@ -208,7 +208,7 @@ export default function AccountPage() {
                 </div>
               </div>
               <Separator className="my-4" />
-              <Link href={`/shop/${slug}/orders`}>
+              <Link href={`/${slug}/orders`}>
                 <Button variant="outline" className="w-full">
                   <Package className="mr-2 size-4" />
                   View Order History

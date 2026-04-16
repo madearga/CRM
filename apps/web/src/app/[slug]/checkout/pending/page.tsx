@@ -30,7 +30,7 @@ export default function CheckoutPendingPage() {
       await new Promise((r) => setTimeout(r, 1500));
       toast.info('Please check your order details for the latest status.');
       if (orderNumber) {
-        router.push(`/shop/${slug}/orders/${orderNumber}`);
+        router.push(`/${slug}/orders/${orderNumber}`);
       }
     } finally {
       setChecking(false);
@@ -83,7 +83,7 @@ export default function CheckoutPendingPage() {
 
         {orderNumber && (
           <Button variant="outline" asChild>
-            <Link href={`/shop/${slug}/orders/${orderNumber}`}>
+            <Link href={`/${slug}/orders/${orderNumber}`}>
               View Order Details
             </Link>
           </Button>

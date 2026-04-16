@@ -72,8 +72,8 @@ export default function CheckoutPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const checkoutUrl = `/shop/${slug}/checkout`;
-  const productsUrl = `/shop/${slug}/products`;
+  const checkoutUrl = `/${slug}/checkout`;
+  const productsUrl = `/${slug}/products`;
 
   if (authLoading) {
     return (
@@ -145,22 +145,22 @@ export default function CheckoutPage() {
 
       if (!paymentData?.snapToken) {
         toast.error('Payment initiation failed. Please try again.');
-        router.push(`/shop/${slug}/checkout/failed?order=${orderNumber}`);
+        router.push(`/${slug}/checkout/failed?order=${orderNumber}`);
         return;
       }
 
       await payWithSnap(paymentData.snapToken as string, {
         onSuccess: () => {
-          router.push(`/shop/${slug}/checkout/success?order=${orderNumber}`);
+          router.push(`/${slug}/checkout/success?order=${orderNumber}`);
         },
         onPending: () => {
-          router.push(`/shop/${slug}/checkout/pending?order=${orderNumber}`);
+          router.push(`/${slug}/checkout/pending?order=${orderNumber}`);
         },
         onClose: () => {
-          router.push(`/shop/${slug}/checkout/pending?order=${orderNumber}`);
+          router.push(`/${slug}/checkout/pending?order=${orderNumber}`);
         },
         onError: () => {
-          router.push(`/shop/${slug}/checkout/failed?order=${orderNumber}`);
+          router.push(`/${slug}/checkout/failed?order=${orderNumber}`);
         },
       });
     } catch (err: any) {

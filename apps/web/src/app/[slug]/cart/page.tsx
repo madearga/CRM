@@ -109,7 +109,7 @@ export default function CartPage() {
         <h1 className="text-2xl font-bold">Your cart is empty</h1>
         <p className="text-muted-foreground">Looks like you haven&apos;t added anything yet.</p>
         <Button asChild size="lg">
-          <Link href={`/shop/${slug}/products`}>Browse Products</Link>
+          <Link href={`/${slug}/products`}>Browse Products</Link>
         </Button>
       </div>
     );
@@ -164,7 +164,7 @@ export default function CartPage() {
             <p className="text-lg font-bold">{formatIDR(totalAmount)}</p>
           </div>
           <Button asChild size="lg">
-            <Link href={`/shop/${slug}/checkout${isAuthenticated ? '' : `?session=${sessionId}`}`}>
+            <Link href={`/${slug}/checkout${isAuthenticated ? '' : `?session=${sessionId}`}`}>
               Checkout
             </Link>
           </Button>

@@ -152,7 +152,7 @@ function PluginCard({
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
             />
             <p className="text-xs text-muted-foreground">
-              URL toko: <code>/shop/{slug || '{slug}'}</code>
+              URL toko: <code>/{slug || '{slug}'}</code>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ function PluginCard({
             </Button>
             {slug && (
               <Button variant="outline" size="sm" asChild>
-                <a href={`/shop/${slug}`} target="_blank" rel="noreferrer">
+                <a href={`/${slug}`} target="_blank" rel="noreferrer">
                   Lihat Toko
                 </a>
               </Button>
