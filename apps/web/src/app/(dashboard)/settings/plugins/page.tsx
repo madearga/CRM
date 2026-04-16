@@ -21,6 +21,36 @@ import type { PluginInstance, ExternalPlugin } from '@/lib/plugins/types';
 import { ConnectPluginDialog } from '@/components/external-plugin/connect-plugin-dialog';
 import { ExternalPluginCard } from '@/components/external-plugin/external-plugin-card';
 
+function ConnectExternalPluginButton({
+  instanceMap,
+  onConnected,
+}: {
+  instanceMap: Map<string, PluginInstance>;
+  onConnected: () => void;
+}) {
+  const ecommerceInstance = instanceMap.get('ecommerce');
+  if (!ecommerceInstance?.isActive) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <Plus className="mr-2 size-4" />
+        Aktifkan Ecommerce dulu
+      </Button>
+    );
+  }
+  return (
+    <ConnectPluginDialog
+      pluginInstanceId={ecommerceInstance.id}
+      pluginName="Toko Online"
+      onConnected={onConnected}
+    >
+      <Button size="sm">
+        <Plus className="mr-2 size-4" />
+        Hubungkan Toko
+      </Button>
+    </ConnectPluginDialog>
+  );
+}
+
 export default function PluginsSettingsPage() {
   const { data: instances, isLoading: instancesLoading } = useAuthQuery(api.plugins.list, {});
   const { data: externalPlugins, isLoading: externalLoading } = useAuthQuery(
@@ -83,30 +113,7 @@ export default function PluginsSettingsPage() {
               Hubungkan toko online Anda yang di-deploy sendiri untuk sync data.
             </p>
           </div>
-          {(() => {
-            // Find the ecommerce plugin instance (if active)
-            const ecommerceInstance = instanceMap.get('ecommerce');
-            if (!ecommerceInstance?.isActive) {
-              return (
-                <Button variant="outline" size="sm" disabled>
-                  <Plus className="mr-2 size-4" />
-                  Aktifkan Ecommerce dulu
-                </Button>
-              );
-            }
-            return (
-              <ConnectPluginDialog
-                pluginInstanceId={ecommerceInstance.id}
-                pluginName="Toko Online"
-                onConnected={handleConnected}
-              >
-                <Button size="sm">
-                  <Plus className="mr-2 size-4" />
-                  Hubungkan Toko
-                </Button>
-              </ConnectPluginDialog>
-            );
-          })()}
+          <ConnectExternalPluginButton instanceMap={instanceMap} onConnected={handleConnected} />
         </div>
 
         {(externalPlugins ?? []).length === 0 ? (
