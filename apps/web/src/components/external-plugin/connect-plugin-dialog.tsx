@@ -57,6 +57,18 @@ export function ConnectPluginDialog({
   }
 
   async function handleRegister() {
+    // Validate URL format
+    try {
+      const parsed = new URL(url.trim());
+      if (!['https:', 'http:'].includes(parsed.protocol)) {
+        toast.error('URL harus dimulai dengan http:// atau https://');
+        return;
+      }
+    } catch {
+      toast.error('Format URL tidak valid');
+      return;
+    }
+
     if (!url.trim()) {
       toast.error('URL plugin wajib diisi');
       return;
