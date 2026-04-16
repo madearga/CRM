@@ -12,7 +12,7 @@ export const seedAll = mutation({
     for (const org of orgs) {
       const existing = await ctx.db
         .query('pluginInstances')
-        .filter((q) => q.eq(q.field('organizationId'), org._id))
+        .withIndex('organizationId', (q) => q.eq('organizationId', org._id))
         .first();
 
       if (!existing && org.slug) {

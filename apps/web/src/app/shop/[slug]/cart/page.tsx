@@ -12,7 +12,6 @@ import { useConvexAuth } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { formatIDR } from '@/lib/commerce/format-currency';
 
-const { slug } = useParams<{ slug: string }>();
 const SESSION_KEY = 'shop_session_id';
 
 function getOrCreateSessionId(): string {
@@ -26,6 +25,7 @@ function getOrCreateSessionId(): string {
 }
 
 export default function CartPage() {
+  const { slug } = useParams<{ slug: string }>();
   const [sessionId, setSessionId] = useState<string>('');
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [merged, setMerged] = useState(false);
@@ -76,6 +76,7 @@ export default function CartPage() {
 
   const items: CartItemData[] = cart?.items ?? [];
   const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  // TODO: Make shipping configurable per org via plugin settings
   const shippingCost = subtotal > 0 ? (subtotal >= 500000 ? 0 : 25000) : 0;
   const totalAmount = subtotal + shippingCost;
 

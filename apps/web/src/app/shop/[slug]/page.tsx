@@ -13,9 +13,8 @@ import { ProductGrid, type ProductCardData } from '@/components/shop/product-gri
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-const { slug } = useParams<{ slug: string }>();
-
 export default function ShopHomePage() {
+  const { slug } = useParams<{ slug: string }>();
   // Featured products (top 8)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: featuredResult, isLoading: featuredLoading } = usePublicPaginatedQuery(

@@ -26,12 +26,11 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const { slug } = useParams<{ slug: string }>();
-
 type SortOption = 'newest' | 'price-asc' | 'price-desc';
 
 export default function ProductsCatalogPage() {
   const router = useRouter();
+  const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
   const categoryId = searchParams.get('category') ?? '';

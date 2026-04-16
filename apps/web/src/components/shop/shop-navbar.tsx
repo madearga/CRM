@@ -29,13 +29,13 @@ import { CartIcon } from '@/components/shop/cart-icon';
 import { Menu, Search, User, LogOut } from 'lucide-react';
 
 interface ShopNavbarProps {
-  slug: string;
+  slug?: string;
   storeName?: string;
   cartItemCount?: number;
 }
 
 export function ShopNavbar({
-  slug,
+  slug = '',
   storeName = 'Store',
   cartItemCount = 0,
 }: ShopNavbarProps) {
@@ -43,22 +43,24 @@ export function ShopNavbar({
   const router = useRouter();
   const [search, setSearch] = useState('');
 
+  const prefix = slug ? `/shop/${slug}` : '/shop';
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`/shop/${slug}?q=${encodeURIComponent(search.trim())}`);
+      router.push(`${prefix}?q=${encodeURIComponent(search.trim())}`);
     }
   };
 
   const handleLogin = () => {
     signIn.social({
       provider: 'google',
-      callbackURL: `/shop/${slug}`,
+      callbackURL: prefix,
     });
   };
 
   const navLinks = [
-    { label: 'Products', href: `/shop/${slug}/products` },
+    { label: 'Products', href: `${prefix}/products` },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
   ];
@@ -91,7 +93,7 @@ export function ShopNavbar({
         </Sheet>
 
         {/* Logo */}
-        <Link href={`/shop/${slug}`} className="flex items-center gap-2 font-bold">
+        <Link href={prefix} className="flex items-center gap-2 font-bold">
           <ShoppingCart className="size-5" />
           <span className="hidden sm:inline">{storeName}</span>
         </Link>
@@ -154,7 +156,7 @@ export function ShopNavbar({
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(`/shop/${slug}/orders`)}>
+                <DropdownMenuItem onClick={() => router.push(`${prefix}/orders`)}>
                   My Orders
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

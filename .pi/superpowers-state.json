@@ -29,7 +29,17 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [],
+    "sourceFiles": [
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/[slug]/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/[slug]/cart/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/[slug]/products/page.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/[slug]/products/[id]/page.tsx",
+      "/Users/madearga/Desktop/crm/convex/plugins.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/middleware.ts",
+      "/Users/madearga/Desktop/crm/convex/migrations/seedPluginInstances.ts",
+      "/Users/madearga/Desktop/crm/apps/web/src/components/shop/shop-navbar.tsx",
+      "/Users/madearga/Desktop/crm/apps/web/src/app/shop/page.tsx"
+    ],
     "redVerificationPending": false
   },
   "debug": {

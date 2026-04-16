@@ -23,10 +23,9 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ProductImageGallery } from '@/components/shop/product-image-gallery';
 
-const { slug } = useNavParams<{ slug: string }>();
-
 export default function ProductDetailPage() {
   const params = useNavParams<{ id: string }>();
+  const { slug } = useNavParams<{ slug: string }>();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
 

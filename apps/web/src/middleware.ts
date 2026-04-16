@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/static') ||
-    pathname.includes('.')
+    /\/[^/]*\.[^/]*$/.test(pathname)
   ) {
     return NextResponse.next();
   }
