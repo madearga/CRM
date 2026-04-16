@@ -1199,7 +1199,7 @@ const schema = defineEntSchema(
       name: v.string(),                         // display name
       url: v.string(),                          // e.g. https://myshop.vercel.app
       apiKey: v.string(),                       // generated API key for auth
-      status: v.string(),                       // 'connected' | 'disconnected' | 'error'
+      status: v.union(v.literal('connected'), v.literal('disconnected'), v.literal('error')),
       lastSyncAt: v.optional(v.number()),       // timestamp of last successful sync
       lastError: v.optional(v.string()),        // last error message
       manifest: v.optional(v.any()),            // cached plugin manifest
@@ -1211,9 +1211,9 @@ const schema = defineEntSchema(
 
     // Sync log — history of data synchronization
     pluginSyncLog: defineEnt({
-      direction: v.string(),                   // 'pull' | 'push'
+      direction: v.union(v.literal('pull'), v.literal('push')),
       table: v.string(),                       // 'products' | 'orders' | 'customers'
-      status: v.string(),                      // 'success' | 'partial' | 'failed'
+      status: v.union(v.literal('success'), v.literal('partial'), v.literal('failed')),
       recordCount: v.number(),
       errorMessage: v.optional(v.string()),
       durationMs: v.optional(v.number()),
