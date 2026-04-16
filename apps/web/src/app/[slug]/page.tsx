@@ -16,12 +16,12 @@ import { Button } from '@/components/ui/button';
 export default function ShopHomePage() {
   const { slug } = useParams<{ slug: string }>();
   // Featured products (top 8)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: featuredResult, isLoading: featuredLoading } = usePublicPaginatedQuery(
     api.commerce.products.listPublished,
     { organizationSlug: slug },
     { initialNumItems: 8 }
-  ) as any;
+  );
 
   // Categories
   const { data: categories, isLoading: catLoading } = usePublicQuery(
@@ -41,7 +41,7 @@ export default function ShopHomePage() {
         category: p.categoryName,
         organizationSlug: slug,
       })),
-    [featuredResult?.data]
+    [featuredResult?.data, slug]
   );
 
   return (

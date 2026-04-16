@@ -55,7 +55,7 @@ export default function CartPage() {
         sessionId,
       } as any);
     }
-  }, [isAuthenticated, merged, sessionId]);
+  }, [isAuthenticated, merged, sessionId, slug, mergeGuestCart]);
 
   // Fetch cart
   const cartQueryArgs = useMemo(
@@ -66,7 +66,7 @@ export default function CartPage() {
             sessionId: isAuthenticated ? undefined : sessionId,
           } as any)
         : 'skip',
-    [sessionId, isAuthenticated],
+    [sessionId, isAuthenticated, slug],
   );
 
   const { data: cart, isLoading, isError } = usePublicQuery(

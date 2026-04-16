@@ -43,7 +43,7 @@ export default function ProductDetailPage() {
       ? { organizationSlug: slug, category: product.category as any }
       : 'skip',
     { initialNumItems: 4 }
-  ) as any;
+  );
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -71,7 +71,7 @@ export default function ProductDetailPage() {
           category: p.categoryName,
           organizationSlug: slug,
         })),
-    [relatedRaw, params.id]
+    [relatedRaw, params.id, slug]
   );
 
   if (isLoading) {

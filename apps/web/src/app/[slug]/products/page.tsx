@@ -80,7 +80,7 @@ export default function ProductsCatalogPage() {
     }
 
     return items;
-  }, [productsRaw, sort]);
+  }, [productsRaw, sort, slug]);
 
   const handleCategoryChange = useCallback(
     (catId: string) => {
@@ -92,7 +92,7 @@ export default function ProductsCatalogPage() {
       }
       router.push(`/${slug}/products?${params.toString()}`);
     },
-    [searchParams, router]
+    [searchParams, router, slug]
   );
 
   const handleSearch = useCallback(
@@ -105,12 +105,12 @@ export default function ProductsCatalogPage() {
       }
       router.push(`/${slug}/products?${params.toString()}`);
     },
-    [searchParams, router]
+    [searchParams, router, slug]
   );
 
   const clearFilters = useCallback(() => {
     router.push(`/${slug}/products`);
-  }, [router]);
+  }, [router, slug]);
 
   const activeFilterCount = [categoryId, searchQuery].filter(Boolean).length;
 

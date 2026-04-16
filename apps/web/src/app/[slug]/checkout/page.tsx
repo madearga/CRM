@@ -54,7 +54,7 @@ export default function CheckoutPage() {
     } else if (isAuthenticated && !sessionId) {
       setUserReady(true);
     }
-  }, [isAuthenticated, merged, sessionId]);
+  }, [isAuthenticated, merged, sessionId, slug, mergeGuestCart]);
 
   const { data: cart, isLoading: cartLoading } = useAuthQuery(
     api.commerce.cart.getCart as any,

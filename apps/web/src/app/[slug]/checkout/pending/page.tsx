@@ -35,7 +35,7 @@ export default function CheckoutPendingPage() {
     } finally {
       setChecking(false);
     }
-  }, [orderNumber, router]);
+  }, [orderNumber, router, slug]);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 py-12">
