@@ -78,10 +78,12 @@ export const listPublished = createPublicPaginatedQuery({ publicOnly: true })({
     // Resolve category names
     const categoryIds = [...new Set(page.map((p) => p.category).filter(Boolean))];
     const categoryMap = new Map<string, string>();
-    for (const catId of categoryIds) {
-      const cat = await ctx.table('productCategories').get(catId);
-      if (cat) categoryMap.set(catId, cat.name);
-    }
+    await Promise.all(
+      categoryIds.map(async (catId) => {
+        const cat = await ctx.table('productCategories').get(catId);
+        if (cat) categoryMap.set(catId, cat.name);
+      })
+    );
 
     return {
       page: page.map((p) => ({

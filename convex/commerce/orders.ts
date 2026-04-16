@@ -123,22 +123,26 @@ export const listOrders = createOrgPaginatedQuery()({
 
     const result = await query.paginate(args.paginationOpts);
 
-    // Enrich with customer name
-    const page = await Promise.all(
-      result.page.map(async (order: any) => {
-        const customer = await ctx.table('customers').get(order.customerId);
-        return {
-          id: order._id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          paymentStatus: order.paymentStatus,
-          totalAmount: order.totalAmount,
-          currency: order.currency,
-          customerName: customer?.name ?? 'Unknown',
-          createdAt: order._creationTime,
-        };
+    // Batch customer lookups (deduplicated)
+    const customerIds = [...new Set(result.page.map((o: any) => o.customerId).filter(Boolean))];
+    const customerMap = new Map<string, string>();
+    await Promise.all(
+      customerIds.map(async (id) => {
+        const c = await ctx.table('customers').get(id);
+        if (c) customerMap.set(id, c.name);
       }),
     );
+
+    const page = result.page.map((order: any) => ({
+      id: order._id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount,
+      currency: order.currency,
+      customerName: order.customerId ? customerMap.get(order.customerId) ?? 'Unknown' : 'Unknown',
+      createdAt: order._creationTime,
+    }));
 
     return {
       page,
