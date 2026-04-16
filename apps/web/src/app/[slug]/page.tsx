@@ -16,8 +16,10 @@ import { Button } from '@/components/ui/button';
 export default function ShopHomePage() {
   const { slug } = useParams<{ slug: string }>();
   // Featured products (top 8)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: featuredResult, isLoading: featuredLoading } = usePublicPaginatedQuery(
+  const {
+    data: featuredProducts_raw,
+    isLoading: featuredLoading,
+  } = usePublicPaginatedQuery(
     api.commerce.products.listPublished,
     { organizationSlug: slug },
     { initialNumItems: 8 }
@@ -31,7 +33,7 @@ export default function ShopHomePage() {
 
   const featuredProducts: ProductCardData[] = useMemo(
     () =>
-      (featuredResult?.data ?? []).map((p) => ({
+      (featuredProducts_raw ?? []).map((p: any) => ({
         _id: p.id,
         name: p.name,
         slug: p.slug ?? '',
@@ -41,7 +43,7 @@ export default function ShopHomePage() {
         category: p.categoryName,
         organizationSlug: slug,
       })),
-    [featuredResult?.data, slug]
+    [featuredProducts_raw, slug]
   );
 
   return (

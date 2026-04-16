@@ -32,3 +32,31 @@ export interface PluginInstance {
   publicSlug?: string;
   settings?: any;
 }
+
+export interface ExternalPlugin {
+  id: string;
+  name: string;
+  url: string;
+  status: 'connected' | 'disconnected' | 'error';
+  lastSyncAt?: number;
+  lastError?: string;
+  pluginInstanceId: string;
+  manifest?: {
+    id?: string;
+    name?: string;
+    version?: string;
+    tables?: string[];
+    capabilities?: string[];
+  };
+}
+
+export interface SyncLogEntry {
+  id: string;
+  direction: 'pull' | 'push';
+  table: string;
+  status: 'success' | 'partial' | 'failed';
+  recordCount: number;
+  errorMessage?: string;
+  durationMs?: number;
+  createdAt: number;
+}

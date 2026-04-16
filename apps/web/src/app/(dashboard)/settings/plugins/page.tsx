@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Link as LinkIcon,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,22 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { PLUGINS } from '@/lib/plugins/registry';
-import type { PluginInstance } from '@/lib/plugins/types';
+import type { PluginInstance, ExternalPlugin } from '@/lib/plugins/types';
+import { ConnectPluginDialog } from '@/components/external-plugin/connect-plugin-dialog';
+import { ExternalPluginCard } from '@/components/external-plugin/external-plugin-card';
 
 export default function PluginsSettingsPage() {
-  const { data: instances, isLoading } = useAuthQuery(api.plugins.list, {});
+  const { data: instances, isLoading: instancesLoading } = useAuthQuery(api.plugins.list, {});
+  const { data: externalPlugins, isLoading: externalLoading } = useAuthQuery(
+    api.externalPlugins.list,
+    {}
+  );
   const upsertPlugin = useAuthMutation(api.plugins.upsert);
+
+  const isLoading = instancesLoading || externalLoading;
+
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleConnected = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   if (isLoading) {
     return (
@@ -36,7 +48,7 @@ export default function PluginsSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Plugins</h2>
         <p className="text-muted-foreground">
@@ -44,22 +56,88 @@ export default function PluginsSettingsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6">
-        {PLUGINS.map((plugin) => {
-          const instance = instanceMap.get(plugin.id);
-          return (
-            <PluginCard
-              key={plugin.id}
-              plugin={plugin}
-              instance={instance}
-              upsertPlugin={upsertPlugin}
-            />
-          );
-        })}
-      </div>
+      {/* Built-in Plugins */}
+      <section>
+        <h3 className="mb-4 text-lg font-semibold">Built-in Plugins</h3>
+        <div className="grid gap-6">
+          {PLUGINS.map((plugin) => {
+            const instance = instanceMap.get(plugin.id);
+            return (
+              <PluginCard
+                key={plugin.id}
+                plugin={plugin}
+                instance={instance}
+                upsertPlugin={upsertPlugin}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      {/* External Plugins */}
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Toko Online External</h3>
+            <p className="text-sm text-muted-foreground">
+              Hubungkan toko online Anda yang di-deploy sendiri untuk sync data.
+            </p>
+          </div>
+          {(() => {
+            // Find the ecommerce plugin instance (if active)
+            const ecommerceInstance = instanceMap.get('ecommerce');
+            if (!ecommerceInstance?.isActive) {
+              return (
+                <Button variant="outline" size="sm" disabled>
+                  <Plus className="mr-2 size-4" />
+                  Aktifkan Ecommerce dulu
+                </Button>
+              );
+            }
+            return (
+              <ConnectPluginDialog
+                pluginInstanceId={ecommerceInstance.id}
+                pluginName="Toko Online"
+                onConnected={handleConnected}
+              >
+                <Button size="sm">
+                  <Plus className="mr-2 size-4" />
+                  Hubungkan Toko
+                </Button>
+              </ConnectPluginDialog>
+            );
+          })()}
+        </div>
+
+        {(externalPlugins ?? []).length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <LinkIcon className="mb-4 size-12 text-muted-foreground/40" />
+              <p className="font-medium">Belum ada toko external terhubung</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Hubungkan toko online Anda untuk mulai sinkronisasi data.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div key={refreshKey} className="grid gap-6">
+            {(externalPlugins as ExternalPlugin[]).map((ep) => (
+              <ExternalPluginCard
+                key={ep.id}
+                plugin={ep}
+                onRemoved={handleConnected}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Built-in Plugin Card (unchanged)
+// ---------------------------------------------------------------------------
 
 function PluginCard({
   plugin,

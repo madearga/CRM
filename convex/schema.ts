@@ -1184,6 +1184,35 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .index('organizationId_pluginId', ['organizationId', 'pluginId'])
       .index('publicSlug', ['publicSlug']),
+
+    // External plugins — third-party stores connected to CRM
+    externalPlugins: defineEnt({
+      name: v.string(),                         // display name
+      url: v.string(),                          // e.g. https://myshop.vercel.app
+      apiKey: v.string(),                       // generated API key for auth
+      status: v.string(),                       // 'connected' | 'disconnected' | 'error'
+      lastSyncAt: v.optional(v.number()),       // timestamp of last successful sync
+      lastError: v.optional(v.string()),        // last error message
+      manifest: v.optional(v.any()),            // cached plugin manifest
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('pluginInstanceId', v.id('pluginInstances'), { index: true })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('url', ['url']),
+
+    // Sync log — history of data synchronization
+    pluginSyncLog: defineEnt({
+      direction: v.string(),                   // 'pull' | 'push'
+      table: v.string(),                       // 'products' | 'orders' | 'customers'
+      status: v.string(),                      // 'success' | 'partial' | 'failed'
+      recordCount: v.number(),
+      errorMessage: v.optional(v.string()),
+      durationMs: v.optional(v.number()),
+    })
+      .field('externalPluginId', v.id('externalPlugins'), { index: true })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('externalPluginId_organizationId', ['externalPluginId', 'organizationId'])
+      .index('organizationId_externalPluginId', ['organizationId', 'externalPluginId']),
   },
   {
     schemaValidation: true,

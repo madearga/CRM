@@ -58,10 +58,10 @@ export default function ProductDetailPage() {
 
   const relatedProducts: ProductCardData[] = useMemo(
     () =>
-      (relatedRaw?.data ?? [])
-        .filter((p) => p.slug !== params.id)
+      (relatedRaw ?? [])
+        .filter((p: any) => p.slug !== params.id)
         .slice(0, 4)
-        .map((p) => ({
+        .map((p: any) => ({
           _id: p.id,
           name: p.name,
           slug: p.slug ?? '',
