@@ -29,11 +29,13 @@ import { CartIcon } from '@/components/shop/cart-icon';
 import { Menu, Search, User, LogOut } from 'lucide-react';
 
 interface ShopNavbarProps {
+  slug: string;
   storeName?: string;
   cartItemCount?: number;
 }
 
 export function ShopNavbar({
+  slug,
   storeName = 'Store',
   cartItemCount = 0,
 }: ShopNavbarProps) {
@@ -44,19 +46,19 @@ export function ShopNavbar({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`/shop?q=${encodeURIComponent(search.trim())}`);
+      router.push(`/shop/${slug}?q=${encodeURIComponent(search.trim())}`);
     }
   };
 
   const handleLogin = () => {
     signIn.social({
       provider: 'google',
-      callbackURL: '/shop',
+      callbackURL: `/shop/${slug}`,
     });
   };
 
   const navLinks = [
-    { label: 'Products', href: '/shop' },
+    { label: 'Products', href: `/shop/${slug}/products` },
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
   ];
@@ -89,7 +91,7 @@ export function ShopNavbar({
         </Sheet>
 
         {/* Logo */}
-        <Link href="/shop" className="flex items-center gap-2 font-bold">
+        <Link href={`/shop/${slug}`} className="flex items-center gap-2 font-bold">
           <ShoppingCart className="size-5" />
           <span className="hidden sm:inline">{storeName}</span>
         </Link>
@@ -152,7 +154,7 @@ export function ShopNavbar({
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/shop/orders')}>
+                <DropdownMenuItem onClick={() => router.push(`/shop/${slug}/orders`)}>
                   My Orders
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

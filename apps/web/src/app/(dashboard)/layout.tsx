@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
@@ -22,6 +23,9 @@ import {
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
 import { usePermissions } from '@/lib/permissions';
+import { useAuthQuery } from '@/lib/convex/hooks';
+import { PLUGINS } from '@/lib/plugins/registry';
+import { api } from '@convex/_generated/api';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
@@ -94,6 +98,21 @@ export default function DashboardLayout({
   const perms = usePermissions();
   const permsLoaded = Object.keys(perms).length > 0;
 
+  // Plugin nav items
+  const { data: activePluginIds } = useAuthQuery(api.plugins.getActive, {});
+  const pluginNavItems = useMemo(() => {
+    if (!activePluginIds || activePluginIds.length === 0) return [];
+    return activePluginIds.flatMap((pluginId: string) => {
+      const plugin = PLUGINS.find((p) => p.id === pluginId);
+      if (!plugin) return [];
+      return plugin.navItems.map((item) => ({
+        title: `${plugin.name}: ${item.label}`,
+        href: item.href,
+        icon: item.icon,
+      }));
+    });
+  }, [activePluginIds]);
+
   // Show onboarding overlay if user is authenticated but has no active org
   // Placeholder data has id === '0', so we exclude that
   const isLoggedIn =
@@ -111,6 +130,8 @@ export default function DashboardLayout({
     if (!feature) return true;
     return perms[`${feature}:view`] ?? false;
   });
+
+  const allNavItems = [...visibleNavItems, ...pluginNavItems];
 
   return (
     <SidebarProvider>
@@ -132,7 +153,7 @@ export default function DashboardLayout({
             <SidebarGroupLabel className="uppercase tracking-[1.17px]">Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {visibleNavItems.map((item) => {
+                {allNavItems.map((item) => {
                   const isActive =
                     item.href === '/'
                       ? pathname === '/'
@@ -205,7 +226,7 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center gap-2 bg-black/80 px-4 backdrop-blur">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname, visibleNavItems)}</h1>
+          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname, allNavItems)}</h1>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>

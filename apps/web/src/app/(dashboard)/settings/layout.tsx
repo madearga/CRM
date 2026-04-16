@@ -15,6 +15,7 @@ const tabs = [
   { title: 'Pricelists', href: '/settings/pricelists', feature: 'settings'},
   { title: 'Reminder Rules', href: '/settings/reminder-rules', feature: 'settings' },
   { title: 'Shop', href: '/settings/shop', feature: 'settings' },
+  { title: 'Plugins', href: '/settings/plugins', feature: 'settings' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

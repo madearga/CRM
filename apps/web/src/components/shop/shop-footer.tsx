@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 interface ShopFooterProps {
+  slug?: string;
   storeName?: string;
 }
 
