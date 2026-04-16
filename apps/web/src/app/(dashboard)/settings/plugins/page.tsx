@@ -1,12 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  ShoppingBag,
-  ToggleLeft,
-  ToggleRight,
-  Globe,
   Link as LinkIcon,
   Loader2,
 } from 'lucide-react';
@@ -19,13 +15,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
-import { PLUGINS, getPlugin } from '@/lib/plugins/registry';
+import { PLUGINS } from '@/lib/plugins/registry';
 import type { PluginInstance } from '@/lib/plugins/types';
 
 export default function PluginsSettingsPage() {
   const { data: instances, isLoading } = useAuthQuery(api.plugins.list, {});
   const upsertPlugin = useAuthMutation(api.plugins.upsert);
-  const removePlugin = useAuthMutation(api.plugins.remove);
 
   if (isLoading) {
     return (
@@ -58,7 +53,6 @@ export default function PluginsSettingsPage() {
               plugin={plugin}
               instance={instance}
               upsertPlugin={upsertPlugin}
-              removePlugin={removePlugin}
             />
           );
         })}
@@ -71,16 +65,13 @@ function PluginCard({
   plugin,
   instance,
   upsertPlugin,
-  removePlugin,
 }: {
   plugin: (typeof PLUGINS)[number];
   instance: PluginInstance | undefined;
   upsertPlugin: ReturnType<typeof useAuthMutation<typeof api.plugins.upsert>>;
-  removePlugin: ReturnType<typeof useAuthMutation<typeof api.plugins.remove>>;
 }) {
   const isActive = instance?.isActive ?? false;
   const [slug, setSlug] = useState(instance?.publicSlug ?? '');
-  const [domain, setDomain] = useState(instance?.customDomain ?? '');
   const [saving, setSaving] = useState(false);
   const Icon = plugin.icon;
 
@@ -91,7 +82,6 @@ function PluginCard({
         pluginId: plugin.id,
         isActive: active,
         publicSlug: slug || undefined,
-        customDomain: domain || undefined,
       });
       toast.success(active ? `${plugin.name} diaktifkan` : `${plugin.name} dinonaktifkan`);
     } catch (e: unknown) {
@@ -112,7 +102,6 @@ function PluginCard({
         pluginId: plugin.id,
         isActive,
         publicSlug: slug || undefined,
-        customDomain: domain || undefined,
       });
       toast.success('Pengaturan disimpan');
     } catch (e: unknown) {
@@ -152,35 +141,19 @@ function PluginCard({
       {isActive && (
         <CardContent className="space-y-4">
           <Separator />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <LinkIcon className="size-3.5" />
-                Public Slug
-              </Label>
-              <Input
-                placeholder="tokobudi"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-              />
-              <p className="text-xs text-muted-foreground">
-                URL toko: <code>/shop/{slug || '{slug}'}</code>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Globe className="size-3.5" />
-                Custom Domain
-              </Label>
-              <Input
-                placeholder="www.tokobudi.com"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Domain kustom yang mengarah ke toko ini
-              </p>
-            </div>
+          <div className="space-y-2 max-w-md">
+            <Label className="flex items-center gap-2">
+              <LinkIcon className="size-3.5" />
+              Public Slug
+            </Label>
+            <Input
+              placeholder="tokobudi"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            />
+            <p className="text-xs text-muted-foreground">
+              URL toko: <code>/shop/{slug || '{slug}'}</code>
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={handleSave} disabled={saving} size="sm">

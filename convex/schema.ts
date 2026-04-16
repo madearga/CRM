@@ -1180,12 +1180,10 @@ const schema = defineEntSchema(
       isActive: v.boolean(),                   // aktif atau tidak
       settings: v.optional(v.any()),           // plugin-specific settings JSON
       publicSlug: v.optional(v.string()),      // 'tokobudi' → /shop/tokobudi
-      customDomain: v.optional(v.string()),    // 'www.tokobudi.com'
     })
       .field('organizationId', v.id('organization'), { index: true })
       .index('organizationId_pluginId', ['organizationId', 'pluginId'])
-      .index('publicSlug', ['publicSlug'])
-      .index('customDomain', ['customDomain']),
+      .index('publicSlug', ['publicSlug']),
   },
   {
     schemaValidation: true,

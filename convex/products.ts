@@ -302,6 +302,7 @@ export const create = createOrgMutation()({
       notes: args.notes,
       organizationId: ctx.orgId,
       ownerId: ctx.userId,
+      visibleInShop: true,
     });
 
     // 2. Auto-create default variant (same name, no extra price)

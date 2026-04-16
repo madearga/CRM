@@ -30,6 +30,5 @@ export interface PluginInstance {
   pluginId: string;
   isActive: boolean;
   publicSlug?: string;
-  customDomain?: string;
   settings?: any;
 }

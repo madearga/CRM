@@ -137,6 +137,14 @@ export const createOrganization = createAuthMutation({
     // Seed default permission templates for the new organization
     await seedDefaultTemplates(ctx, org.id as Id<'organization'>, ctx.user._id as Id<'user'>);
 
+    // Auto-create ecommerce plugin instance for the new org
+    await ctx.table('pluginInstances').insert({
+      organizationId: org.id as Id<'organization'>,
+      pluginId: 'ecommerce',
+      isActive: true,
+      publicSlug: org.slug,
+    });
+
     // Set as active organization
     await setActiveOrganizationHandler(ctx, {
       organizationId: org.id as Id<'organization'>,

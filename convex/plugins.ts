@@ -19,7 +19,6 @@ export const list = createOrgQuery()({
       pluginId: z.string(),
       isActive: z.boolean(),
       publicSlug: z.string().optional(),
-      customDomain: z.string().optional(),
       settings: z.any().optional(),
     })
   ),
@@ -33,7 +32,6 @@ export const list = createOrgQuery()({
       pluginId: p.pluginId,
       isActive: p.isActive,
       publicSlug: p.publicSlug ?? undefined,
-      customDomain: p.customDomain ?? undefined,
       settings: p.settings ?? undefined,
     }));
   },
@@ -79,32 +77,11 @@ export const getBySlug = createPublicQuery()({
   },
 });
 
-/** Resolve plugin instance by custom domain (public — no auth required). */
-export const getByDomain = createPublicQuery()({
-  args: { domain: z.string() },
-  returns: z
-    .object({
-      pluginId: z.string(),
-      publicSlug: z.string().optional(),
-    })
-    .nullable(),
-  handler: async (ctx, args) => {
-    const instance = await ctx
-      .table('pluginInstances', 'customDomain', (q) =>
-        q.eq('customDomain', args.domain)
-      )
-      .first();
-    if (!instance) return null;
-    return {
-      pluginId: instance.pluginId,
-      publicSlug: instance.publicSlug ?? undefined,
-    };
-  },
-});
-
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
+
+const SLUG_REGEX = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 
 /** Create or update a plugin instance for current org. */
 export const upsert = createOrgMutation()({
@@ -112,26 +89,16 @@ export const upsert = createOrgMutation()({
     pluginId: z.string(),
     isActive: z.boolean().optional(),
     publicSlug: z.string().optional(),
-    customDomain: z.string().optional(),
     settings: z.any().optional(),
   },
   returns: z.object({ success: z.boolean() }),
   handler: async (ctx, args) => {
     // Server-side slug format validation
     if (args.publicSlug !== undefined && args.publicSlug !== '') {
-      if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(args.publicSlug)) {
+      if (!SLUG_REGEX.test(args.publicSlug)) {
         throw new ConvexError({
           code: 'BAD_REQUEST',
           message: 'Slug hanya boleh huruf kecil, angka, dan tanda hubung (min 2 karakter)',
-        });
-      }
-    }
-    // Server-side domain format validation
-    if (args.customDomain !== undefined && args.customDomain !== '') {
-      if (!/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(args.customDomain)) {
-        throw new ConvexError({
-          code: 'BAD_REQUEST',
-          message: 'Format domain tidak valid',
         });
       }
     }
@@ -157,30 +124,13 @@ export const upsert = createOrgMutation()({
           });
         }
       }
-      // Validate domain uniqueness if changing
-      if (args.customDomain !== undefined && args.customDomain !== existing.customDomain) {
-        const domainTaken = await ctx
-          .table('pluginInstances', 'customDomain', (q) =>
-            q.eq('customDomain', args.customDomain!)
-          )
-          .first();
-        if (domainTaken && domainTaken._id !== existing._id) {
-          throw new ConvexError({
-            code: 'CONFLICT',
-            message: `Domain "${args.customDomain}" sudah digunakan toko lain`,
-          });
-        }
-      }
       await existing.patch({
         ...(args.isActive !== undefined && { isActive: args.isActive }),
         ...(args.publicSlug !== undefined && { publicSlug: args.publicSlug }),
-        ...(args.customDomain !== undefined && {
-          customDomain: args.customDomain,
-        }),
         ...(args.settings !== undefined && { settings: args.settings }),
       });
     } else {
-      // Validate slug uniqueness — also check after insert to close TOCTOU gap
+      // Validate slug uniqueness
       if (args.publicSlug) {
         const slugTaken = await ctx
           .table('pluginInstances', 'publicSlug', (q) =>
@@ -194,26 +144,11 @@ export const upsert = createOrgMutation()({
           });
         }
       }
-      // Validate domain uniqueness
-      if (args.customDomain) {
-        const domainTaken = await ctx
-          .table('pluginInstances', 'customDomain', (q) =>
-            q.eq('customDomain', args.customDomain!)
-          )
-          .first();
-        if (domainTaken) {
-          throw new ConvexError({
-            code: 'CONFLICT',
-            message: `Domain "${args.customDomain}" sudah digunakan toko lain`,
-          });
-        }
-      }
       const insertedId = await ctx.table('pluginInstances').insert({
         organizationId: ctx.orgId,
         pluginId: args.pluginId,
         isActive: args.isActive ?? true,
         publicSlug: args.publicSlug,
-        customDomain: args.customDomain,
         settings: args.settings,
       } satisfies Record<string, unknown>);
 

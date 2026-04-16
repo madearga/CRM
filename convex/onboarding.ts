@@ -86,6 +86,14 @@ export const completeOnboarding = createAuthMutation({
       ctx.user._id as Id<'user'>
     );
 
+    // 5b. Auto-create ecommerce plugin instance
+    await ctx.table('pluginInstances').insert({
+      organizationId: org.id as Id<'organization'>,
+      pluginId: 'ecommerce',
+      isActive: true,
+      publicSlug: slug,
+    });
+
     // 6. Set as active organization
     await ctx.auth.api.setActiveOrganization({
       body: { organizationId: org.id },
