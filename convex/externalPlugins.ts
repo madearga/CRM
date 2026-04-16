@@ -201,7 +201,7 @@ export const register = createOrgMutation({})({
     const existing = await ctx
       .table('externalPlugins', 'url', (q) => q.eq('url', args.url))
       .first();
-    if (existing && existing.organizationId === ctx.orgId) {
+    if (existing) {
       throw new ConvexError({
         code: 'CONFLICT',
         message: 'Plugin dengan URL ini sudah terdaftar',
