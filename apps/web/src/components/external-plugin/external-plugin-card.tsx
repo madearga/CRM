@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Unplug,
   Trash2,
-  Copy,
   ExternalLink,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +31,6 @@ interface ExternalPluginCardProps {
 
 export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const triggerSync = useAuthMutation(api.externalPlugins.triggerSync);
   const unregister = useAuthMutation(api.externalPlugins.unregister);
@@ -86,14 +84,6 @@ export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProp
     } catch (err: any) {
       toast.error(err.message ?? 'Gagal verifikasi');
     }
-  }
-
-  async function handleCopyApiKey() {
-    // Fetch the full plugin data to get the API key
-    await navigator.clipboard.writeText('••••••••');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.info('Gunakan tombol "Regenerate Key" untuk mendapatkan API key baru');
   }
 
   async function handleRegenerateKey() {
@@ -188,13 +178,13 @@ export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProp
             <code className="flex-1 rounded bg-muted px-3 py-2 text-xs">
               ••••••••••••••••••••
             </code>
-            <Button size="sm" variant="outline" onClick={handleCopyApiKey}>
-              <Copy className="size-3" />
-            </Button>
             <Button size="sm" variant="outline" onClick={handleRegenerateKey}>
-              Regenerate
+              Regenerate Key
             </Button>
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Key hanya terlihat saat pertama dibuat atau di-regenerate.
+          </p>
         </div>
       </CardContent>
     </Card>
