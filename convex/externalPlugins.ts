@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { ConvexError } from 'convex/values';
 import { createOrgQuery, createOrgMutation } from './functions';
-import { internalAction } from './_generated/server';
-import { api } from './_generated/api';
 
 // ---------------------------------------------------------------------------
 // Helpers
