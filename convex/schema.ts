@@ -286,6 +286,8 @@ const schema = defineEntSchema(
       // for this contact (entityType='contact', entityId=contact._id).
       // Eliminates the N+1 query in contacts.list.
       lastActivityAt: v.optional(v.number()),
+      externalId: v.optional(v.string()),
+      externalPluginId: v.optional(v.id('externalPlugins')),
     })
       .field('email', v.string(), { index: true })
       .field('organizationId', v.id('organization'), { index: true })
@@ -301,6 +303,7 @@ const schema = defineEntSchema(
       .index('organizationId_email', ['organizationId', 'email'])
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
+      .index('organizationId_externalId', ['organizationId', 'externalId'])
       .searchIndex('search_contacts', {
         searchField: 'fullName',
         filterFields: ['organizationId', 'companyId'],
@@ -512,6 +515,8 @@ const schema = defineEntSchema(
       slug: v.optional(v.string()),
       stock: v.optional(v.number()),
       images: v.optional(v.array(v.string())),
+      externalId: v.optional(v.string()),
+      externalPluginId: v.optional(v.id('externalPlugins')),
     })
       .field('organizationId', v.id('organization'), { index: true })
       .edge('owner', { to: 'user', field: 'ownerId' })
@@ -529,6 +534,7 @@ const schema = defineEntSchema(
       .index('organizationId_type', ['organizationId', 'type'])
       .index('organizationId_slug', ['organizationId', 'slug'])
       .index('organizationId_visibleInShop', ['organizationId', 'visibleInShop'])
+      .index('organizationId_externalId', ['organizationId', 'externalId'])
       .searchIndex('search_products', {
         searchField: 'name',
         filterFields: ['organizationId', 'type', 'category'],
@@ -587,6 +593,8 @@ const schema = defineEntSchema(
       customerNotes: v.optional(v.string()),
       terms: v.optional(v.string()),
       source: v.optional(v.union(v.literal('deal'), v.literal('manual'))),
+      externalId: v.optional(v.string()),
+      externalPluginId: v.optional(v.id('externalPlugins')),
       invoiceStatus: v.optional(v.union(
         v.literal('to_invoice'),
         v.literal('partially'),
@@ -614,6 +622,7 @@ const schema = defineEntSchema(
       .index('organizationId_orderDate', ['organizationId', 'orderDate'])
       .index('organizationId_ownerId', ['organizationId', 'ownerId'])
       .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
+      .index('organizationId_externalId', ['organizationId', 'externalId'])
       .searchIndex('search_sale_orders', {
         searchField: 'number',
         filterFields: ['organizationId', 'state'],
