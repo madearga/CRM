@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ConvexError } from 'convex/values';
 import { createOrgQuery, createOrgMutation } from './functions';
 import { internalQuery, internalMutation } from './_generated/server';
+import { validateExternalUrl, SSRFError } from './helpers/validateExternalUrl';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,6 +173,19 @@ export const register = createOrgMutation({})({
     apiKey: z.string(),
   }),
   handler: async (ctx, args) => {
+    // Validate URL for SSRF protection
+    try {
+      validateExternalUrl(args.url.replace(/\/$/, ''));
+    } catch (err) {
+      if (err instanceof SSRFError) {
+        throw new ConvexError({
+          code: 'BAD_REQUEST',
+          message: err.message,
+        });
+      }
+      throw err;
+    }
+
     // Verify plugin instance belongs to this org
     const instance = await ctx
       .table('pluginInstances')
