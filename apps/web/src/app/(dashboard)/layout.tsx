@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
@@ -228,7 +228,11 @@ export default function DashboardLayout({
           <Separator orientation="vertical" className="h-4" />
           <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname, allNavItems)}</h1>
         </header>
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4">
+          <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+            {children}
+          </Suspense>
+        </main>
       </SidebarInset>
       <KeyboardShortcuts />
       <CommandPalette />
