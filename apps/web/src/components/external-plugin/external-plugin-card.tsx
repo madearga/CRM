@@ -12,6 +12,7 @@ import {
   Unplug,
   Trash2,
   ExternalLink,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import {
 } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import type { ExternalPlugin } from '@/lib/plugins/types';
+import { SyncLogsDialog } from './sync-logs-dialog';
 
 interface ExternalPluginCardProps {
   plugin: ExternalPlugin;
@@ -31,6 +33,7 @@ interface ExternalPluginCardProps {
 
 export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [logsOpen, setLogsOpen] = useState(false);
 
   const triggerSync = useAuthMutation(api.externalPlugins.triggerSync);
   const unregister = useAuthMutation(api.externalPlugins.unregister);
@@ -100,7 +103,8 @@ export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProp
   const tables = plugin.manifest?.capabilities ?? ['products', 'orders', 'customers'] as const;
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -121,6 +125,9 @@ export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProp
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setLogsOpen(true)}>
+              <FileText className="size-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleReverify}>
               <RefreshCw className="size-4" />
             </Button>
@@ -187,6 +194,13 @@ export function ExternalPluginCard({ plugin, onRemoved }: ExternalPluginCardProp
           </p>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+      <SyncLogsDialog
+        pluginId={plugin.id}
+        pluginName={plugin.name}
+        open={logsOpen}
+        onOpenChange={setLogsOpen}
+      />
+    </>
   );
 }
