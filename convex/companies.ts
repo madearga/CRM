@@ -340,12 +340,6 @@ export const bulkCreate = createOrgMutation()({
     const errors: { row: number; identifier: string; reason: string }[] = [];
     const seenNames = new Set<string>();
 
-    // Pre-fetch existing company names in org for faster duplicate detection
-    const existingCompanies = await ctx
-      .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
-      .take(10000);
-    const existingNames = new Set(existingCompanies.map((c) => c.name.toLowerCase()));
-
     for (let i = 0; i < args.companies.length; i++) {
       const company = args.companies[i];
       const normalizedName = company.name.trim().toLowerCase();
@@ -359,8 +353,13 @@ export const bulkCreate = createOrgMutation()({
         }
         seenNames.add(normalizedName);
 
-        // Check duplicate name in org (pre-fetched)
-        if (existingNames.has(normalizedName)) {
+        // Check duplicate name in org using indexed lookup
+        const existing = await ctx
+          .table('companies', 'organizationId_name', (q) =>
+            q.eq('organizationId', orgId).eq('name', company.name.trim())
+          )
+          .first();
+        if (existing) {
           skipped++;
           errors.push({ row: i, identifier: company.name, reason: 'Company already exists in organization' });
           continue;

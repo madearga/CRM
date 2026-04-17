@@ -197,6 +197,39 @@ describe('validateRows (companies)', () => {
     expect(result[0].status).toBe('invalid');
     expect(result[0].reason).toContain('Invalid source');
   });
+
+  it('accepts valid company sizes', () => {
+    for (const size of ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']) {
+      const rows = [{ name: 'Acme', size }];
+      const result = validateRows(rows, { name: 'name', size: 'size' }, {
+        requiredField: 'name',
+        companySizeField: 'size',
+      });
+      expect(result[0].status).toBe('valid');
+    }
+  });
+
+  it('accepts valid company sources', () => {
+    for (const source of ['referral', 'website', 'linkedin', 'cold', 'event', 'other']) {
+      const rows = [{ name: 'Acme', source }];
+      const result = validateRows(rows, { name: 'name', source: 'source' }, {
+        requiredField: 'name',
+        companySourceField: 'source',
+      });
+      expect(result[0].status).toBe('valid');
+    }
+  });
+
+  it('validates company with all valid fields combined', () => {
+    const rows = [{ name: 'Acme Corp', status: 'active', size: '51-200', source: 'referral' }];
+    const result = validateRows(rows, { name: 'name', status: 'status', size: 'size', source: 'source' }, {
+      requiredField: 'name',
+      companyStatusField: 'status',
+      companySizeField: 'size',
+      companySourceField: 'source',
+    });
+    expect(result[0].status).toBe('valid');
+  });
 });
 
 describe('getMappedEntity', () => {
