@@ -3,7 +3,9 @@
  * Replaces date-fns format() and formatDistanceToNow().
  */
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', {
+const LOCALE = 'id-ID';
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(LOCALE, {
   numeric: 'auto',
   style: 'long',
 });
@@ -18,7 +20,10 @@ const DIVISIONS: { amount: number; name: Intl.RelativeTimeFormatUnit }[] = [
   { amount: Number.POSITIVE_INFINITY, name: 'years' },
 ];
 
-/** Format a date relative to now, e.g. "3 hours ago", "in 2 days" */
+/** Format a date relative to now, e.g. "3 hours ago", "in 2 days".
+ *  The `addSuffix` option is accepted for date-fns API compatibility but is a no-op
+ *  — suffix is always included (built into Intl.RelativeTimeFormat with numeric: 'auto').
+ */
 export function formatDistanceToNow(date: Date | number, _opts?: { addSuffix?: boolean }): string {
   const timestamp = typeof date === 'number' ? date : date.getTime();
   const now = Date.now();
@@ -35,15 +40,20 @@ export function formatDistanceToNow(date: Date | number, _opts?: { addSuffix?: b
 
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 
-/** Format a date with a pattern. Supports common date-fns patterns:
- *  'MMM d, yyyy' → "Jan 15, 2026"
+/** Format a date with a pattern.
+ *  Supported patterns (subset of date-fns):
+ *    'MMM d, yyyy' → "Jan 15, 2026"
+ *    'MMMM d, yyyy' → "January 15, 2026"
+ *    'MM/dd/yyyy'   → "01/15/2026"
+ *    'yyyy-MM-dd'   → "2026-01-15"
+ *  Time tokens and timezone are NOT supported — use date-fns for those if needed.
  */
 export function format(date: Date | number, pattern: string): string {
   const d = typeof date === 'number' ? new Date(date) : date;
 
   if (!dateFormatters.has(pattern)) {
     const options = patternToOptions(pattern);
-    dateFormatters.set(pattern, new Intl.DateTimeFormat('en', options));
+    dateFormatters.set(pattern, new Intl.DateTimeFormat(LOCALE, options));
   }
 
   return dateFormatters.get(pattern)!.format(d);
