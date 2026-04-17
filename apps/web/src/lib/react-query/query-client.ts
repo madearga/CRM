@@ -5,7 +5,7 @@ import {
   defaultShouldDehydrateQuery,
   QueryClient,
 } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/lib/format-date';
 import { toast } from 'sonner';
 import SuperJSON from 'superjson';
 
