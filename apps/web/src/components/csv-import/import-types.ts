@@ -23,8 +23,6 @@ export type CompanyField =
   | 'status'
   | 'notes';
 
-export type EntityField = ContactField | CompanyField;
-
 export interface FieldDef<T extends string> {
   key: T;
   label: string;

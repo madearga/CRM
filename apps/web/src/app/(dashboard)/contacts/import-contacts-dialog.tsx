@@ -62,7 +62,7 @@ export function ImportContactsDialog({
       lastName: mapped.lastName as string | undefined,
       jobTitle: mapped.jobTitle as string | undefined,
       phone: mapped.phone as string | undefined,
-      lifecycleStage: mapped.lifecycleStage as any,
+      lifecycleStage: mapped.lifecycleStage as 'lead' | 'prospect' | 'customer' | 'churned' | undefined,
       tags: mapped.tags as string[] | undefined,
       notes: mapped.notes as string | undefined,
       companyName: mapped.companyName as string | undefined,
@@ -148,6 +148,7 @@ export function ImportContactsDialog({
               rawRows={rawRows}
               columnMap={columnMap}
               onMapField={setFieldMapping}
+              fields={CONTACT_FIELDS}
             />
           )}
           {step === 3 && (
@@ -156,6 +157,7 @@ export function ImportContactsDialog({
               columnMap={columnMap}
               onImport={runImport}
               isImporting={isImporting}
+              fields={CONTACT_FIELDS}
             />
           )}
           {step === 4 && importResult && (

@@ -362,6 +362,7 @@ export const bulkCreate = createOrgMutation()({
         // Check duplicate name in org (pre-fetched)
         if (existingNames.has(normalizedName)) {
           skipped++;
+          errors.push({ row: i, identifier: company.name, reason: 'Company already exists in organization' });
           continue;
         }
 

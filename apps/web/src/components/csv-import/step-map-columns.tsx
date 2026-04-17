@@ -8,7 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  CONTACT_FIELDS,
   type ColumnMap,
   type FieldDef,
   type ParsedRow,
@@ -19,7 +18,7 @@ interface StepMapColumnsProps<T extends string> {
   rawRows: ParsedRow[];
   columnMap: ColumnMap<T>;
   onMapField: (field: T, csvHeader: string | undefined) => void;
-  fields?: FieldDef<T>[];
+  fields: FieldDef<T>[];
 }
 
 export function StepMapColumns<T extends string>({
@@ -27,7 +26,7 @@ export function StepMapColumns<T extends string>({
   rawRows,
   columnMap,
   onMapField,
-  fields = CONTACT_FIELDS as any,
+  fields,
 }: StepMapColumnsProps<T>) {
   const previewRows = rawRows.slice(0, 5);
 

@@ -61,11 +61,11 @@ export function ImportCompaniesDialog({
       name: mapped.name as string,
       website: mapped.website as string | undefined,
       industry: mapped.industry as string | undefined,
-      size: mapped.size as any,
+      size: mapped.size as '1-10' | '11-50' | '51-200' | '201-500' | '501-1000' | '1000+' | undefined,
       address: mapped.address as string | undefined,
       country: mapped.country as string | undefined,
-      source: mapped.source as any,
-      status: mapped.status as any,
+      source: mapped.source as 'referral' | 'website' | 'linkedin' | 'cold' | 'event' | 'other' | undefined,
+      status: mapped.status as 'active' | 'inactive' | 'prospect' | undefined,
       tags: mapped.tags as string[] | undefined,
       notes: mapped.notes as string | undefined,
     }),
@@ -150,7 +150,7 @@ export function ImportCompaniesDialog({
               rawRows={rawRows}
               columnMap={columnMap}
               onMapField={setFieldMapping}
-              fields={COMPANY_FIELDS as any}
+              fields={COMPANY_FIELDS}
             />
           )}
           {step === 3 && (
@@ -159,7 +159,7 @@ export function ImportCompaniesDialog({
               columnMap={columnMap}
               onImport={runImport}
               isImporting={isImporting}
-              fields={COMPANY_FIELDS as any}
+              fields={COMPANY_FIELDS}
             />
           )}
           {step === 4 && importResult && (

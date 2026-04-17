@@ -384,6 +384,7 @@ export const bulkCreate = createOrgMutation()({
         // Check duplicate email in org (pre-fetched)
         if (existingEmails.has(contact.email)) {
           skipped++;
+          errors.push({ row: i, identifier: contact.email, reason: 'Email already exists in organization' });
           continue;
         }
 

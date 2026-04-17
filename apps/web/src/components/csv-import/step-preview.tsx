@@ -1,14 +1,14 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { type ColumnMap, type ValidatedRow, CONTACT_FIELDS, type FieldDef } from './import-types';
+import { type ColumnMap, type ValidatedRow, type FieldDef } from './import-types';
 
 interface StepPreviewProps<T extends string> {
   validatedRows: ValidatedRow[];
   columnMap: ColumnMap<T>;
   onImport: () => void;
   isImporting: boolean;
-  fields?: FieldDef<T>[];
+  fields: FieldDef<T>[];
 }
 
 export function StepPreview<T extends string>({
@@ -16,7 +16,7 @@ export function StepPreview<T extends string>({
   columnMap,
   onImport,
   isImporting,
-  fields = CONTACT_FIELDS as any,
+  fields,
 }: StepPreviewProps<T>) {
   const validCount = validatedRows.filter((r) => r.status === 'valid').length;
   const invalidCount = validatedRows.filter(
