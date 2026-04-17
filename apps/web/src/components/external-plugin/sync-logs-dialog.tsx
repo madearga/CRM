@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -184,56 +184,53 @@ export function SyncLogsDialog({
                     entry.direction === 'pull' ? 'text-blue-600' : 'text-purple-600';
 
                   return (
-                    <tr key={entry.id} className="border-b last:border-b-0">
-                      <td className="py-2 pr-3 whitespace-nowrap">
-                        {formatDate(entry.createdAt)}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <DirectionIcon
-                          className={`h-4 w-4 ${dirColor}`}
-                        />
-                      </td>
-                      <td className="py-2 pr-3 font-mono text-xs">
-                        {entry.table}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <Badge
-                          variant={cfg.badgeVariant}
-                          className="flex items-center gap-1 w-fit"
-                        >
-                          <StatusIcon className="h-3 w-3" />
-                          {cfg.label}
-                        </Badge>
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums">
-                        {entry.recordCount}
-                      </td>
-                      <td className="py-2 text-right text-muted-foreground tabular-nums">
-                        {formatDuration(entry.durationMs)}
-                      </td>
-                    </tr>
+                    <Fragment key={entry.id}>
+                      <tr className="border-b last:border-b-0">
+                        <td className="py-2 pr-3 whitespace-nowrap">
+                          {formatDate(entry.createdAt)}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <DirectionIcon
+                            className={`h-4 w-4 ${dirColor}`}
+                          />
+                        </td>
+                        <td className="py-2 pr-3 font-mono text-xs">
+                          {entry.table}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <Badge
+                            variant={cfg.badgeVariant}
+                            className="flex items-center gap-1 w-fit"
+                          >
+                            <StatusIcon className="h-3 w-3" />
+                            {cfg.label}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">
+                          {entry.recordCount}
+                        </td>
+                        <td className="py-2 text-right text-muted-foreground tabular-nums">
+                          {formatDuration(entry.durationMs)}
+                        </td>
+                      </tr>
+                      {entry.errorMessage && (
+                        <tr className="border-b last:border-b-0">
+                          <td colSpan={6} className="py-2 px-3">
+                            <div className="flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
+                              <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                              <div>
+                                <span className="font-medium">
+                                  [{entry.table}]{' '}
+                                </span>
+                                {entry.errorMessage}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
-                })}
-
-                {/* Error rows */}
-                {pageEntries
-                  .filter((e) => e.errorMessage)
-                  .map((entry) => (
-                    <tr key={`${entry.id}-error`} className="border-b last:border-b-0">
-                      <td colSpan={6} className="py-2 px-3">
-                        <div className="flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
-                          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                          <div>
-                            <span className="font-medium">
-                              [{entry.table}]{' '}
-                            </span>
-                            {entry.errorMessage}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
+                }))
             </table>
           )}
         </div>
