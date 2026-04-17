@@ -299,6 +299,92 @@ export const archive = createOrgMutation()({
   },
 });
 
+// Bulk create companies (CSV import), skipping duplicates
+export const bulkCreate = createOrgMutation()({
+  args: {
+    companies: z.array(
+      z.object({
+        name: z.string(),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        size: sizeEnum.optional(),
+        address: z.string().optional(),
+        country: z.string().optional(),
+        source: sourceEnum.optional(),
+        tags: z.array(z.string()).optional(),
+        status: statusEnum.optional(),
+        notes: z.string().optional(),
+      })
+    ),
+  },
+  returns: z.object({
+    created: z.number(),
+    errors: z.array(
+      z.object({
+        identifier: z.string(),
+        reason: z.string(),
+        row: z.number(),
+      })
+    ),
+    skipped: z.number(),
+  }),
+  handler: async (ctx, args) => {
+    const { orgId } = ctx;
+
+    if (args.companies.length > 500) {
+      throw new ConvexError({ code: 'BAD_REQUEST', message: 'Maximum 500 companies per import' });
+    }
+
+    let created = 0;
+    let skipped = 0;
+    const errors: { row: number; identifier: string; reason: string }[] = [];
+    const seenNames = new Set<string>();
+
+    // Pre-fetch existing company names in org for faster duplicate detection
+    const existingCompanies = await ctx
+      .table('companies', 'organizationId', (q) => q.eq('organizationId', orgId))
+      .take(10000);
+    const existingNames = new Set(existingCompanies.map((c) => c.name.toLowerCase()));
+
+    for (let i = 0; i < args.companies.length; i++) {
+      const company = args.companies[i];
+      const normalizedName = company.name.trim().toLowerCase();
+
+      try {
+        // Intra-batch duplicate check
+        if (seenNames.has(normalizedName)) {
+          skipped++;
+          errors.push({ row: i, identifier: company.name, reason: 'Duplicate name in import' });
+          continue;
+        }
+        seenNames.add(normalizedName);
+
+        // Check duplicate name in org (pre-fetched)
+        if (existingNames.has(normalizedName)) {
+          skipped++;
+          continue;
+        }
+
+        await ctx.table('companies').insert({
+          ...company,
+          organizationId: orgId,
+          ownerId: ctx.user._id,
+        });
+
+        created++;
+      } catch (err) {
+        errors.push({
+          identifier: company.name,
+          reason: err instanceof Error ? err.message : String(err),
+          row: i,
+        });
+      }
+    }
+
+    return { created, skipped, errors };
+  },
+});
+
 // Unarchive (clear archivedAt)
 export const restore = createOrgMutation()({
   args: {

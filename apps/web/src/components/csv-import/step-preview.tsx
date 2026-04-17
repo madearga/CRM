@@ -1,28 +1,30 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { type ColumnMap, type ValidatedRow, CONTACT_FIELDS } from './import-types';
+import { type ColumnMap, type ValidatedRow, CONTACT_FIELDS, type FieldDef } from './import-types';
 
-interface StepPreviewProps {
+interface StepPreviewProps<T extends string> {
   validatedRows: ValidatedRow[];
-  columnMap: ColumnMap;
+  columnMap: ColumnMap<T>;
   onImport: () => void;
   isImporting: boolean;
+  fields?: FieldDef<T>[];
 }
 
-export function StepPreview({
+export function StepPreview<T extends string>({
   validatedRows,
   columnMap,
   onImport,
   isImporting,
-}: StepPreviewProps) {
+  fields = CONTACT_FIELDS as any,
+}: StepPreviewProps<T>) {
   const validCount = validatedRows.filter((r) => r.status === 'valid').length;
   const invalidCount = validatedRows.filter(
     (r) => r.status === 'invalid',
   ).length;
   const displayRows = validatedRows.slice(0, 10);
 
-  const mappedFields = CONTACT_FIELDS.filter((f) => columnMap[f.key]);
+  const mappedFields = fields.filter((f) => columnMap[f.key]);
 
   return (
     <div className="space-y-4">
@@ -113,7 +115,7 @@ export function StepPreview({
         >
           {isImporting
             ? 'Importing...'
-            : `Import ${validCount} contact${validCount !== 1 ? 's' : ''}`}
+            : `Import ${validCount} record${validCount !== 1 ? 's' : ''}`}
         </Button>
       </div>
     </div>

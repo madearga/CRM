@@ -7,14 +7,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
-import { CONTACT_FIELDS, type ContactField } from '@/components/csv-import/import-types';
+import { COMPANY_FIELDS, type CompanyField } from '@/components/csv-import/import-types';
 import { useCsvImport } from '@/components/csv-import/use-csv-import';
 import { StepUpload } from '@/components/csv-import/step-upload';
 import { StepMapColumns } from '@/components/csv-import/step-map-columns';
 import { StepPreview } from '@/components/csv-import/step-preview';
 import { StepResult } from '@/components/csv-import/step-result';
 
-interface ImportContactsDialogProps {
+interface ImportCompaniesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -26,11 +26,11 @@ const STEP_TITLES = {
   4: 'Import Result',
 } as const;
 
-export function ImportContactsDialog({
+export function ImportCompaniesDialog({
   open,
   onOpenChange,
-}: ImportContactsDialogProps) {
-  const bulkCreate = useAuthMutation(api.contacts.bulkCreate);
+}: ImportCompaniesDialogProps) {
+  const bulkCreate = useAuthMutation(api.companies.bulkCreate);
 
   const {
     step,
@@ -47,25 +47,27 @@ export function ImportContactsDialog({
     goToPreview,
     runImport,
     reset,
-  } = useCsvImport<ContactField>({
-    fields: CONTACT_FIELDS,
-    mutationKey: 'contacts',
+  } = useCsvImport<CompanyField>({
+    fields: COMPANY_FIELDS,
+    mutationKey: 'companies',
     validateOptions: {
-      requiredField: 'email',
-      emailField: 'email',
-      lifecycleField: 'lifecycleStage',
+      requiredField: 'name',
+      companyStatusField: 'status',
+      companySizeField: 'size',
+      companySourceField: 'source',
     },
     bulkCreateMutation: bulkCreate,
     getPayload: (mapped) => ({
-      email: mapped.email as string,
-      firstName: mapped.firstName as string | undefined,
-      lastName: mapped.lastName as string | undefined,
-      jobTitle: mapped.jobTitle as string | undefined,
-      phone: mapped.phone as string | undefined,
-      lifecycleStage: mapped.lifecycleStage as any,
+      name: mapped.name as string,
+      website: mapped.website as string | undefined,
+      industry: mapped.industry as string | undefined,
+      size: mapped.size as any,
+      address: mapped.address as string | undefined,
+      country: mapped.country as string | undefined,
+      source: mapped.source as any,
+      status: mapped.status as any,
       tags: mapped.tags as string[] | undefined,
       notes: mapped.notes as string | undefined,
-      companyName: mapped.companyName as string | undefined,
     }),
   });
 
@@ -80,7 +82,7 @@ export function ImportContactsDialog({
     else if (step === 2) setStep(1);
   };
 
-  const canProceed = step === 2 ? !!columnMap.email : true;
+  const canProceed = step === 2 ? !!columnMap.name : true;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -148,6 +150,7 @@ export function ImportContactsDialog({
               rawRows={rawRows}
               columnMap={columnMap}
               onMapField={setFieldMapping}
+              fields={COMPANY_FIELDS as any}
             />
           )}
           {step === 3 && (
@@ -156,6 +159,7 @@ export function ImportContactsDialog({
               columnMap={columnMap}
               onImport={runImport}
               isImporting={isImporting}
+              fields={COMPANY_FIELDS as any}
             />
           )}
           {step === 4 && importResult && (

@@ -339,7 +339,7 @@ export const bulkCreate = createOrgMutation()({
     created: z.number(),
     errors: z.array(
       z.object({
-        email: z.string(),
+        identifier: z.string(),
         reason: z.string(),
         row: z.number(),
       })
@@ -355,7 +355,7 @@ export const bulkCreate = createOrgMutation()({
 
     let created = 0;
     let skipped = 0;
-    const errors: { row: number; email: string; reason: string }[] = [];
+    const errors: { row: number; identifier: string; reason: string }[] = [];
     const seenEmails = new Set<string>();
 
     // Pre-fetch existing emails in org for faster duplicate detection
@@ -376,7 +376,7 @@ export const bulkCreate = createOrgMutation()({
         // Intra-batch duplicate check
         if (seenEmails.has(contact.email)) {
           skipped++;
-          errors.push({ row: i, email: contact.email, reason: 'Duplicate email in import' });
+          errors.push({ row: i, identifier: contact.email, reason: 'Duplicate email in import' });
           continue;
         }
         seenEmails.add(contact.email);
@@ -414,7 +414,7 @@ export const bulkCreate = createOrgMutation()({
         created++;
       } catch (err) {
         errors.push({
-          email: contact.email,
+          identifier: contact.email,
           reason: err instanceof Error ? err.message : String(err),
           row: i,
         });

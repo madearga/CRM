@@ -10,23 +10,25 @@ import {
 import {
   CONTACT_FIELDS,
   type ColumnMap,
-  type ContactField,
+  type FieldDef,
   type ParsedRow,
 } from './import-types';
 
-interface StepMapColumnsProps {
+interface StepMapColumnsProps<T extends string> {
   headers: string[];
   rawRows: ParsedRow[];
-  columnMap: ColumnMap;
-  onMapField: (field: ContactField, csvHeader: string | undefined) => void;
+  columnMap: ColumnMap<T>;
+  onMapField: (field: T, csvHeader: string | undefined) => void;
+  fields?: FieldDef<T>[];
 }
 
-export function StepMapColumns({
+export function StepMapColumns<T extends string>({
   headers,
   rawRows,
   columnMap,
   onMapField,
-}: StepMapColumnsProps) {
+  fields = CONTACT_FIELDS as any,
+}: StepMapColumnsProps<T>) {
   const previewRows = rawRows.slice(0, 5);
 
   return (
@@ -34,17 +36,17 @@ export function StepMapColumns({
       {/* Mapping section */}
       <div>
         <h3 className="text-sm font-medium text-[#171717] mb-3">
-          Map CSV columns to contact fields
+          Map CSV columns to fields
         </h3>
         <div className="space-y-2">
-          {CONTACT_FIELDS.map((field) => (
+          {fields.map((field) => (
             <div key={field.key} className="flex items-center gap-3">
               <label className="w-40 text-sm text-gray-600 flex items-center gap-1 shrink-0">
                 {field.label}
                 {field.required && <span className="text-red-500">*</span>}
               </label>
               <Select
-                value={columnMap[field.key] || '__none__'}
+                value={(columnMap[field.key] as string) || '__none__'}
                 onValueChange={(v) =>
                   onMapField(field.key, v === '__none__' ? undefined : v)
                 }
@@ -53,6 +55,7 @@ export function StepMapColumns({
                   <SelectValue placeholder="-- None --" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">-- None --</SelectItem>
                   {headers.map((header) => (
                     <SelectItem key={header} value={header}>
                       {header}

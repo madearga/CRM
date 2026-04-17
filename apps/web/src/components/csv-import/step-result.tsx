@@ -54,7 +54,9 @@ export function StepResult({ result, onClose }: StepResultProps) {
           <ul className="text-sm text-red-600 space-y-1 max-h-32 overflow-y-auto">
             {result.errors.map((err, i) => (
               <li key={i}>
-                {err.row >= 0 ? `Row ${err.row}: ` : ''}{err.reason}
+                {err.row >= 0 ? `Row ${err.row + 1}: ` : ''}
+                {err.identifier ? `[${err.identifier}] ` : ''}
+                {err.reason}
               </li>
             ))}
           </ul>

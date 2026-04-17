@@ -2,81 +2,92 @@
 
 import { useState, useCallback } from 'react';
 import Papa from 'papaparse';
-import { useAuthMutation } from '@/lib/convex/hooks';
-import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
 import {
-  CONTACT_FIELDS,
   type ColumnMap,
-  type ContactField,
+  type FieldDef,
   type ParsedRow,
   type ValidatedRow,
   type ImportResult,
 } from './import-types';
-import { autoMapColumns, validateRows, getMappedContact } from './csv-utils';
+import { autoMapColumns, validateRows, getMappedEntity } from './csv-utils';
 
 const MAX_ROWS = 500;
 
-export function useCsvImport() {
+interface UseCsvImportOptions<T extends string> {
+  fields: FieldDef<T>[];
+  validateOptions: Parameters<typeof validateRows>[2];
+  bulkCreateMutation: {
+    mutateAsync: (args: any) => Promise<any>;
+  };
+  mutationKey: string;
+  getPayload: (mapped: Record<string, unknown>) => any;
+}
+
+export function useCsvImport<T extends string>({
+  fields,
+  validateOptions,
+  bulkCreateMutation,
+  mutationKey,
+  getPayload,
+}: UseCsvImportOptions<T>) {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [rawRows, setRawRows] = useState<ParsedRow[]>([]);
-  const [columnMap, setColumnMap] = useState<ColumnMap>({});
+  const [columnMap, setColumnMap] = useState<ColumnMap<T>>({});
   const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const bulkCreate = useAuthMutation(api.contacts.bulkCreate);
+  const parseFile = useCallback(
+    async (file: File) => {
+      return new Promise<void>((resolve, reject) => {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const h = results.meta.fields ?? [];
+            const rows = results.data as ParsedRow[];
 
-  const parseFile = useCallback(async (file: File) => {
-    return new Promise<void>((resolve, reject) => {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const h = results.meta.fields ?? [];
-          const rows = results.data as ParsedRow[];
+            if (rows.length === 0) {
+              reject(new Error('CSV file is empty'));
+              return;
+            }
+            if (rows.length > MAX_ROWS) {
+              reject(new Error(`Too many rows (${rows.length}). Maximum is ${MAX_ROWS}.`));
+              return;
+            }
 
-          if (rows.length === 0) {
-            reject(new Error('CSV file is empty'));
-            return;
-          }
-          if (rows.length > MAX_ROWS) {
-            reject(new Error(`Too many rows (${rows.length}). Maximum is ${MAX_ROWS}.`));
-            return;
-          }
-
-          const autoMap = autoMapColumns(h, CONTACT_FIELDS);
-          setFileName(file.name);
-          setHeaders(h);
-          setRawRows(rows);
-          setColumnMap(autoMap);
-          setStep(2);
-          resolve();
-        },
-        error: (error) => reject(new Error(error.message)),
+            const autoMap = autoMapColumns(h, fields);
+            setFileName(file.name);
+            setHeaders(h);
+            setRawRows(rows);
+            setColumnMap(autoMap);
+            setStep(2);
+            resolve();
+          },
+          error: (error) => reject(new Error(error.message)),
+        });
       });
+    },
+    [fields],
+  );
+
+  const setFieldMapping = useCallback((field: T, csvHeader: string | undefined) => {
+    setColumnMap((prev) => {
+      const next = { ...prev };
+      if (csvHeader) next[field] = csvHeader;
+      else delete next[field];
+      return next;
     });
   }, []);
 
-  const setFieldMapping = useCallback(
-    (field: ContactField, csvHeader: string | undefined) => {
-      setColumnMap((prev) => {
-        const next = { ...prev };
-        if (csvHeader) next[field] = csvHeader;
-        else delete next[field];
-        return next;
-      });
-    },
-    [],
-  );
-
   const goToPreview = useCallback(() => {
-    const validated = validateRows(rawRows, columnMap);
+    const validated = validateRows<T>(rawRows, columnMap, validateOptions as any);
     setValidatedRows(validated);
     setStep(3);
-  }, [rawRows, columnMap]);
+  }, [rawRows, columnMap, validateOptions]);
 
   const runImport = useCallback(async () => {
     const validRows = validatedRows.filter((r) => r.status === 'valid');
@@ -84,26 +95,13 @@ export function useCsvImport() {
 
     setIsImporting(true);
     try {
-      const contacts = validRows.map((r) => {
-        const mapped = getMappedContact(r.data, columnMap);
-        return {
-          email: mapped.email as string,
-          firstName: mapped.firstName as string | undefined,
-          lastName: mapped.lastName as string | undefined,
-          jobTitle: mapped.jobTitle as string | undefined,
-          phone: mapped.phone as string | undefined,
-          lifecycleStage: mapped.lifecycleStage as
-            | 'lead'
-            | 'prospect'
-            | 'customer'
-            | 'churned'
-            | undefined,
-          tags: mapped.tags as string[] | undefined,
-          notes: mapped.notes as string | undefined,
-          companyName: mapped.companyName as string | undefined,
-        };
+      const entities = validRows.map((r) => {
+        const mapped = getMappedEntity(r.data, columnMap);
+        return getPayload(mapped);
       });
-      const result = await bulkCreate.mutateAsync({ contacts });
+      const result = await bulkCreateMutation.mutateAsync({
+        [mutationKey]: entities,
+      });
       setImportResult(result as ImportResult);
       setStep(4);
     } catch (error) {
@@ -116,7 +114,7 @@ export function useCsvImport() {
         errors: [
           {
             row: -1,
-            email: '',
+            identifier: '',
             reason: error instanceof Error ? error.message : String(error),
           },
         ],
@@ -125,7 +123,13 @@ export function useCsvImport() {
     } finally {
       setIsImporting(false);
     }
-  }, [validatedRows, columnMap, bulkCreate]);
+  }, [
+    validatedRows,
+    columnMap,
+    bulkCreateMutation,
+    mutationKey,
+    getPayload,
+  ]);
 
   const reset = useCallback(() => {
     setStep(1);

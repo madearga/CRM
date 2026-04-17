@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Building2, Plus, Search } from 'lucide-react';
+import { Building2, Plus, Search, Upload } from 'lucide-react';
 import { DataTableExportButton } from '@/components/data-table-export-button';
 import { EmptyState } from '@/components/empty-state';
 import { NoResults } from '@/components/no-results';
@@ -22,6 +22,7 @@ import { getColumns, type CompanyRow } from './columns';
 import { useCompaniesParams } from '@/hooks/use-companies-params';
 import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
+import { ImportCompaniesDialog } from './import-companies-dialog';
 
 export default function CompaniesPage() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function CompaniesPage() {
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.companies ?? new Set(), [selections.companies]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [newCompany, setNewCompany] = useState({
     name: '', website: '', industry: '', size: undefined as string | undefined,
     country: '', source: undefined as string | undefined,
@@ -156,9 +158,11 @@ export default function CompaniesPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+          <Upload className="mr-1 h-4 w-4" />
+          Import
+        </Button>
       </div>
-
-      {/* Search & Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -202,6 +206,8 @@ export default function CompaniesPage() {
         showRestore={showArchived}
         isArchiving={archiveCompany.isPending}
       />
+      {/* CSV Import Dialog */}
+      <ImportCompaniesDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

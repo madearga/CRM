@@ -10,13 +10,28 @@ export type ContactField =
   | 'notes'
   | 'companyName';
 
-export interface ContactFieldDef {
-  key: ContactField;
+/** Company fields available for CSV column mapping */
+export type CompanyField =
+  | 'name'
+  | 'website'
+  | 'industry'
+  | 'size'
+  | 'address'
+  | 'country'
+  | 'source'
+  | 'tags'
+  | 'status'
+  | 'notes';
+
+export type EntityField = ContactField | CompanyField;
+
+export interface FieldDef<T extends string> {
+  key: T;
   label: string;
   required: boolean;
 }
 
-export const CONTACT_FIELDS: ContactFieldDef[] = [
+export const CONTACT_FIELDS: FieldDef<ContactField>[] = [
   { key: 'email', label: 'Email', required: true },
   { key: 'firstName', label: 'First Name', required: false },
   { key: 'lastName', label: 'Last Name', required: false },
@@ -28,8 +43,21 @@ export const CONTACT_FIELDS: ContactFieldDef[] = [
   { key: 'companyName', label: 'Company Name', required: false },
 ];
 
-/** Maps a contact field key to a CSV header name */
-export type ColumnMap = Partial<Record<ContactField, string>>;
+export const COMPANY_FIELDS: FieldDef<CompanyField>[] = [
+  { key: 'name', label: 'Company Name', required: true },
+  { key: 'website', label: 'Website', required: false },
+  { key: 'industry', label: 'Industry', required: false },
+  { key: 'size', label: 'Size', required: false },
+  { key: 'address', label: 'Address', required: false },
+  { key: 'country', label: 'Country', required: false },
+  { key: 'source', label: 'Source', required: false },
+  { key: 'tags', label: 'Tags (comma-separated)', required: false },
+  { key: 'status', label: 'Status', required: false },
+  { key: 'notes', label: 'Notes', required: false },
+];
+
+/** Maps an entity field key to a CSV header name */
+export type ColumnMap<T extends string = string> = Partial<Record<T, string>>;
 
 /** A single parsed CSV row as key-value pairs */
 export type ParsedRow = Record<string, string>;
@@ -46,5 +74,5 @@ export interface ValidatedRow {
 export interface ImportResult {
   created: number;
   skipped: number;
-  errors: Array<{ row: number; email: string; reason: string }>;
+  errors: Array<{ row: number; identifier: string; reason: string }>;
 }
