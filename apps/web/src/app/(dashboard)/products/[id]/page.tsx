@@ -12,7 +12,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
-import { VariantManager } from '@/components/products/variant-manager';
+import dynamic from 'next/dynamic';
+
+const VariantManager = dynamic(
+  () => import('@/components/products/variant-manager').then(m => ({ default: m.VariantManager })),
+  { loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" /> }
+);
 import { formatMoney } from '@/lib/format-money';
 
 const TYPE_COLORS: Record<string, string> = {

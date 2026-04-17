@@ -3,7 +3,12 @@
 import { useParams } from 'next/navigation';
 import { useAuthQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
-import { InvoiceForm } from '@/components/invoices/invoice-form';
+import dynamic from 'next/dynamic';
+
+const InvoiceForm = dynamic(
+  () => import('@/components/invoices/invoice-form').then(m => ({ default: m.InvoiceForm })),
+  { loading: () => <div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div> }
+);
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EditInvoicePage() {

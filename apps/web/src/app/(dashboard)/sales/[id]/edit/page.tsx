@@ -7,7 +7,12 @@ import { ShoppingCart } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { SaleOrderForm } from '@/components/sales/sale-order-form';
+import dynamic from 'next/dynamic';
+
+const SaleOrderForm = dynamic(
+  () => import('@/components/sales/sale-order-form').then(m => ({ default: m.SaleOrderForm })),
+  { loading: () => <div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div> }
+);
 
 export default function EditSaleOrderPage() {
   const params = useParams();

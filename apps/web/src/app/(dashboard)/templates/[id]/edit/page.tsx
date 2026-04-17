@@ -3,7 +3,12 @@
 import { useAuthQuery } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { useParams } from 'next/navigation';
-import { TemplateForm } from '@/components/templates/template-form';
+import dynamic from 'next/dynamic';
+
+const TemplateForm = dynamic(
+  () => import('@/components/templates/template-form').then(m => ({ default: m.TemplateForm })),
+  { loading: () => <div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div> }
+);
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EditTemplatePage() {
