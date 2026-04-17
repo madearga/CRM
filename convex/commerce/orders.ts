@@ -128,8 +128,8 @@ export const listOrders = createOrgPaginatedQuery()({
     const customerMap = new Map<string, string>();
     await Promise.all(
       customerIds.map(async (id) => {
-        const c = await ctx.table('customers').get(id);
-        if (c) customerMap.set(id, c.name);
+        const c = await ctx.table('customers').get(id as any);
+        if (c) customerMap.set(id as string, c.name);
       }),
     );
 

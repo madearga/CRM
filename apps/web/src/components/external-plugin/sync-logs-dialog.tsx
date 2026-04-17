@@ -230,7 +230,8 @@ export function SyncLogsDialog({
                       )}
                     </Fragment>
                   );
-                }))
+                })}
+              </tbody>
             </table>
           )}
         </div>

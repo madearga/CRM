@@ -21,6 +21,14 @@ import { formatDistanceToNow, format } from "@/lib/format-date";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 
+
+const RevenueChart = dynamic(
+  () => import("./revenue-chart").then((m) => ({ default: m.RevenueChart })),
+  {
+    ssr: false,
+    loading: () => <div className="h-[300px] animate-pulse rounded-lg bg-muted" />,
+  }
+);
 const PipelineChart = dynamic(() => import("./pipeline-chart"), {
   ssr: false,
   loading: () => (
@@ -337,45 +345,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {revenueData && revenueData.length > 0 ? (
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="month"
-                      className="text-xs"
-                      tick={{ fontSize: 11 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      className="text-xs"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid hsl(var(--border))",
-                        background: "hsl(var(--card))",
-                      }}
-                    />
-                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]} name="Revenue">
-                      {revenueData.map((_, i) => (
-                        <Cell key={i} fill="#6366f1" />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No revenue data yet
-              </p>
-            )}
+            <RevenueChart data={revenueData ?? []} />
           </CardContent>
         </Card>
 
@@ -389,7 +359,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {forecastData && forecastData.length > 0 ? (
-              <PipelineChart dealsByStage={forecastData} />
+              <PipelineChart dealsByStage={forecastData?.map((s: any) => ({ stage: s.stage, count: s.dealCount, value: s.totalValue })) ?? []} />
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">
                 No pipeline data yet
