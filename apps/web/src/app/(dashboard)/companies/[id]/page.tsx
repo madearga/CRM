@@ -11,7 +11,7 @@ import { ArrowLeft, Building2, Globe, MapPin, Users, Handshake, Activity, Archiv
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/lib/format-date';
 import { STATUS_COLORS } from '@/lib/constants';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -232,7 +232,7 @@ export default function CompanyDetailPage() {
                       <p className="text-xs text-muted-foreground">{activity.description}</p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(activity._creationTime), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(activity._creationTime))}
                     </p>
                   </div>
                   <Badge variant="outline" className="text-xs capitalize">{activity.type}</Badge>

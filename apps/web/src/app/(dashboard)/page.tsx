@@ -17,19 +17,16 @@ import {
   BarChart3,
   Clock,
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format } from "@/lib/format-date";
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+
+const PipelineChart = dynamic(() => import("./pipeline-chart"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[300px] animate-pulse rounded-lg bg-muted" />
+  ),
+});
 
 import { api } from "@convex/_generated/api";
 import { useAuthQuery } from "@/lib/convex/hooks";
@@ -392,46 +389,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {forecastData && forecastData.length > 0 ? (
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={forecastData}
-                    layout="vertical"
-                    margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      type="number"
-                      className="text-xs"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="stage"
-                      className="text-xs capitalize"
-                      tick={{ fontSize: 12 }}
-                      width={80}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid hsl(var(--border))",
-                        background: "hsl(var(--card))",
-                      }}
-                    />
-                    <Bar dataKey="expectedRevenue" radius={[0, 6, 6, 0]} name="Expected Revenue">
-                      {forecastData.map((stage) => (
-                        <Cell
-                          key={stage.stage}
-                          fill={STAGE_CHART_COLORS[stage.stage] ?? "#6366f1"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <PipelineChart dealsByStage={forecastData} />
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">
                 No pipeline data yet
@@ -628,9 +586,7 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{activity.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(activity.createdAt), {
-                            addSuffix: true,
-                          })}
+                          {formatDistanceToNow(new Date(activity.createdAt))}
                         </p>
                       </div>
                     </li>

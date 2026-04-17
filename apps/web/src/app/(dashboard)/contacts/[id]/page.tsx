@@ -11,7 +11,7 @@ import { ArrowLeft, Users, Mail, Phone, Building2, Handshake, Activity, Archive,
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/lib/format-date';
 import { LIFECYCLE_COLORS } from '@/lib/constants';
 
 export default function ContactDetailPage() {
@@ -176,7 +176,7 @@ export default function ContactDetailPage() {
                   <div className="flex-1">
                     <p className="text-sm font-medium">{activity.title}</p>
                     {activity.description && <p className="text-xs text-muted-foreground">{activity.description}</p>}
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity._creationTime), { addSuffix: true })}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity._creationTime))}</p>
                   </div>
                   <Badge variant="outline" className="text-xs capitalize">{activity.type}</Badge>
                 </div>

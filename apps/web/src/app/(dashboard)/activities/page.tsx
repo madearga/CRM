@@ -31,7 +31,7 @@ import {
 import { ActivityIconBadge, ACTIVITY_ICONS, ACTIVITY_COLORS } from '@/components/activities/activity-icon';
 import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format } from '@/lib/format-date';
 
 const PRIORITY_BADGE: Record<string, string> = {
   low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
@@ -342,7 +342,7 @@ export default function ActivitiesPage() {
                       <p className="text-xs text-muted-foreground">{activity.description}</p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(activity._creationTime), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(activity._creationTime))}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

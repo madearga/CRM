@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { ActivityIconBadge } from './activity-icon';
 import { ScheduleActivityDialog } from './schedule-activity-dialog';
 import { Plus, Check, X, Clock, CalendarClock, CheckCircle2, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format } from '@/lib/format-date';
 import { toast } from 'sonner';
 
 type Filter = 'all' | 'planned' | 'done' | 'overdue';

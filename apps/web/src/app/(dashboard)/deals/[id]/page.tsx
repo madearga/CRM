@@ -24,7 +24,7 @@ import {
   RotateCcw,
   ShoppingCart,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format } from '@/lib/format-date';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { STAGE_COLORS } from '@/lib/constants';
