@@ -429,6 +429,46 @@ export const createOrgMutation = ({
     })
   );
 
+// Org-scoped action: auto-injects orgId, throws if no active org
+// Used for operations that need ctx.runQuery/runAction (e.g. CSV export, WhatsApp bot integration)
+export const createOrgAction = ({
+  devOnly,
+  permission,
+}: {
+  devOnly?: boolean;
+  permission?: { feature: string; action: string };
+} = {}) =>
+  zCustomAction(
+    action,
+    customCtx(async (ctx) => {
+      checkDevOnly(devOnly);
+
+      const rawUser = await ctx.runQuery(api.user.getSessionUser, {});
+      const user = requireUser(rawUser as SessionUser | null);
+      const orgId = user.activeOrganization?.id;
+      if (!orgId) {
+        throw new ConvexError({ code: 'UNAUTHORIZED', message: 'No active organization' });
+      }
+
+      if (permission) {
+        const permissions = await ctx.runQuery(api.permissionQueries.getMyPermissions, {});
+        if (!permissions[`${permission.feature}:${permission.action}`]) {
+          throw new ConvexError({
+            code: 'FORBIDDEN',
+            message: `Missing permission: ${permission.feature}:${permission.action}`,
+          });
+        }
+      }
+
+      return {
+        ...ctx,
+        user,
+        userId: user.id,
+        orgId,
+      };
+    })
+  );
+
 // Org-scoped paginated query: auto-injects orgId + paginationOpts, throws if no active org
 export const createOrgPaginatedQuery = ({
   devOnly,

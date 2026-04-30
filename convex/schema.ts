@@ -459,6 +459,172 @@ const schema = defineEntSchema(
       ])
       .index('organizationId_createdAt', ['organizationId', 'createdAt']),
 
+    // ----------------------------
+    // HR Module — Branches, Employees, Attendance
+    // ----------------------------
+
+    branches: defineEnt({
+      name: v.string(),
+      address: v.optional(v.union(v.null(), v.string())),
+      phone: v.optional(v.union(v.null(), v.string())),
+      latitude: v.optional(v.union(v.null(), v.number())),
+      longitude: v.optional(v.union(v.null(), v.number())),
+      qrCode: v.string(),
+      isActive: v.boolean(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edges('employees', { to: 'employees', ref: 'branchId' })
+      .edges('shifts', { to: 'shifts', ref: 'branchId' })
+      .index('organizationId_isActive', ['organizationId', 'isActive'])
+      .index('organizationId_name', ['organizationId', 'name'])
+      .index('qrCode', ['qrCode']),
+
+    employees: defineEnt({
+      name: v.string(),
+      nik: v.string(),
+      email: v.optional(v.union(v.null(), v.string())),
+      phone: v.optional(v.union(v.null(), v.string())),
+      address: v.optional(v.union(v.null(), v.string())),
+      birthDate: v.optional(v.union(v.null(), v.number())),
+      gender: v.optional(v.union(v.null(), v.string())),
+      position: v.string(),
+      department: v.optional(v.union(v.null(), v.string())),
+      photoUrl: v.optional(v.union(v.null(), v.string())),
+      whatsappNumber: v.optional(v.union(v.null(), v.string())),
+      status: v.string(),
+      hireDate: v.optional(v.union(v.null(), v.number())),
+      resignDate: v.optional(v.union(v.null(), v.number())),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('branch', { to: 'branches', field: 'branchId' })
+      .edge('user', { to: 'user', field: 'userId' })
+      .edges('attendanceRecords', { to: 'attendanceRecords', ref: 'employeeId' })
+      .edges('shiftAssignments', { to: 'shiftAssignments', ref: 'employeeId' })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('organizationId_nik', ['organizationId', 'nik'])
+      .index('organizationId_branchId', ['organizationId', 'branchId'])
+      .index('organizationId_department', ['organizationId', 'department'])
+      .index('organizationId_userId', ['organizationId', 'userId'])
+      .index('organizationId_whatsappNumber', ['organizationId', 'whatsappNumber']),
+
+    shifts: defineEnt({
+      name: v.string(),
+      startTime: v.string(),
+      endTime: v.string(),
+      lateToleranceMinutes: v.number(),
+      daysOfWeek: v.array(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('branch', { to: 'branches', field: 'branchId' })
+      .edges('assignments', { to: 'shiftAssignments', ref: 'shiftId' })
+      .index('organizationId_branchId', ['organizationId', 'branchId']),
+
+    shiftAssignments: defineEnt({
+      recurrenceType: v.string(),
+      daysOfWeek: v.optional(v.array(v.number())),
+      startDate: v.number(),
+      endDate: v.optional(v.union(v.null(), v.number())),
+      specificDate: v.optional(v.union(v.null(), v.number())),
+      createdAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('branchId', v.id('branches'), { index: true })
+      .edge('employee', { to: 'employees', field: 'employeeId' })
+      .edge('shift', { to: 'shifts', field: 'shiftId' })
+      .edges('attendanceRecords', { to: 'attendanceRecords', ref: 'shiftAssignmentId' })
+      .index('employeeId_startDate', ['employeeId', 'startDate'])
+      .index('branchId_startDate', ['branchId', 'startDate'])
+      .index('organizationId_startDate', ['organizationId', 'startDate']),
+
+    attendanceRecords: defineEnt({
+      date: v.string(),
+      clockIn: v.optional(v.union(v.null(), v.number())),
+      clockOut: v.optional(v.union(v.null(), v.number())),
+      clockInSource: v.optional(v.union(v.null(), v.string())),
+      clockInQrCode: v.optional(v.union(v.null(), v.string())),
+      clockInLocation: v.optional(
+        v.union(
+          v.null(),
+          v.object({
+            lat: v.number(),
+            lng: v.number(),
+            accuracy: v.optional(v.number()),
+          })
+        )
+      ),
+      clockOutLocation: v.optional(
+        v.union(
+          v.null(),
+          v.object({
+            lat: v.number(),
+            lng: v.number(),
+            accuracy: v.optional(v.number()),
+          })
+        )
+      ),
+      status: v.string(),
+      label: v.optional(v.union(v.null(), v.string())),
+      lateMinutes: v.optional(v.union(v.null(), v.number())),
+      earlyLeaveMinutes: v.optional(v.union(v.null(), v.number())),
+      totalWorkHours: v.optional(v.union(v.null(), v.number())),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('branchId', v.id('branches'), { index: true })
+      .edge('employee', { to: 'employees', field: 'employeeId' })
+      .edge('shiftAssignment', {
+        to: 'shiftAssignments',
+        field: 'shiftAssignmentId',
+      })
+      .edges('corrections', { to: 'attendanceCorrections', ref: 'attendanceRecordId' })
+      .index('organizationId_date', ['organizationId', 'date'])
+      .index('organizationId_branchId_date', ['organizationId', 'branchId', 'date'])
+      .index('employeeId_date', ['employeeId', 'date'])
+      .index('organizationId_status_date', ['organizationId', 'status', 'date']),
+
+    attendanceCorrections: defineEnt({
+      correctedClockIn: v.optional(v.union(v.null(), v.number())),
+      correctedClockOut: v.optional(v.union(v.null(), v.number())),
+      reason: v.string(),
+      status: v.string(),
+      reviewNote: v.optional(v.union(v.null(), v.string())),
+      createdAt: v.number(),
+      reviewedAt: v.optional(v.union(v.null(), v.number())),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .edge('attendanceRecord', {
+        to: 'attendanceRecords',
+        field: 'attendanceRecordId',
+      })
+      .edge('requestedByEmployee', {
+        to: 'employees',
+        field: 'requestedByEmployeeId',
+      })
+      .edge('requestedByUser', {
+        to: 'user',
+        field: 'requestedByUserId',
+      })
+      .edge('reviewer', { to: 'user', field: 'reviewedBy' })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('attendanceRecordId_status', ['attendanceRecordId', 'status']),
+
+    holidays: defineEnt({
+      date: v.string(),
+      name: v.string(),
+      isRecurring: v.boolean(),
+      createdAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .index('organizationId_date', ['organizationId', 'date'])
+      .index('organizationId_isRecurring', ['organizationId', 'isRecurring']),
+
     // --------------------
     // Sequence Counter (shared)
     // --------------------

@@ -19,6 +19,12 @@ export const FEATURES = [
   'team',
   'settings',
   'activities',
+  'hr_employees',
+  'hr_attendance',
+  'hr_shifts',
+  'hr_reports',
+  'hr_branches',
+  'hr_holidays',
 ] as const;
 
 export type Feature = (typeof FEATURES)[number];
@@ -32,6 +38,7 @@ export const ACTIONS = [
   'invite',
   'remove',
   'manage_roles',
+  'export',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -50,6 +57,12 @@ export const FEATURE_ACTIONS: Record<Feature, Action[]> = {
   team: ['view', 'invite', 'remove', 'manage_roles'],
   settings: ['view', 'manage'],
   activities: ['view', 'create', 'edit', 'delete'],
+  hr_employees: ['view', 'create', 'edit', 'delete'],
+  hr_attendance: ['view', 'edit', 'manage'],
+  hr_shifts: ['view', 'create', 'edit', 'delete'],
+  hr_reports: ['view', 'export'],
+  hr_branches: ['view', 'create', 'edit', 'delete'],
+  hr_holidays: ['view', 'create', 'delete'],
 };
 
 // ---------------------------------------------------------------------------

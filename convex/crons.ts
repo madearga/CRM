@@ -20,4 +20,12 @@ crons.daily(
   {},
 );
 
+// Daily 00:05 Asia/Jakarta (17:05 UTC previous day) — close attendance records without clock-out
+crons.daily(
+  'auto-close-open-attendance-records',
+  { hourUTC: 17, minuteUTC: 5 },
+  internal.hrAttendance.autoCloseOpenRecords,
+  {},
+);
+
 export default crons;

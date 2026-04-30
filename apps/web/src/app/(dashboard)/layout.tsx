@@ -19,6 +19,7 @@ import {
   LayoutTemplate,
   RefreshCw,
   Landmark,
+  UsersRound,
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
@@ -62,6 +63,7 @@ const navItems = [
   { title: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
   { title: 'Templates', href: '/templates', icon: LayoutTemplate },
   { title: 'Activities', href: '/activities', icon: Activity },
+  { title: 'HR', href: '/hr', icon: UsersRound },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -77,6 +79,15 @@ const featureMap: Record<string, string> = {
   '/subscriptions': 'subscriptions',
   '/templates': 'templates',
   '/activities': 'activities',
+  '/hr': 'hr_employees',
+  '/hr/employees': 'hr_employees',
+  '/hr/branches': 'hr_branches',
+  '/hr/shifts': 'hr_shifts',
+  '/hr/assignments': 'hr_shifts',
+  '/hr/attendance': 'hr_attendance',
+  '/hr/corrections': 'hr_attendance',
+  '/hr/holidays': 'hr_holidays',
+  '/hr/reports': 'hr_reports',
   '/settings': 'settings',
 };
 
