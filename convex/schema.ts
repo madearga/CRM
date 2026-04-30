@@ -193,6 +193,9 @@ const schema = defineEntSchema(
       .edges('saleOrders', { ref: 'ownerId' })
       .edges('invoices', { ref: 'ownerId' })
       .edges('payments', { ref: 'ownerId' })
+      .edges('employees', { ref: 'userId' })
+      .edges('requestedCorrections', { to: 'attendanceCorrections', ref: 'requestedByUserId' })
+      .edges('reviewedCorrections', { to: 'attendanceCorrections', ref: 'reviewedBy' })
       .edges('quotationTemplates', { ref: 'ownerId' })
       .edges('subscriptionTemplates', { ref: 'ownerId' })
       .edges('recurringInvoices', { ref: 'ownerId' })
@@ -501,9 +504,10 @@ const schema = defineEntSchema(
     })
       .field('organizationId', v.id('organization'), { index: true })
       .edge('branch', { to: 'branches', field: 'branchId' })
-      .edge('user', { to: 'user', field: 'userId' })
+      .edge('user', { to: 'user', field: 'userId', optional: true })
       .edges('attendanceRecords', { to: 'attendanceRecords', ref: 'employeeId' })
       .edges('shiftAssignments', { to: 'shiftAssignments', ref: 'employeeId' })
+      .edges('corrections', { to: 'attendanceCorrections', ref: 'requestedByEmployeeId' })
       .index('organizationId_status', ['organizationId', 'status'])
       .index('organizationId_nik', ['organizationId', 'nik'])
       .index('organizationId_branchId', ['organizationId', 'branchId'])
@@ -610,8 +614,9 @@ const schema = defineEntSchema(
       .edge('requestedByUser', {
         to: 'user',
         field: 'requestedByUserId',
+        optional: true,
       })
-      .edge('reviewer', { to: 'user', field: 'reviewedBy' })
+      .edge('reviewer', { to: 'user', field: 'reviewedBy', optional: true })
       .index('organizationId_status', ['organizationId', 'status'])
       .index('attendanceRecordId_status', ['attendanceRecordId', 'status']),
 

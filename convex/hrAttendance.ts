@@ -154,7 +154,7 @@ export const clockOutFromWhatsApp = createPublicMutation()({
     }
     if (record.clockOut) return toAttendanceOutput(record);
 
-    let earlyLeaveMinutes = null;
+    let earlyLeaveMinutes: number | null = null;
     let label = record.label;
     if (record.shiftAssignmentId) {
       const assignment = await ctx.table('shiftAssignments').get(record.shiftAssignmentId);
@@ -169,7 +169,8 @@ export const clockOutFromWhatsApp = createPublicMutation()({
       }
     }
 
-    await record.patch({
+    const writer = await ctx.table('attendanceRecords').get(record._id);
+    await writer!.patch({
       clockOut: now,
       clockOutLocation: args.location ?? null,
       label,
@@ -178,7 +179,7 @@ export const clockOutFromWhatsApp = createPublicMutation()({
       updatedAt: now,
     });
     const updated = await ctx.table('attendanceRecords').get(record._id);
-    return toAttendanceOutput(updated);
+    return toAttendanceOutput(updated!);
   },
 });
 
@@ -250,7 +251,8 @@ export const autoCloseOpenRecords = createInternalMutation()({
           clockOut = date.getTime();
         }
       }
-      await record.patch({
+      const writer = await ctx.table('attendanceRecords').get(record._id);
+      await writer!.patch({
         clockOut,
         label: 'forgot_clockout',
         totalWorkHours: calculateWorkHours(record.clockIn, clockOut),

@@ -126,8 +126,10 @@ export const create = createOrgMutation({
       throw new ConvexError({ code: 'CONFLICT', message: 'NIK already exists' });
     }
     const now = Date.now();
+    const { userId, ...insertArgs } = args;
     return ctx.table('employees').insert({
-      ...args,
+      ...insertArgs,
+      ...(userId ?? undefined),
       status: 'active',
       hireDate: args.hireDate ?? now,
       organizationId: ctx.orgId,
