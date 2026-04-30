@@ -84,7 +84,6 @@ export default function EmployeesPage() {
         email: newEmp.email || undefined,
         whatsappNumber: newEmp.whatsappNumber || undefined,
         branchId: newEmp.branchId,
-        status: 'active',
       } as any);
       toast.success(`Employee "${newEmp.name}" created`);
       setNewEmp({ name: '', nik: '', position: '', department: '', phone: '', email: '', whatsappNumber: '', branchId: '' });
