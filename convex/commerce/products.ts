@@ -279,6 +279,7 @@ export const checkOrg = createPublicQuery({ publicOnly: true })({
   returns: z.object({
     exists: z.boolean(),
     hasProducts: z.boolean(),
+    orgName: z.string().optional(),
   }),
   handler: async (ctx, args) => {
     const org = await ctx.table('organization').get('slug', args.organizationSlug);
@@ -293,6 +294,19 @@ export const checkOrg = createPublicQuery({ publicOnly: true })({
       )
       .take(1);
 
-    return { exists: true, hasProducts: products.length > 0 };
+    return { exists: true, hasProducts: products.length > 0, orgName: org.name };
+  },
+});
+
+/** List all org slugs (for debugging). */
+export const listAllOrgs = createPublicQuery({ publicOnly: true })({
+  args: {},
+  returns: z.array(z.object({
+    slug: z.string(),
+    name: z.string(),
+  })),
+  handler: async (ctx) => {
+    const orgs = await ctx.table('organization').take(100);
+    return orgs.map((o: any) => ({ slug: o.slug, name: o.name }));
   },
 });
