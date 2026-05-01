@@ -10,16 +10,28 @@ import { useMemo } from 'react';
  * Keys are "feature:action" strings, values are booleans.
  */
 export function usePermissions(): Record<string, boolean> {
+  const { perms } = usePermissionsWithStatus();
+  return perms;
+}
+
+/**
+ * Returns permissions plus loading state.
+ */
+export function usePermissionsWithStatus(): {
+  perms: Record<string, boolean>;
+  isLoading: boolean;
+} {
   const user = useCurrentUser();
   const orgId = user?.activeOrganization?.id;
 
-  const { data } = useAuthQuery(
+  const { data, isLoading } = useAuthQuery(
     api.permissionQueries.getMyPermissions as any,
     orgId ? {} : 'skip',
     {}
   );
 
-  return useMemo(() => data ?? {}, [data]);
+  const perms = useMemo(() => data ?? {}, [data]);
+  return { perms, isLoading };
 }
 
 /**

@@ -4,28 +4,18 @@ import Link from 'next/link';
 import { useMemo, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import {
-  Activity,
   Building2,
-  Handshake,
-  LayoutDashboard,
   LogOut,
   Moon,
-  Package,
-  FileText,
-  Settings,
-  ShoppingCart,
   Sun,
-  Users,
-  LayoutTemplate,
-  RefreshCw,
-  Landmark,
-  UsersRound,
 } from 'lucide-react';
 
 import { useCurrentUser } from '@/lib/convex/hooks/useCurrentUser';
-import { usePermissions } from '@/lib/permissions';
+import { usePermissionsWithStatus } from '@/lib/permissions';
 import { useAuthQuery } from '@/lib/convex/hooks';
 import { PLUGINS } from '@/lib/plugins/registry';
+import { NavGroup } from '@/components/sidebar/nav-group';
+import { navGroups, featureMap, getPageTitle } from '@/lib/navigation';
 import { api } from '@convex/_generated/api';
 import { signOut } from '@/lib/convex/auth-client';
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher';
@@ -41,8 +31,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -51,52 +39,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-const navItems = [
-  { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { title: 'Companies', href: '/companies', icon: Building2 },
-  { title: 'Contacts', href: '/contacts', icon: Users },
-  { title: 'Deals', href: '/deals', icon: Handshake },
-  { title: 'Products', href: '/products', icon: Package },
-  { title: 'Sales', href: '/sales', icon: ShoppingCart },
-  { title: 'Invoices', href: '/invoices', icon: FileText },
-  { title: 'Payments', href: '/payments', icon: Landmark },
-  { title: 'Subscriptions', href: '/subscriptions', icon: RefreshCw },
-  { title: 'Templates', href: '/templates', icon: LayoutTemplate },
-  { title: 'Activities', href: '/activities', icon: Activity },
-  { title: 'HR', href: '/hr', icon: UsersRound },
-  { title: 'Settings', href: '/settings', icon: Settings },
-];
 
-const featureMap: Record<string, string> = {
-  '/': 'dashboard',
-  '/companies': 'companies',
-  '/contacts': 'contacts',
-  '/deals': 'deals',
-  '/products': 'products',
-  '/sales': 'sales',
-  '/invoices': 'invoices',
-  '/payments': 'payments',
-  '/subscriptions': 'subscriptions',
-  '/templates': 'templates',
-  '/activities': 'activities',
-  '/hr': 'hr_employees',
-  '/hr/employees': 'hr_employees',
-  '/hr/branches': 'hr_branches',
-  '/hr/shifts': 'hr_shifts',
-  '/hr/assignments': 'hr_shifts',
-  '/hr/attendance': 'hr_attendance',
-  '/hr/corrections': 'hr_attendance',
-  '/hr/holidays': 'hr_holidays',
-  '/hr/reports': 'hr_reports',
-  '/settings': 'settings',
-};
-
-function getPageTitle(pathname: string, items: typeof navItems) {
-  const item = items.find((item) =>
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-  );
-  return item?.title ?? 'Dashboard';
-}
 
 export default function DashboardLayout({
   children,
@@ -106,8 +49,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const user = useCurrentUser();
   const { theme, setTheme } = useTheme();
-  const perms = usePermissions();
-  const permsLoaded = Object.keys(perms).length > 0;
+  const { perms, isLoading: permsLoading } = usePermissionsWithStatus();
+  const permsLoaded = !permsLoading;
 
   // Plugin nav items
   const { data: activePluginIds } = useAuthQuery(api.plugins.getActive, {});
@@ -117,7 +60,7 @@ export default function DashboardLayout({
       const plugin = PLUGINS.find((p) => p.id === pluginId);
       if (!plugin) return [];
       return plugin.navItems.map((item) => ({
-        title: `${plugin.name}: ${item.label}`,
+        title: item.label,
         href: item.href,
         icon: item.icon,
       }));
@@ -126,8 +69,7 @@ export default function DashboardLayout({
 
   // Show onboarding overlay if user is authenticated but has no active org
   // Placeholder data has id === '0', so we exclude that
-  const isLoggedIn =
-    user && user.id && user.id !== ('0' as any);
+  const isLoggedIn = Boolean(user?.id && String(user.id) !== '0');
 
   const needsOnboarding = isLoggedIn && !user.activeOrganization;
 
@@ -135,14 +77,7 @@ export default function DashboardLayout({
     return <OnboardingOverlay />;
   }
 
-  const visibleNavItems = navItems.filter((item) => {
-    if (!permsLoaded) return true; // Show all until permissions resolve
-    const feature = featureMap[item.href];
-    if (!feature) return true;
-    return perms[`${feature}:view`] ?? false;
-  });
 
-  const allNavItems = [...visibleNavItems, ...pluginNavItems];
 
   return (
     <SidebarProvider>
@@ -152,7 +87,7 @@ export default function DashboardLayout({
             <div className="flex size-8 items-center justify-center rounded-[32px] border border-[rgba(240,240,250,0.35)] bg-[rgba(240,240,250,0.1)] text-foreground">
               <Building2 className="size-4" />
             </div>
-            <span className="truncate text-sm font-bold uppercase tracking-[0.96px]">
+            <span className="truncate text-sm font-semibold">
               {user?.activeOrganization?.name ?? 'CRM'}
             </span>
           </div>
@@ -160,29 +95,34 @@ export default function DashboardLayout({
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel className="uppercase tracking-[1.17px]">Navigation</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {allNavItems.map((item) => {
-                  const isActive =
-                    item.href === '/'
-                      ? pathname === '/'
-                      : pathname.startsWith(item.href);
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={item.href}>
-                          <item.icon />
-                          <span className="uppercase tracking-[1.17px]">{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => {
+              if (!permsLoaded) return true;
+              const feature = featureMap[item.href];
+              if (!feature) return true;
+              return perms[`${feature}:view`] ?? false;
+            });
+            if (visibleItems.length === 0) return null;
+            return (
+              <NavGroup
+                key={group.id}
+                label={group.label}
+                icon={group.icon}
+                items={visibleItems}
+                defaultOpen={group.defaultOpen}
+              />
+            );
+          })}
+
+          {/* Plugin items grouped for consistent UX */}
+          {pluginNavItems.length > 0 && (
+            <NavGroup
+              key="plugins"
+              label="Integrations"
+              items={pluginNavItems}
+              defaultOpen={false}
+            />
+          )}
         </SidebarContent>
 
         <SidebarFooter>
@@ -200,7 +140,7 @@ export default function DashboardLayout({
                         .toUpperCase() ?? '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="flex-1 truncate text-sm font-medium uppercase tracking-[0.96px]">
+                  <span className="flex-1 truncate text-sm font-medium">
                     {user?.name ?? 'User'}
                   </span>
                 </div>
@@ -208,13 +148,13 @@ export default function DashboardLayout({
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                   {theme === 'dark' ? <Sun /> : <Moon />}
-                  <span className="uppercase tracking-[1.17px]">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                  <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => signOut()}>
                   <LogOut />
-                  <span className="uppercase tracking-[1.17px]">Sign out</span>
+                  <span>Sign out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -224,7 +164,7 @@ export default function DashboardLayout({
                 <SidebarMenuButton asChild>
                   <Link href="/login">
                     <LogOut style={{ transform: 'rotate(180deg)' }} />
-                    <span className="uppercase tracking-[1.17px]">Sign in</span>
+                    <span>Sign in</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -237,7 +177,7 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center gap-2 bg-black/80 px-4 backdrop-blur">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-bold uppercase tracking-[0.96px]">{getPageTitle(pathname, allNavItems)}</h1>
+          <h1 className="text-sm font-semibold">{getPageTitle(pathname, pluginNavItems)}</h1>
         </header>
         <main className="flex-1 p-4">
           <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>

@@ -1,1 +1,1 @@
-export { usePermission, usePermissions, useAnyPermission } from './use-permission';
+export { usePermission, usePermissions, usePermissionsWithStatus, useAnyPermission } from './use-permission';
