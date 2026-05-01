@@ -563,20 +563,17 @@ export const seedShopData = createInternalMutation()({
       // Find org by explicit slug
       org = await ctx.table('organization').get('slug', args.targetOrgSlug);
       if (!org) throw new Error(`Organization with slug "${args.targetOrgSlug}" not found.`);
-      orgId = org._id;
+      orgId = org._id as Id<'organization'>;
     } else {
       // Fallback: use admin's last active org
-      orgId = admin.lastActiveOrganizationId!;
+      orgId = admin.lastActiveOrganizationId;
       if (!orgId) throw new Error('Admin has no active organization. Run seed first.');
       org = await ctx.table('organization').get(orgId);
       if (!org) throw new Error('Organization not found.');
     }
 
-    // Set org slug to 'default' so the online shop can find it (only when not targeting explicit slug)
-    if (!args.targetOrgSlug && org.slug !== 'default') {
-      await org.patch({ slug: 'default' });
-      console.info(`  ✅ Updated org slug to 'default'`);
-    }
+    // Don't overwrite existing slug — respect user's chosen slug
+    console.info(`  ℹ️ Seeding products for org "${org.name}" (slug: ${org.slug})`);
 
     const userId = admin._id;
 

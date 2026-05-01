@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ShopNavbar } from '@/components/shop/shop-navbar';
 import { ShopFooter } from '@/components/shop/shop-footer';
-import { Loader2, Store } from 'lucide-react';
+import { Loader2, Store, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@convex/_generated/api';
 import { usePublicQuery } from '@/lib/convex/hooks';
@@ -17,22 +17,16 @@ export default function ShopSlugLayout({
   const { slug } = useParams<{ slug: string }>();
   const [override, setOverride] = useState(false);
 
-  // Resolve plugin instance by slug to check if shop is active
-  const { data: pluginInstance, isLoading: pluginLoading } = usePublicQuery(
-    api.plugins.getBySlug,
-    { publicSlug: slug },
-  );
-
-  // Fallback: check if org exists (has products) even without plugin instance
-  const { data: orgCheck, isLoading: orgLoading } = usePublicQuery(
+  // Single query checks org existence, products, and plugin status
+  const { data: orgCheck, isLoading, error } = usePublicQuery(
     api.commerce.products.checkOrg,
     { organizationSlug: slug },
   );
 
-  const hasOrg = !!orgCheck && orgCheck.exists;
-  const shopActive = pluginInstance?.isActive || hasOrg || override;
+  const hasOrg = !!orgCheck?.exists;
+  const shopActive = orgCheck?.isActive || orgCheck?.hasProducts || override;
 
-  if (pluginLoading || orgLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -40,7 +34,20 @@ export default function ShopSlugLayout({
     );
   }
 
-  if (!pluginInstance && !hasOrg) {
+  if (error || !orgCheck) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+        <AlertTriangle className="size-16 text-yellow-500" />
+        <h1 className="text-2xl font-bold">Something went wrong</h1>
+        <p className="text-muted-foreground">Failed to load store. Please try again.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!hasOrg) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
         <Store className="size-16 text-muted-foreground" />

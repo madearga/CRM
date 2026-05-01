@@ -71,6 +71,19 @@ export default function DashboardLayout({
   // Placeholder data has id === '0', so we exclude that
   const isLoggedIn = Boolean(user?.id && String(user.id) !== '0');
 
+  // Memoize filtered nav groups so NavGroup receives stable item references
+  const visibleNavGroups = useMemo(() => {
+    return navGroups.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!permsLoaded) return true;
+        const feature = featureMap[item.href];
+        if (!feature) return true;
+        return perms[`${feature}:view`] ?? false;
+      }),
+    })).filter((group) => group.items.length > 0);
+  }, [permsLoaded, perms]);
+
   const needsOnboarding = isLoggedIn && !user.activeOrganization;
 
   if (needsOnboarding) {
@@ -95,24 +108,15 @@ export default function DashboardLayout({
         </SidebarHeader>
 
         <SidebarContent>
-          {navGroups.map((group) => {
-            const visibleItems = group.items.filter((item) => {
-              if (!permsLoaded) return true;
-              const feature = featureMap[item.href];
-              if (!feature) return true;
-              return perms[`${feature}:view`] ?? false;
-            });
-            if (visibleItems.length === 0) return null;
-            return (
-              <NavGroup
-                key={group.id}
-                label={group.label}
-                icon={group.icon}
-                items={visibleItems}
-                defaultOpen={group.defaultOpen}
-              />
-            );
-          })}
+          {visibleNavGroups.map((group) => (
+            <NavGroup
+              key={group.id}
+              label={group.label}
+              icon={group.icon}
+              items={group.items}
+              defaultOpen={group.defaultOpen}
+            />
+          ))}
 
           {/* Plugin items grouped for consistent UX */}
           {pluginNavItems.length > 0 && (

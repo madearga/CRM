@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight, type LucideIcon } from 'lucide-react'
@@ -31,18 +31,14 @@ export function NavGroup({ label, icon: Icon, items, defaultOpen = false }: NavG
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
-  // Use a ref to avoid re-triggering the effect when parent creates a new array reference each render
-  const itemsRef = useRef(items)
-  itemsRef.current = items
-
   useEffect(() => {
-    const matches = itemsRef.current.some((item) =>
+    const matches = items.some((item) =>
       item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
     )
     if (matches) {
       setIsOpen(true)
     }
-  }, [pathname])
+  }, [pathname, items])
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

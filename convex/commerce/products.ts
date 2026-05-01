@@ -271,7 +271,7 @@ export const listCategories = createPublicQuery({ publicOnly: true })({
   },
 });
 
-/** Check if an organization exists by slug (public). */
+/** Check if an organization exists by slug (public, constant-time). */
 export const checkOrg = createPublicQuery({ publicOnly: true })({
   args: {
     organizationSlug: z.string(),
@@ -279,34 +279,36 @@ export const checkOrg = createPublicQuery({ publicOnly: true })({
   returns: z.object({
     exists: z.boolean(),
     hasProducts: z.boolean(),
+    isActive: z.boolean(),
     orgName: z.string().optional(),
   }),
   handler: async (ctx, args) => {
     const org = await ctx.table('organization').get('slug', args.organizationSlug);
-    if (!org) {
-      return { exists: false, hasProducts: false };
-    }
+    const orgId = org ? (org._id as any) : undefined;
 
-    const orgId = org._id as any;
-    const products = await ctx
-      .table('products', 'organizationId_visibleInShop', (q: any) =>
-        q.eq('organizationId', orgId).eq('visibleInShop', true)
-      )
-      .take(1);
+    // Always run both queries to avoid timing-based enumeration
+    const [products, pluginInstance] = await Promise.all([
+      orgId
+        ? ctx
+            .table('products', 'organizationId_visibleInShop', (q: any) =>
+              q.eq('organizationId', orgId).eq('visibleInShop', true)
+            )
+            .take(1)
+        : [],
+      orgId
+        ? ctx
+            .table('pluginInstances', 'publicSlug', (q: any) =>
+              q.eq('publicSlug', args.organizationSlug)
+            )
+            .first()
+        : null,
+    ]);
 
-    return { exists: true, hasProducts: products.length > 0, orgName: org.name };
-  },
-});
-
-/** List all org slugs (for debugging). */
-export const listAllOrgs = createPublicQuery({ publicOnly: true })({
-  args: {},
-  returns: z.array(z.object({
-    slug: z.string(),
-    name: z.string(),
-  })),
-  handler: async (ctx) => {
-    const orgs = await ctx.table('organization').take(100);
-    return orgs.map((o: any) => ({ slug: o.slug, name: o.name }));
+    return {
+      exists: !!org,
+      hasProducts: products.length > 0,
+      isActive: pluginInstance?.isActive ?? false,
+      orgName: org?.name,
+    };
   },
 });
