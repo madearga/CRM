@@ -18,14 +18,21 @@ export default function ShopSlugLayout({
   const [override, setOverride] = useState(false);
 
   // Resolve plugin instance by slug to check if shop is active
-  const { data: pluginInstance, isLoading } = usePublicQuery(
+  const { data: pluginInstance, isLoading: pluginLoading } = usePublicQuery(
     api.plugins.getBySlug,
     { publicSlug: slug },
   );
 
-  const shopActive = (pluginInstance?.isActive) || override;
+  // Fallback: check if org exists (has products) even without plugin instance
+  const { data: orgCheck, isLoading: orgLoading } = usePublicQuery(
+    api.commerce.products.checkOrg,
+    { organizationSlug: slug },
+  );
 
-  if (isLoading) {
+  const hasOrg = !!orgCheck && orgCheck.exists;
+  const shopActive = pluginInstance?.isActive || hasOrg || override;
+
+  if (pluginLoading || orgLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -33,7 +40,7 @@ export default function ShopSlugLayout({
     );
   }
 
-  if (!pluginInstance) {
+  if (!pluginInstance && !hasOrg) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
         <Store className="size-16 text-muted-foreground" />

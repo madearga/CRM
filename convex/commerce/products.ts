@@ -270,3 +270,29 @@ export const listCategories = createPublicQuery({ publicOnly: true })({
     return result;
   },
 });
+
+/** Check if an organization exists by slug (public). */
+export const checkOrg = createPublicQuery({ publicOnly: true })({
+  args: {
+    organizationSlug: z.string(),
+  },
+  returns: z.object({
+    exists: z.boolean(),
+    hasProducts: z.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const org = await ctx.table('organization').get('slug', args.organizationSlug);
+    if (!org) {
+      return { exists: false, hasProducts: false };
+    }
+
+    const orgId = org._id as any;
+    const products = await ctx
+      .table('products', 'organizationId_visibleInShop', (q: any) =>
+        q.eq('organizationId', orgId).eq('visibleInShop', true)
+      )
+      .take(1);
+
+    return { exists: true, hasProducts: products.length > 0 };
+  },
+});
