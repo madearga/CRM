@@ -5,11 +5,19 @@ import { internal } from './_generated/api';
 import { authClient } from './auth';
 import { createAuth } from './auth';
 import { handlePaymentWebhook } from './commerce/checkout';
+import { handleAiChat } from './aiChat';
 import { verifyWebhookSignature } from './helpers/validateWebhook';
 
 const http = httpRouter();
 
 authClient.registerRoutes(http, createAuth);
+
+// AI Chat Assistant (owner-only)
+http.route({
+  path: '/api/ai/chat',
+  method: 'POST',
+  handler: handleAiChat,
+});
 
 // Midtrans payment webhook
 http.route({

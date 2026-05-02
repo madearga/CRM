@@ -34,6 +34,7 @@
     "convex-ents": "0.16.0",
     "convex-helpers": "0.1.104",
     "dotenv": "^17.2.2",
+    "openai": "^6.35.0",
     "react-email": "^1.2.3",
     "superjson": "^2.2.2",
     "ts-essentials": "10.1.1",

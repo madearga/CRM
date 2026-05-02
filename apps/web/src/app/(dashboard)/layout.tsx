@@ -22,6 +22,9 @@ import { OrganizationSwitcher } from '@/components/organization/organization-swi
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { OnboardingOverlay } from '@/components/onboarding/onboarding-overlay';
 import { CommandPalette } from '@/components/command-palette';
+import { ChatPanel } from '@/components/ai-chat/chat-panel';
+import { ChatToggle } from '@/components/ai-chat/chat-toggle';
+import { useAiChat } from '@/hooks/use-ai-chat';
 import { useTheme } from 'next-themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -85,6 +88,10 @@ export default function DashboardLayout({
   }, [permsLoaded, perms]);
 
   const needsOnboarding = isLoggedIn && !user.activeOrganization;
+
+  // AI Chat (owner only)
+  const isOwner = user?.activeOrganization?.role === 'owner';
+  const aiChat = useAiChat();
 
   if (needsOnboarding) {
     return <OnboardingOverlay />;
@@ -191,6 +198,24 @@ export default function DashboardLayout({
       </SidebarInset>
       <KeyboardShortcuts />
       <CommandPalette />
+
+      {/* AI Chat Assistant - Owner Only */}
+      {isOwner && (
+        <>
+          <ChatToggle onClick={aiChat.togglePanel} isOpen={aiChat.isOpen} />
+          <ChatPanel
+            messages={aiChat.messages}
+            isLoading={aiChat.isLoading}
+            isOpen={aiChat.isOpen}
+            onClose={aiChat.togglePanel}
+            onSend={aiChat.sendMessage}
+            conversations={aiChat.conversations}
+            currentConversationId={aiChat.currentConversationId}
+            onSelectConversation={aiChat.selectConversation}
+            onNewConversation={aiChat.newConversation}
+          />
+        </>
+      )}
     </SidebarProvider>
   );
 }

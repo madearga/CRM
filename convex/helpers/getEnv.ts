@@ -14,6 +14,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
 
+  // AI Chat
+  OPENROUTER_API_KEY: z.string().optional(),
+  AI_CHAT_MODEL: z.string().optional(),
+
   // Polar (new payment provider)
   POLAR_ACCESS_TOKEN: z.string().optional(),
   POLAR_PRODUCT_CREDITS: z.string().optional(),

@@ -1398,6 +1398,26 @@ const schema = defineEntSchema(
       .field('organizationId', v.id('organization'), { index: true })
       .index('externalPluginId_organizationId', ['externalPluginId', 'organizationId'])
       .index('organizationId_externalPluginId', ['organizationId', 'externalPluginId']),
+
+    // ----------------------------
+    // AI Chat Assistant
+    // ----------------------------
+
+    aiChatConversations: defineEnt({
+      title: v.string(),
+      updatedAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('userId', v.id('user'), { index: true })
+      .index('organizationId_updatedAt', ['organizationId', 'updatedAt']),
+
+    aiChatMessages: defineEnt({
+      role: v.union(v.literal('user'), v.literal('assistant'), v.literal('tool')),
+      content: v.string(),
+      toolCalls: v.optional(v.array(v.record(v.string(), v.any()))),
+      toolResults: v.optional(v.array(v.record(v.string(), v.any()))),
+    })
+      .field('conversationId', v.id('aiChatConversations'), { index: true }),
   },
   {
     schemaValidation: true,
