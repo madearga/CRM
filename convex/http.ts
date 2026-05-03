@@ -18,6 +18,11 @@ http.route({
   method: 'POST',
   handler: handleAiChat,
 });
+http.route({
+  path: '/api/ai/chat',
+  method: 'OPTIONS',
+  handler: handleAiChat,
+});
 
 // Midtrans payment webhook
 http.route({
