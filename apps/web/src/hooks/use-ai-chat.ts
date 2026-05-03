@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useQuery, useConvexAuth } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { env } from '@/env';
 import { useAuthStore } from '@/lib/convex/components/convex-provider';
@@ -20,19 +20,18 @@ export function useAiChat() {
   const abortRef = useRef<AbortController | null>(null);
   const { state: authState } = useAuthStore();
 
-  // Check if user is authenticated before querying
-  const { isAuthenticated } = useConvexAuth();
+  // Load chat history only after Better Auth session token is available.
+  // useConvexAuth() can become authenticated before AuthEffect has synced the token.
+  const hasAuthToken = Boolean(authState.token);
 
-  // Load conversations list (only when open AND authenticated)
   const conversations = useQuery(
     api.aiChatHistory.listConversations,
-    isOpen && isAuthenticated ? { limit: 20 } : 'skip'
+    isOpen && hasAuthToken ? { limit: 20 } : 'skip'
   );
 
-  // Load messages when conversation changes
   const savedMessages = useQuery(
     api.aiChatHistory.getMessages,
-    isOpen && isAuthenticated && currentConversationId ? { conversationId: currentConversationId as any } : 'skip'
+    isOpen && hasAuthToken && currentConversationId ? { conversationId: currentConversationId as any } : 'skip'
   );
 
   // Sync saved messages into local state when they load or change
