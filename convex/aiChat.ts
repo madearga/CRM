@@ -15,8 +15,7 @@ const MAX_MESSAGES_PER_CONVERSATION = 100;
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 export const handleAiChat = httpAction(async (ctx, request) => {

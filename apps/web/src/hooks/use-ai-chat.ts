@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useConvexAuth } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { env } from '@/env';
+import { useAuthStore } from '@/lib/convex/components/convex-provider';
 import { type ChatMessage } from '@/components/ai-chat/message-bubble';
 
 const STORAGE_KEY = 'crm-ai-chat-open';
@@ -17,6 +18,7 @@ export function useAiChat() {
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const abortRef = useRef<AbortController | null>(null);
+  const { state: authState } = useAuthStore();
 
   // Check if user is authenticated before querying
   const { isAuthenticated } = useConvexAuth();
@@ -79,14 +81,18 @@ export function useAiChat() {
         abortRef.current = new AbortController();
 
         const convexSiteUrl = env.NEXT_PUBLIC_CONVEX_SITE_URL;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (authState.token) {
+          headers.Authorization = `Bearer ${authState.token}`;
+        }
+
         const response = await fetch(`${convexSiteUrl}/api/ai/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             conversationId: currentConversationId,
             message: content,
           }),
-          credentials: 'include',
           signal: abortRef.current.signal,
         });
 
@@ -159,7 +165,7 @@ export function useAiChat() {
         abortRef.current = null;
       }
     },
-    [isLoading, currentConversationId]
+    [isLoading, currentConversationId, authState.token]
   );
 
   const stopGeneration = useCallback(() => {
