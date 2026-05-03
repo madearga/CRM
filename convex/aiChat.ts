@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { httpAction } from './_generated/server';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { getEnv } from './helpers/getEnv';
 import { toOpenAITools, executeTool } from './aiTools';
 import { buildSystemPrompt } from './aiSystemPrompt';
@@ -110,14 +110,17 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   // --- Get or create conversation ---
   let convId = conversationId;
   if (!convId) {
-    convId = await ctx.runMutation(api.aiChatHistory.createConversation, {
+    convId = await ctx.runMutation(internal.aiChatHistory.createConversationForHttp, {
       title: message.slice(0, 50),
+      organizationId: orgId,
+      userId: ownerContext.userId,
     });
   }
 
   // Check conversation message count to prevent runaway conversations
-  const existingMessages = await ctx.runQuery(api.aiChatHistory.getMessages, {
+  const existingMessages = await ctx.runQuery(internal.aiChatHistory.getMessagesForHttp, {
     conversationId: convId,
+    organizationId: orgId,
   });
   if (existingMessages.length > MAX_MESSAGES_PER_CONVERSATION) {
     return new Response(
@@ -127,14 +130,16 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   }
 
   // Save user message
-  await ctx.runMutation(api.aiChatHistory.addUserMessage, {
+  await ctx.runMutation(internal.aiChatHistory.addUserMessageForHttp, {
     conversationId: convId,
+    organizationId: orgId,
     content: message,
   });
 
   // Reload history after save
-  const history = await ctx.runQuery(api.aiChatHistory.getMessages, {
+  const history = await ctx.runQuery(internal.aiChatHistory.getMessagesForHttp, {
     conversationId: convId,
+    organizationId: orgId,
   });
 
   // --- Setup LLM ---
@@ -246,8 +251,9 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   }
 
   // Save assistant message
-  await ctx.runMutation(api.aiChatHistory.addAssistantMessage, {
+  await ctx.runMutation(internal.aiChatHistory.addAssistantMessageForHttp, {
     conversationId: convId,
+    organizationId: orgId,
     content: finalContent,
     toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
   });

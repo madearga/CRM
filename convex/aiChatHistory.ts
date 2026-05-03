@@ -1,4 +1,5 @@
 import { v } from 'convex/values';
+import { internalMutation, internalQuery } from './_generated/server';
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
 import { createOrgQuery, createOrgMutation, createPublicQuery } from './functions';
@@ -45,6 +46,108 @@ export const getOwnerContextForHttp = createPublicQuery({ publicOnly: true })({
       orgId: resolvedOrgId,
       orgName: org.name,
     };
+  },
+});
+
+export const createConversationForHttp = internalMutation({
+  args: {
+    title: v.string(),
+    organizationId: v.id('organization'),
+    userId: v.id('user'),
+  },
+  returns: v.id('aiChatConversations'),
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('aiChatConversations', {
+      title: args.title,
+      organizationId: args.organizationId,
+      userId: args.userId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const getMessagesForHttp = internalQuery({
+  args: {
+    conversationId: v.id('aiChatConversations'),
+    organizationId: v.id('organization'),
+  },
+  returns: v.array(
+    v.object({
+      id: v.id('aiChatMessages'),
+      role: v.union(v.literal('user'), v.literal('assistant'), v.literal('tool')),
+      content: v.string(),
+      toolCalls: v.optional(v.array(v.record(v.string(), v.any()))),
+      toolResults: v.optional(v.array(v.record(v.string(), v.any()))),
+      createdAt: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.organizationId !== args.organizationId) {
+      return [];
+    }
+
+    const messages = await ctx.db
+      .query('aiChatMessages')
+      .withIndex('conversationId', (q) => q.eq('conversationId', args.conversationId))
+      .collect();
+
+    return messages
+      .sort((a, b) => a._creationTime - b._creationTime)
+      .map((m) => ({
+        id: m._id,
+        role: m.role,
+        content: m.content,
+        toolCalls: m.toolCalls,
+        toolResults: m.toolResults,
+        createdAt: m._creationTime,
+      }));
+  },
+});
+
+export const addUserMessageForHttp = internalMutation({
+  args: {
+    conversationId: v.id('aiChatConversations'),
+    organizationId: v.id('organization'),
+    content: v.string(),
+  },
+  returns: v.id('aiChatMessages'),
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.organizationId !== args.organizationId) {
+      throw new Error('Conversation not found');
+    }
+
+    await ctx.db.patch(args.conversationId, { updatedAt: Date.now() });
+    return await ctx.db.insert('aiChatMessages', {
+      conversationId: args.conversationId,
+      role: 'user',
+      content: args.content,
+    });
+  },
+});
+
+export const addAssistantMessageForHttp = internalMutation({
+  args: {
+    conversationId: v.id('aiChatConversations'),
+    organizationId: v.id('organization'),
+    content: v.string(),
+    toolCalls: v.optional(v.array(v.record(v.string(), v.any()))),
+  },
+  returns: v.id('aiChatMessages'),
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.organizationId !== args.organizationId) {
+      throw new Error('Conversation not found');
+    }
+
+    await ctx.db.patch(args.conversationId, { updatedAt: Date.now() });
+    return await ctx.db.insert('aiChatMessages', {
+      conversationId: args.conversationId,
+      role: 'assistant',
+      content: args.content,
+      toolCalls: args.toolCalls,
+    });
   },
 });
 
