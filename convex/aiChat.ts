@@ -1,12 +1,10 @@
 import OpenAI from 'openai';
 import { httpAction } from './_generated/server';
-import { api, internal } from './_generated/api';
+import { api } from './_generated/api';
 import { getEnv } from './helpers/getEnv';
 import { toOpenAITools, executeTool } from './aiTools';
 import { buildSystemPrompt } from './aiSystemPrompt';
-import { authClient, getAuth } from './auth';
-import { entsTableFactory } from 'convex-ents';
-import { entDefinitions } from './schema';
+import { getAuth } from './auth';
 import type { Id } from './_generated/dataModel';
 
 const MAX_TOOL_ITERATIONS = 5;
@@ -39,30 +37,25 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   const authorization = request.headers.get('authorization');
   if (authorization) requestHeaders.set('authorization', authorization);
 
-  const table = entsTableFactory(ctx as any, entDefinitions);
-  const auth = getAuth(ctx as any);
-  const sessionPayload = await auth.api.getSession({ headers: requestHeaders });
+  let sessionPayload: any;
+  try {
+    const auth = getAuth(ctx as any);
+    sessionPayload = await auth.api.getSession({ headers: requestHeaders });
+  } catch (error) {
+    console.error('[AI Chat] Session lookup failed:', error);
+    return new Response(JSON.stringify({ error: 'Authentication failed.' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
 
-  if (!sessionPayload?.session || !sessionPayload?.user) {
+  if (!sessionPayload?.session || !sessionPayload?.user?.email) {
     return new Response(JSON.stringify({ error: 'Authentication required.' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 
-  // Find user in main table
-  const user = await table('user')
-    .filter((q: any) => q.eq(q.field('email'), sessionPayload.user!.email))
-    .first();
-
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'User not found.' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  }
-
-  // Check owner role from session's active org
   const session = sessionPayload.session as any;
   const orgId = session.activeOrganizationId as Id<'organization'> | null;
   if (!orgId) {
@@ -72,23 +65,19 @@ export const handleAiChat = httpAction(async (ctx, request) => {
     );
   }
 
-  // Look up member role in the organization
-  const member = await table('member')
-    .filter((q: any) =>
-      q.eq(q.field('organizationId'), orgId).eq(q.field('userId'), user._id)
-    )
-    .first();
+  const ownerContext = await ctx.runQuery(api.aiChatHistory.getOwnerContextForHttp, {
+    email: sessionPayload.user.email,
+    orgId,
+  });
 
-  if (!member || member.role !== 'owner') {
+  if (!ownerContext) {
     return new Response(
       JSON.stringify({ error: 'Access denied. Owner role required.' }),
       { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 
-  // Get org name
-  const org = await table('organization').get(orgId);
-  const orgName = org?.name ?? 'CRM';
+  const orgName = ownerContext.orgName;
 
   // --- Parse request ---
   let body: any;
@@ -163,7 +152,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
 
   const systemPrompt = buildSystemPrompt({
     orgName,
-    userName: user.name ?? 'Owner',
+    userName: ownerContext.userName ?? 'Owner',
     date: new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
@@ -239,7 +228,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
         const result = await executeTool(toolName, toolArgs, {
           ctx,
           orgId,
-          userId: user._id as Id<'user'>,
+          userId: ownerContext.userId,
         });
 
         toolCallLog.push({ name: toolName, args: toolArgs, result });

@@ -1,9 +1,48 @@
 import { v } from 'convex/values';
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
-import { createOrgQuery, createOrgMutation } from './functions';
+import { createOrgQuery, createOrgMutation, createPublicQuery } from './functions';
 
 // --- Queries ---
+
+export const getOwnerContextForHttp = createPublicQuery({ publicOnly: true })({
+  args: {
+    email: z.string().email(),
+    orgId: zid('organization'),
+  },
+  returns: z.union([
+    z.object({
+      userId: zid('user'),
+      userName: z.string().optional(),
+      orgId: zid('organization'),
+      orgName: z.string(),
+    }),
+    z.null(),
+  ]),
+  handler: async (ctx, args) => {
+    const user = await ctx
+      .table('user', 'email', (q) => q.eq('email', args.email))
+      .first();
+    if (!user) return null;
+
+    const member = await ctx
+      .table('member', 'organizationId_userId', (q) =>
+        q.eq('organizationId', args.orgId).eq('userId', user._id)
+      )
+      .first();
+    if (!member || member.role !== 'owner') return null;
+
+    const org = await ctx.table('organization').get(args.orgId);
+    if (!org) return null;
+
+    return {
+      userId: user._id,
+      userName: user.name,
+      orgId: args.orgId,
+      orgName: org.name,
+    };
+  },
+});
 
 export const listConversations = createOrgQuery()({
   args: {
