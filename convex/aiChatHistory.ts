@@ -2,49 +2,53 @@ import { v } from 'convex/values';
 import { internalMutation, internalQuery } from './_generated/server';
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
-import { createOrgQuery, createOrgMutation, createPublicQuery } from './functions';
+import { createOrgQuery, createOrgMutation } from './functions';
 
 // --- Queries ---
 
-export const getOwnerContextForHttp = createPublicQuery({ publicOnly: true })({
+export const getOwnerContextForHttp = internalQuery({
   args: {
-    email: z.string().email(),
-    orgId: zid('organization').optional(),
+    email: v.string(),
+    orgId: v.optional(v.id('organization')),
   },
-  returns: z.union([
-    z.object({
-      userId: zid('user'),
-      userName: z.string().optional(),
-      orgId: zid('organization'),
-      orgName: z.string(),
+  returns: v.union(
+    v.object({
+      userId: v.id('user'),
+      userName: v.optional(v.string()),
+      orgId: v.id('organization'),
+      orgName: v.string(),
     }),
-    z.null(),
-  ]),
+    v.null()
+  ),
   handler: async (ctx, args) => {
-    const user = await ctx
-      .table('user', 'email', (q) => q.eq('email', args.email))
-      .first();
+    const users = await ctx.db
+      .query('user')
+      .withIndex('email', (q) => q.eq('email', args.email))
+      .take(1);
+    const user = users[0];
     if (!user) return null;
 
     const resolvedOrgId =
-      args.orgId ?? user.personalOrganizationId ?? user.lastActiveOrganizationId;
+      args.orgId ?? (user as any).personalOrganizationId ?? (user as any).lastActiveOrganizationId;
     if (!resolvedOrgId) return null;
 
-    const member = await ctx
-      .table('member', 'organizationId_userId', (q) =>
+    const members = await ctx.db
+      .query('member')
+      .withIndex('organizationId_userId', (q) =>
         q.eq('organizationId', resolvedOrgId).eq('userId', user._id)
       )
-      .first();
+      .take(1);
+    const member = members[0];
     if (!member || member.role !== 'owner') return null;
 
-    const org = await ctx.table('organization').get(resolvedOrgId);
+    const org = await ctx.db.get(resolvedOrgId);
     if (!org) return null;
 
     return {
       userId: user._id,
-      userName: user.name,
+      userName: (user as any).name,
       orgId: resolvedOrgId,
-      orgName: org.name,
+      orgName: (org as any).name,
     };
   },
 });

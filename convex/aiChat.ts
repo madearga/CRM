@@ -18,22 +18,42 @@ const CORS_HEADERS: Record<string, string> = {
 
 export const handleAiChat = httpAction(async (ctx, request) => {
   // Handle CORS preflight
-  const origin = request.headers.get('origin') ?? '*';
+  const rawOrigin = request.headers.get('origin') ?? '*';
+  const siteUrl = getEnv().NEXT_PUBLIC_SITE_URL || 'http://localhost:3005';
+  const allowedOrigin =
+    rawOrigin === '*' || rawOrigin === siteUrl || rawOrigin.endsWith(new URL(siteUrl).hostname)
+      ? rawOrigin
+      : siteUrl;
   const corsHeaders = {
     ...CORS_HEADERS,
-    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Origin': allowedOrigin,
   };
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // --- Top-level boundary: every phase must return a Response with corsHeaders ---
+  try {
+    return await handleAiChatBody(ctx, request, corsHeaders);
+  } catch (err: any) {
+    console.error('[AI Chat] Unhandled error:', err);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error. Silakan coba lagi.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  }
+});
+
+async function handleAiChatBody(
+  ctx: any,
+  request: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
   // --- Auth check via Better Auth session ---
-  // HTTP actions receive cookies from the browser via credentials: 'include'.
+  // The frontend sends the session token as Authorization: Bearer <token>.
   // We reconstruct the headers and use Better Auth's getSession to verify.
   const requestHeaders = new Headers();
-  // Forward relevant cookies and auth headers
-  const cookie = request.headers.get('cookie');
-  if (cookie) requestHeaders.set('cookie', cookie);
   const authorization = request.headers.get('authorization');
   if (authorization) requestHeaders.set('authorization', authorization);
 
@@ -41,7 +61,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   try {
     const auth = getAuth(ctx as any);
     sessionPayload = await auth.api.getSession({ headers: requestHeaders });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[AI Chat] Session lookup failed:', error);
     return new Response(JSON.stringify({ error: 'Authentication failed.' }), {
       status: 401,
@@ -59,7 +79,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   const session = sessionPayload.session as any;
   const sessionOrgId = session.activeOrganizationId as Id<'organization'> | null;
 
-  const ownerContext = await ctx.runQuery(api.aiChatHistory.getOwnerContextForHttp, {
+  const ownerContext = await ctx.runQuery(internal.aiChatHistory.getOwnerContextForHttp, {
     email: sessionPayload.user.email,
     orgId: sessionOrgId ?? undefined,
   });
@@ -97,8 +117,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
     );
   }
 
-  // --- Rate limiting: max 30 messages per minute per user ---
-  // Simple rate limit via conversation timestamp check
+  // --- Check configuration and conversation bounds ---
   const env = getEnv();
   if (!env.OPENROUTER_API_KEY) {
     return new Response(
@@ -295,4 +314,4 @@ export const handleAiChat = httpAction(async (ctx, request) => {
       ...corsHeaders,
     },
   });
-});
+}

@@ -18,6 +18,7 @@ export function useAiChat() {
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const abortRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
   const { state: authState } = useAuthStore();
 
   // Follow the repository's auth-query abstraction instead of raw useQuery.
@@ -62,7 +63,8 @@ export function useAiChat() {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (isLoading) return;
+      if (isLoading || inFlightRef.current) return;
+      inFlightRef.current = true;
 
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -164,6 +166,7 @@ export function useAiChat() {
         }
       } finally {
         setIsLoading(false);
+        inFlightRef.current = false;
         abortRef.current = null;
       }
     },
