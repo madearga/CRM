@@ -1,6 +1,6 @@
 import type { Id } from '../_generated/dataModel';
 import type { ActionCtx } from '../_generated/server';
-import { api } from '../_generated/api';
+import { api, internal } from '../_generated/api';
 
 interface ToolExecutionContext {
   ctx: ActionCtx;
@@ -17,7 +17,7 @@ export async function executeTool(
   args: Record<string, unknown>,
   execCtx: ToolExecutionContext
 ): Promise<unknown> {
-  const { ctx } = execCtx;
+  const { ctx, orgId } = execCtx;
 
   try {
     switch (toolName) {
@@ -95,16 +95,19 @@ export async function executeTool(
 
       // ---- HR ----
       case 'listEmployees':
-        return await ctx.runQuery(api.hrEmployees.list, {
-          status: args.status as any,
+        return await ctx.runQuery(internal.aiToolInternals.listEmployees, {
+          organizationId: orgId,
+          status: args.status as string | undefined,
           department: args.department as string | undefined,
           search: args.search as string | undefined,
           limit: (args.limit as number) ?? 100,
         });
 
       case 'getAttendance':
-        return await ctx.runQuery(api.hrAttendance.getDailySummary, {
+        return await ctx.runQuery(internal.aiToolInternals.getAttendanceDailySummary, {
+          organizationId: orgId,
           date: (args.date ?? new Date().toISOString().split('T')[0]) as string,
+          branchId: args.branchId as Id<'branches'> | undefined,
         });
 
       case 'markAttendance':
