@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { env } from '@/env';
 import { useAuthStore } from '@/lib/convex/components/convex-provider';
+import { useAuthQuery } from '@/lib/convex/hooks';
 import { type ChatMessage } from '@/components/ai-chat/message-bubble';
 
 const STORAGE_KEY = 'crm-ai-chat-open';
@@ -20,19 +20,22 @@ export function useAiChat() {
   const abortRef = useRef<AbortController | null>(null);
   const { state: authState } = useAuthStore();
 
-  // Load chat history only after Better Auth session token is available.
-  // useConvexAuth() can become authenticated before AuthEffect has synced the token.
-  const hasAuthToken = Boolean(authState.token);
-
-  const conversations = useQuery(
+  // Follow the repository's auth-query abstraction instead of raw useQuery.
+  // This matches other dashboard queries and prevents auth bootstrap errors
+  // from escaping into the layout error boundary during refresh.
+  const conversationsQuery = useAuthQuery(
     api.aiChatHistory.listConversations,
-    isOpen && hasAuthToken ? { limit: 20 } : 'skip'
+    isOpen ? { limit: 20 } : ('skip' as any)
+  );
+  const savedMessagesQuery = useAuthQuery(
+    api.aiChatHistory.getMessages,
+    isOpen && currentConversationId
+      ? { conversationId: currentConversationId as any }
+      : ('skip' as any)
   );
 
-  const savedMessages = useQuery(
-    api.aiChatHistory.getMessages,
-    isOpen && hasAuthToken && currentConversationId ? { conversationId: currentConversationId as any } : 'skip'
-  );
+  const conversations = conversationsQuery.data;
+  const savedMessages = savedMessagesQuery.data;
 
   // Sync saved messages into local state when they load or change
   useEffect(() => {
