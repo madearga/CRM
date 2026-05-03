@@ -8,7 +8,7 @@ import { createOrgQuery, createOrgMutation, createPublicQuery } from './function
 export const getOwnerContextForHttp = createPublicQuery({ publicOnly: true })({
   args: {
     email: z.string().email(),
-    orgId: zid('organization'),
+    orgId: zid('organization').optional(),
   },
   returns: z.union([
     z.object({
@@ -25,20 +25,24 @@ export const getOwnerContextForHttp = createPublicQuery({ publicOnly: true })({
       .first();
     if (!user) return null;
 
+    const resolvedOrgId =
+      args.orgId ?? user.personalOrganizationId ?? user.lastActiveOrganizationId;
+    if (!resolvedOrgId) return null;
+
     const member = await ctx
       .table('member', 'organizationId_userId', (q) =>
-        q.eq('organizationId', args.orgId).eq('userId', user._id)
+        q.eq('organizationId', resolvedOrgId).eq('userId', user._id)
       )
       .first();
     if (!member || member.role !== 'owner') return null;
 
-    const org = await ctx.table('organization').get(args.orgId);
+    const org = await ctx.table('organization').get(resolvedOrgId);
     if (!org) return null;
 
     return {
       userId: user._id,
       userName: user.name,
-      orgId: args.orgId,
+      orgId: resolvedOrgId,
       orgName: org.name,
     };
   },

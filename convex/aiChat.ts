@@ -57,26 +57,21 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   }
 
   const session = sessionPayload.session as any;
-  const orgId = session.activeOrganizationId as Id<'organization'> | null;
-  if (!orgId) {
-    return new Response(
-      JSON.stringify({ error: 'No active organization' }),
-      { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    );
-  }
+  const sessionOrgId = session.activeOrganizationId as Id<'organization'> | null;
 
   const ownerContext = await ctx.runQuery(api.aiChatHistory.getOwnerContextForHttp, {
     email: sessionPayload.user.email,
-    orgId,
+    orgId: sessionOrgId ?? undefined,
   });
 
   if (!ownerContext) {
     return new Response(
-      JSON.stringify({ error: 'Access denied. Owner role required.' }),
+      JSON.stringify({ error: 'Access denied. Owner role or active organization required.' }),
       { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 
+  const orgId = ownerContext.orgId;
   const orgName = ownerContext.orgName;
 
   // --- Parse request ---
