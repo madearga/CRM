@@ -143,7 +143,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   });
 
   // --- Setup LLM ---
-  const model = env.AI_CHAT_MODEL || 'anthropic/claude-sonnet-4';
+  const model = env.AI_CHAT_MODEL || 'openrouter/owl-alpha';
 
   const client = new OpenAI({
     apiKey: env.OPENROUTER_API_KEY,
