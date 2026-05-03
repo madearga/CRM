@@ -71,6 +71,76 @@ export const getAttendanceDailySummary = internalQuery({
   },
 });
 
+export const getDashboardStats = internalQuery({
+  args: {
+    organizationId: v.id('organization'),
+    userId: v.id('user'),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const [companies, deals, activities, upcomingActivities] = await Promise.all([
+      ctx.db
+        .query('companies')
+        .withIndex('organizationId', (q) => q.eq('organizationId', args.organizationId))
+        .take(500),
+      ctx.db
+        .query('deals')
+        .withIndex('organizationId', (q) => q.eq('organizationId', args.organizationId))
+        .take(500),
+      ctx.db
+        .query('activities')
+        .withIndex('organizationId_createdAt', (q) => q.eq('organizationId', args.organizationId))
+        .order('desc')
+        .take(10),
+      ctx.db
+        .query('activities')
+        .withIndex('assigneeId_organizationId_dueAt', (q) =>
+          q.eq('assigneeId', args.userId).eq('organizationId', args.organizationId).gt('dueAt', Date.now())
+        )
+        .take(10),
+    ]);
+
+    const activeCompanies = companies.filter((company) => !company.archivedAt);
+    const activeDeals = deals.filter((deal) => !deal.archivedAt);
+    const stages = ['new', 'contacted', 'proposal', 'won', 'lost'];
+    const dealsByStage = stages.map((stage) => {
+      const stageDeals = activeDeals.filter((deal) => deal.stage === stage);
+      return {
+        stage,
+        count: stageDeals.length,
+        value: stageDeals.reduce((sum, deal) => sum + (deal.value ?? 0), 0),
+      };
+    });
+
+    return {
+      pipelineValue: activeDeals.reduce((sum, deal) => sum + (deal.value ?? 0), 0),
+      totalDeals: activeDeals.length,
+      totalCompanies: activeCompanies.length,
+      totalActivities: activities.length,
+      dealsByStage,
+      recentActivities: activities.map((activity) => ({
+        id: activity._id,
+        title: activity.title,
+        type: activity.type,
+        entityType: activity.entityType,
+        entityId: activity.entityId,
+        createdAt: activity.createdAt ?? activity._creationTime,
+      })),
+      upcomingActivities: upcomingActivities
+        .filter((activity) => !activity.completedAt)
+        .map((activity) => ({
+          id: activity._id,
+          title: activity.title,
+          type: activity.type,
+          entityType: activity.entityType,
+          entityId: activity.entityId,
+          dueAt: activity.dueAt!,
+        })),
+      agingDeals: [],
+    };
+  },
+});
+
 export const listEmployees = internalQuery({
   args: {
     organizationId: v.id('organization'),

@@ -167,11 +167,17 @@ export async function executeTool(
         });
 
       case 'getRevenueSummary':
-        return await ctx.runQuery(api.dashboard.overview, {});
+        return await ctx.runQuery(internal.aiToolInternals.getDashboardStats, {
+          organizationId: orgId,
+          userId: execCtx.userId,
+        });
 
       // ---- Reports ----
       case 'getDashboardStats':
-        return await ctx.runQuery(api.dashboard.overview, {});
+        return await ctx.runQuery(internal.aiToolInternals.getDashboardStats, {
+          organizationId: orgId,
+          userId: execCtx.userId,
+        });
 
       case 'getAttendanceReport':
         return await ctx.runQuery(api.hrReports.getMonthlySummary, {
