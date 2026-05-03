@@ -12,7 +12,18 @@ import type { Id } from './_generated/dataModel';
 const MAX_TOOL_ITERATIONS = 5;
 const MAX_MESSAGES_PER_CONVERSATION = 100;
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+  'Access-Control-Allow-Credentials': 'true',
+};
+
 export const handleAiChat = httpAction(async (ctx, request) => {
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   // --- Auth check via Better Auth session ---
   // HTTP actions receive cookies from the browser via credentials: 'include'.
   // We reconstruct the headers and use Better Auth's getSession to verify.
@@ -30,7 +41,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!sessionPayload?.session || !sessionPayload?.user) {
     return new Response(JSON.stringify({ error: 'Authentication required.' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   }
 
@@ -42,7 +53,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!user) {
     return new Response(JSON.stringify({ error: 'User not found.' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   }
 
@@ -52,7 +63,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!orgId) {
     return new Response(
       JSON.stringify({ error: 'No active organization' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
+      { status: 403, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -66,7 +77,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!member || member.role !== 'owner') {
     return new Response(
       JSON.stringify({ error: 'Access denied. Owner role required.' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
+      { status: 403, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -81,7 +92,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   } catch {
     return new Response(
       JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -93,7 +104,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!message?.trim()) {
     return new Response(
       JSON.stringify({ error: 'Message is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -103,7 +114,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (!env.OPENROUTER_API_KEY) {
     return new Response(
       JSON.stringify({ error: 'AI chat is not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -122,7 +133,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   if (existingMessages.length > MAX_MESSAGES_PER_CONVERSATION) {
     return new Response(
       JSON.stringify({ error: 'Conversation too long. Please start a new conversation.' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
     );
   }
 
@@ -286,6 +297,7 @@ export const handleAiChat = httpAction(async (ctx, request) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      ...CORS_HEADERS,
     },
   });
 });
