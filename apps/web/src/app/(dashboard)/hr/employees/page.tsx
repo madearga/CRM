@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,21 @@ import { usePermission } from '@/lib/permissions/use-permission';
 
 export default function EmployeesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Auto-open create dialog when arriving via ?action=create
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only effect
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setDialogOpen(true);
+      router.replace('/hr/employees', { scroll: false });
+    }
+  }, []);
+
   const [newEmp, setNewEmp] = useState({
     name: '', nik: '', position: '', department: '', phone: '', email: '',
     whatsappNumber: '', branchId: '',
