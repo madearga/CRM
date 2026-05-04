@@ -4,8 +4,6 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Lightbulb, AlertTriangle, Clock, ArrowRight } from "lucide-react";
 
-import { api } from "@convex/_generated/api";
-import { useAuthQuery } from "@/lib/convex/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +20,7 @@ function InsightSkeleton() {
   );
 }
 
-export function InsightsWidget() {
-  const { data: overview, isLoading } = useAuthQuery(api.dashboard.overview, {});
-
+export function InsightsWidget({ overview, isLoading }: { overview: any | undefined; isLoading: boolean }) {
   const insights = useMemo(() => {
     if (!overview) return [];
 

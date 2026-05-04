@@ -336,7 +336,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Insights */}
-      <InsightsWidget />
+      <InsightsWidget overview={overview} isLoading={overviewLoading} />
 
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
