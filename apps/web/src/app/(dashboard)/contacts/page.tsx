@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthPaginatedQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,16 @@ export default function ContactsPage() {
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.contacts ?? new Set(), [selections.contacts]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Auto-open create dialog when arriving via ?action=create
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only effect
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setDialogOpen(true);
+      router.replace('/contacts', { scroll: false });
+    }
+  }, []);
   const [importOpen, setImportOpen] = useState(false);
   const [newContact, setNewContact] = useState({
     firstName: '', lastName: '', email: '', phone: '',

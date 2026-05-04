@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import type { DropResult } from '@hello-pangea/dnd';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,18 @@ function DealsBoardSkeleton() {
 }
 
 export default function DealsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  // Auto-open create dialog when arriving via ?action=create
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only effect
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setShowCreateDialog(true);
+      router.replace('/deals', { scroll: false });
+    }
+  }, []);
   const [lostDragInfo, setLostDragInfo] = useState<{
     dealId: string;
     sourceStage: StageId;

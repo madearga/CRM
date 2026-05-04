@@ -20,7 +20,8 @@ import {
   LayoutDashboard,
   Settings,
   Activity,
-} from "lucide-react";
+  FileText,
+  CalendarClock,
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -29,6 +30,13 @@ const NAV_ITEMS = [
   { label: "Deals", href: "/deals", icon: Handshake },
   { label: "Activities", href: "/activities", icon: Activity },
   { label: "Settings", href: "/settings", icon: Settings },
+];
+
+const QUICK_ACTIONS = [
+  { label: "Create new contact", href: "/contacts?action=create", icon: Users },
+  { label: "Create new deal", href: "/deals?action=create", icon: Handshake },
+  { label: "Create new invoice", href: "/invoices/new", icon: FileText },
+  { label: "Schedule activity", href: "/activities?action=create", icon: CalendarClock },
 ];
 
 export function CommandPalette() {
@@ -81,6 +89,20 @@ export function CommandPalette() {
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+
+        <CommandGroup heading="Quick Actions">
+          {QUICK_ACTIONS.map((action) => (
+            <CommandItem
+              key={action.href}
+              value={`action-${action.label}`}
+              onSelect={() => runCommand(() => router.push(action.href))}
+            >
+              <action.icon className="mr-2 h-4 w-4" />
+              <span>{action.label}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+        <CommandSeparator />
 
         {/* Search results */}
         {searchResults && searchResults.companies.length > 0 ? (

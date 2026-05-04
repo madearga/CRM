@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,18 @@ const PRIORITY_BADGE: Record<string, string> = {
 };
 
 export default function ActivitiesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Auto-open create dialog when arriving via ?action=create
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only effect
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setDialogOpen(true);
+      router.replace('/activities', { scroll: false });
+    }
+  }, []);
   const [tab, setTab] = useState('upcoming');
   const [newActivity, setNewActivity] = useState({
     title: '',

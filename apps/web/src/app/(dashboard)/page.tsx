@@ -70,6 +70,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { useDashboardParams, type DateRange } from "@/hooks/use-dashboard-params";
 import { QuickAddDealDialog } from "./quick-add-deal-dialog";
+import { InsightsWidget } from "@/components/insights-widget";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -333,6 +334,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Insights */}
+      <InsightsWidget />
 
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

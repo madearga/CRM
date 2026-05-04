@@ -5,13 +5,12 @@ import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActivityTimeline } from '@/components/activities/activity-timeline';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Users, Mail, Phone, Building2, Handshake, Activity, Archive, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Users, Mail, Phone, Building2, Handshake, Archive, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { formatDistanceToNow } from '@/lib/format-date';
 import { LIFECYCLE_COLORS } from '@/lib/constants';
 
 export default function ContactDetailPage() {
@@ -20,10 +19,6 @@ export default function ContactDetailPage() {
   const id = params.id as string;
 
   const { data: contact, isLoading } = useAuthQuery(api.contacts.getById, { id: id as any });
-  const { data: activities } = useAuthQuery(
-    api.activities.listByEntity,
-    contact ? { entityType: 'contact', entityId: id } : 'skip'
-  );
   const archiveContact = useAuthMutation(api.contacts.archive);
   const restoreContact = useAuthMutation(api.contacts.restore);
 
@@ -158,33 +153,7 @@ export default function ContactDetailPage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="activities">
-        <TabsList>
-          <TabsTrigger value="activities" className="flex items-center gap-1"><Activity className="h-4 w-4" />Activities</TabsTrigger>
-        </TabsList>
-        <TabsContent value="activities" className="mt-4">
-          {!activities?.length ? (
-            <Card><CardContent className="flex flex-col items-center py-8">
-              <Activity className="h-8 w-8 text-muted-foreground/50" />
-              <p className="mt-2 text-sm text-muted-foreground">No activities yet</p>
-            </CardContent></Card>
-          ) : (
-            <div className="space-y-2">
-              {activities.map((activity: any) => (
-                <div key={activity._id} className="flex items-start gap-3 rounded-md border p-3">
-                  <div className="mt-0.5 h-2 w-2 rounded-full bg-blue-400" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.title}</p>
-                    {activity.description && <p className="text-xs text-muted-foreground">{activity.description}</p>}
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity._creationTime))}</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs capitalize">{activity.type}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <ActivityTimeline entityType="contact" entityId={id} />
     </div>
   );
 }
