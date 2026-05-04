@@ -17,10 +17,12 @@ import {
   Clock,
   Download,
   FileSpreadsheet,
+  FileText,
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { EmptyState } from '@/components/empty-state';
+import { AttendanceReportPDF, type AttendanceReportPDFData } from "@/pdf/attendance-report-pdf";
+import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { toast } from 'sonner';
 import { usePermission } from '@/lib/permissions/use-permission';
 
@@ -96,6 +98,38 @@ export default function ReportsPage() {
     );
   }, [filteredSummary]);
 
+  const pdfData: AttendanceReportPDFData | null = useMemo(() => {
+    if (!filteredSummary.length) return null;
+    return {
+      month,
+      branchName: branchFilter !== "all"
+        ? (branches ?? []).find((b: any) => b.id === branchFilter)?.name
+        : undefined,
+      generatedAt: new Date().toLocaleDateString("id-ID", {
+        day: "2-digit", month: "long", year: "numeric",
+      }),
+      summary: {
+        totalEmployees: totals.totalEmployees,
+        avgAttendance: totals.totalEmployees > 0
+          ? Math.round(totals.avgAttendance / totals.totalEmployees)
+          : 0,
+        lateDays: totals.lateDays,
+        totalWorkHours: Math.round(totals.totalWorkHours * 100) / 100,
+      },
+      rows: filteredSummary.map((s: any) => ({
+        nik: s.nik,
+        employeeName: s.employeeName,
+        branchName: (branches ?? []).find((b: any) => b.id === s.branchId)?.name ?? "-",
+        date: month,
+        clockIn: "-",
+        clockOut: "-",
+        status: s.absent > s.present ? "absent" : "present" as "present" | "late" | "absent",
+        label: s.late > 0 ? "Terlambat" : s.absent > s.present ? "Alpha" : "Hadir",
+        totalWorkHours: Math.round((s.totalWorkHours ?? 0) * 100) / 100,
+      })),
+    };
+  }, [filteredSummary, branches, month, branchFilter, totals]);
+
   if (!canView) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
@@ -109,9 +143,17 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Reports</h1>
         {canExport && (
-          <Button size="sm" onClick={handleExport} disabled={exportCsv.isPending}>
-            <Download className="mr-1 h-4 w-4" />Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <PdfDownloadButton
+              doc={<AttendanceReportPDF data={pdfData!} />}
+              fileName={`attendance-report-${month}.pdf`}
+              label="Export PDF"
+              disabled={!pdfData}
+            />
+            <Button size="sm" onClick={handleExport} disabled={exportCsv.isPending}>
+              <Download className="mr-1 h-4 w-4" />Export CSV
+            </Button>
+          </div>
         )}
       </div>
 
