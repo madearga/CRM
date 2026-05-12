@@ -98,7 +98,6 @@ export function LineItemEditor({ lines, onChange }: LineItemEditorProps) {
                             placeholder="Search products..."
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
-                            autoFocus
                           />
                         </div>
                         <div className="max-h-48 overflow-auto">

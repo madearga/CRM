@@ -43,7 +43,7 @@ const QUICK_ACTIONS = [
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const router = useRouter();
+  const { push } = useRouter();
 
   const { data: searchResults } = useAuthQuery(
     api.search.globalSearch,
@@ -102,7 +102,7 @@ export function CommandPalette() {
             <CommandItem
               key={action.href}
               value={`action-${action.label}`}
-              onSelect={() => runCommand(() => router.push(action.href))}
+              onSelect={() => runCommand(() => push(action.href))}
             >
               <action.icon className="mr-2 h-4 w-4" />
               <span>{action.label}</span>
@@ -118,7 +118,7 @@ export function CommandPalette() {
               <CommandItem
                 key={company.id}
                 value={`company-${company.name}`}
-                onSelect={() => runCommand(() => router.push(`/companies/${company.id}`))}
+                onSelect={() => runCommand(() => push(`/companies/${company.id}`))}
               >
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>{company.name}</span>
@@ -138,7 +138,7 @@ export function CommandPalette() {
               <CommandItem
                 key={contact.id}
                 value={`contact-${contact.fullName}`}
-                onSelect={() => runCommand(() => router.push(`/contacts/${contact.id}`))}
+                onSelect={() => runCommand(() => push(`/contacts/${contact.id}`))}
               >
                 <Users className="mr-2 h-4 w-4" />
                 <span>{contact.fullName}</span>
@@ -156,7 +156,7 @@ export function CommandPalette() {
               <CommandItem
                 key={deal.id}
                 value={`deal-${deal.title}`}
-                onSelect={() => runCommand(() => router.push(`/deals/${deal.id}`))}
+                onSelect={() => runCommand(() => push(`/deals/${deal.id}`))}
               >
                 <Handshake className="mr-2 h-4 w-4" />
                 <span>{deal.title}</span>
@@ -177,7 +177,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={item.href}
                   value={`nav-${item.label}`}
-                  onSelect={() => runCommand(() => router.push(item.href))}
+                  onSelect={() => runCommand(() => push(item.href))}
                 >
                   <item.icon className="mr-2 h-4 w-4" />
                   <span>{item.label}</span>

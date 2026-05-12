@@ -54,7 +54,7 @@ interface SaleOrderFormProps {
 }
 
 export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!saleOrderId;
   const isDirty = useRef(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
@@ -117,9 +117,9 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
     api.pricelists.resolvePrices,
     header.companyId && lines.some(l => l.productId)
       ? {
-          productIds: lines.filter(l => l.productId).map(l => l.productId as any),
+          productIds: lines.reduce((acc, l) => l.productId ? [...acc, l.productId as any] : acc, [] as any[]),
           companyId: header.companyId as any,
-          quantities: lines.filter(l => l.productId).map(l => l.quantity),
+          quantities: lines.reduce((acc, l) => l.productId ? [...acc, l.quantity] : acc, [] as number[]),
         }
       : 'skip',
   );
@@ -202,7 +202,7 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
 
   const handleCancel = () => {
     if (isDirty.current && !confirm('You have unsaved changes. Discard?')) return;
-    router.back();
+    back();
   };
 
   // Calculate totals
@@ -308,11 +308,11 @@ export function SaleOrderForm({ saleOrderId, initialData }: SaleOrderFormProps) 
           lines: payload.lines,
         });
         toast.success('Sale order updated');
-        router.push(`/sales/${saleOrderId}`);
+        push(`/sales/${saleOrderId}`);
       } else {
         const newId = await createSO.mutateAsync(payload);
         toast.success('Sale order created');
-        router.push(`/sales/${newId}`);
+        push(`/sales/${newId}`);
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : `Failed to ${isEdit ? 'update' : 'create'} sale order`;

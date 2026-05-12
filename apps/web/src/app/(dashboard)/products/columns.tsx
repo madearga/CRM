@@ -54,7 +54,7 @@ const TypeBadge = memo(({ type, archivedAt }: { type: string; archivedAt?: numbe
       {type}
     </Badge>
     {archivedAt && (
-      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+      <Badge variant="secondary" className="ml-1 bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
         archived
       </Badge>
     )}

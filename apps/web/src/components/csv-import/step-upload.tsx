@@ -43,8 +43,8 @@ export function StepUpload({ onFileSelected }: StepUploadProps) {
       <div
         className={`flex flex-col items-center justify-center w-full h-52 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
           isDragging
-            ? 'border-[#171717] bg-gray-50'
-            : 'border-gray-200 hover:border-gray-400'
+            ? 'border-[#171717] bg-muted/50'
+            : 'border-border hover:border-gray-400'
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -69,7 +69,7 @@ export function StepUpload({ onFileSelected }: StepUploadProps) {
             if (file) handleFile(file);
           }}
         />
-        <Upload className="w-8 h-8 text-gray-400 mb-3" />
+        <Upload className="w-8 h-8 text-muted-foreground mb-3" />
         {isParsing ? (
           <p className="text-sm text-[#171717] font-medium animate-pulse">Parsing CSV...</p>
         ) : (
@@ -77,7 +77,7 @@ export function StepUpload({ onFileSelected }: StepUploadProps) {
             <p className="text-sm text-[#171717] font-medium">
               Drag & drop CSV or click to browse
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Maximum 500 rows, 5MB. .csv files only.
             </p>
           </>

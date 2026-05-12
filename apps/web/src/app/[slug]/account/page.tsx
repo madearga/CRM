@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 
 export default function AccountPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
+  const { push } = useRouter();
   const isAuth = useIsAuth();
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
@@ -63,7 +63,7 @@ export default function AccountPage() {
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
         <Package className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">Sign in to view your account</h2>
-        <Button className="mt-4" onClick={() => router.push(`/${slug}`)}>
+        <Button className="mt-4" onClick={() => push(`/${slug}`)}>
           Go to Shop
         </Button>
       </div>
@@ -90,7 +90,7 @@ export default function AccountPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push(`/${slug}`);
+    push(`/${slug}`);
   };
 
   return (

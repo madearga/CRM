@@ -21,7 +21,7 @@ import Link from 'next/link';
 const STATE_COLORS: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   paused: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  expired: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
+  expired: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
@@ -34,7 +34,7 @@ const INTERVAL_COLORS: Record<string, string> = {
 
 export default function SubscriptionDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: sub, isLoading } = useAuthQuery(api.subscriptions.getById, { id: id as any });
@@ -76,7 +76,7 @@ export default function SubscriptionDetailPage() {
     try {
       const invId = await generateInv.mutateAsync({ id: id as any });
       toast.success('Invoice generated');
-      router.push(`/invoices/${invId}`);
+      push(`/invoices/${invId}`);
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed');
     }
@@ -109,7 +109,7 @@ export default function SubscriptionDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <RefreshCw className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Subscription not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/subscriptions')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/subscriptions')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back to Subscriptions
         </Button>
       </div>
@@ -126,11 +126,11 @@ export default function SubscriptionDetailPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/subscriptions')}>
+          <Button variant="ghost" size="sm" onClick={() => push('/subscriptions')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
               <RefreshCw className="size-4" />
             </div>
             <div>
@@ -156,7 +156,7 @@ export default function SubscriptionDetailPage() {
               <Button variant="outline" size="sm" onClick={handlePause}>
                 <Pause className="mr-1 h-4 w-4" />Pause
               </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push(`/subscriptions/${id}/edit`)}>
+              <Button variant="outline" size="sm" onClick={() => push(`/subscriptions/${id}/edit`)}>
                 <Pencil className="mr-1 h-4 w-4" />Edit
               </Button>
             </>

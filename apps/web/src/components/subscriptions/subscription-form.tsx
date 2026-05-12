@@ -52,7 +52,7 @@ function calculateSubtotal(line: InvoiceLineItem): number {
 }
 
 export function SubscriptionForm({ subscriptionId, initialData }: SubscriptionFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!subscriptionId;
 
   const [form, setForm] = useState({
@@ -197,11 +197,11 @@ export function SubscriptionForm({ subscriptionId, initialData }: SubscriptionFo
       if (isEdit) {
         await updateSub.mutateAsync({ id: subscriptionId as any, ...payload });
         toast.success('Subscription updated');
-        router.push(`/subscriptions/${subscriptionId}`);
+        push(`/subscriptions/${subscriptionId}`);
       } else {
         const newId = await createSub.mutateAsync(payload);
         toast.success('Subscription created');
-        router.push(`/subscriptions/${newId}`);
+        push(`/subscriptions/${newId}`);
       }
     } catch (e: any) {
       toast.error(e.data?.message ?? `Failed to ${isEdit ? 'update' : 'create'} subscription`);
@@ -212,11 +212,11 @@ export function SubscriptionForm({ subscriptionId, initialData }: SubscriptionFo
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
             <RefreshCw className="size-4" />
           </div>
           <h2 className="text-lg font-semibold">{isEdit ? 'Edit Subscription' : 'New Subscription'}</h2>

@@ -40,7 +40,7 @@ export function ShopNavbar({
   cartItemCount = 0,
 }: ShopNavbarProps) {
   const user = useCurrentUser();
-  const router = useRouter();
+  const { push } = useRouter();
   const [search, setSearch] = useState('');
 
   const prefix = slug ? `/${slug}` : '/';
@@ -48,7 +48,7 @@ export function ShopNavbar({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`${prefix}?q=${encodeURIComponent(search.trim())}`);
+      push(`${prefix}?q=${encodeURIComponent(search.trim())}`);
     }
   };
 
@@ -156,7 +156,7 @@ export function ShopNavbar({
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(`${prefix}/orders`)}>
+                <DropdownMenuItem onClick={() => push(`${prefix}/orders`)}>
                   My Orders
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

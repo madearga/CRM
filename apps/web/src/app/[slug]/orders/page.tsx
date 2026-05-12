@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OrdersPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
+  const { push } = useRouter();
   const isAuth = useIsAuth();
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
@@ -32,7 +32,7 @@ export default function OrdersPage() {
         <Package className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">Sign in to view orders</h2>
         <p className="mt-2 text-muted-foreground">You need to be logged in to see your order history.</p>
-        <Button className="mt-4" onClick={() => router.push(`/${slug}`)}>
+        <Button className="mt-4" onClick={() => push(`/${slug}`)}>
           Go to Shop
         </Button>
       </div>

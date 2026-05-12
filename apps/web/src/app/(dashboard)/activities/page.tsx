@@ -35,13 +35,13 @@ import { toast } from 'sonner';
 import { formatDistanceToNow, format } from '@/lib/format-date';
 
 const PRIORITY_BADGE: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  low: 'bg-muted text-muted-foreground dark:bg-slate-800 dark:text-slate-400',
   medium: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
   high: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400',
 };
 
 export default function ActivitiesPage() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -50,7 +50,7 @@ export default function ActivitiesPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
       setDialogOpen(true);
-      router.replace('/activities', { scroll: false });
+      replace('/activities', { scroll: false });
     }
   }, []);
   const [tab, setTab] = useState('upcoming');
@@ -158,18 +158,21 @@ export default function ActivitiesPage() {
               <Input
                 placeholder="Activity title *"
                 value={newActivity.title}
-                onChange={(e) => setNewActivity({ ...newActivity, title: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
+
               />
               <Textarea
                 placeholder="Description"
                 value={newActivity.description}
-                onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
+
                 rows={2}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Select
                   value={newActivity.type}
-                  onValueChange={(v) => setNewActivity({ ...newActivity, type: v })}
+                  onValueChange={(v) => setNewActivity(prev => ({ ...prev, type: v }))}
+
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Type" />
@@ -182,7 +185,8 @@ export default function ActivitiesPage() {
                 </Select>
                 <Select
                   value={newActivity.priority}
-                  onValueChange={(v) => setNewActivity({ ...newActivity, priority: v })}
+                  onValueChange={(v) => setNewActivity(prev => ({ ...prev, priority: v }))}
+
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Priority" />
@@ -198,7 +202,8 @@ export default function ActivitiesPage() {
                 placeholder="Scheduled date"
                 type="datetime-local"
                 value={newActivity.dueAt}
-                onChange={(e) => setNewActivity({ ...newActivity, dueAt: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, dueAt: e.target.value }))}
+
               />
               <Button onClick={handleCreate} className="w-full" disabled={createActivity.isPending || scheduleActivity.isPending}>
                 {newActivity.dueAt ? 'Schedule Activity' : 'Log Activity'}

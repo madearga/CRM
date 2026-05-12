@@ -13,7 +13,7 @@ import { payWithSnap } from '@/lib/commerce/midtrans-snap';
 export default function CheckoutFailedPage() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const orderNumber = searchParams.get('order') ?? '';
   const [retrying, setRetrying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -27,7 +27,7 @@ export default function CheckoutFailedPage() {
     try {
       // Re-initiate checkout to get a new snap token
       // For now, redirect back to checkout page
-      router.push(`/${slug}/checkout`);
+      push(`/${slug}/checkout`);
     } catch {
       toast.error('Failed to retry payment.');
     } finally {
@@ -46,7 +46,7 @@ export default function CheckoutFailedPage() {
       // Note: cancelOrder requires orderId. The URL has orderNumber.
       // Best-effort: redirect to orders detail where cancellation UI exists.
       toast.success('Order cancelled.');
-      router.push(`/${slug}/cart`);
+      push(`/${slug}/cart`);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to cancel order.');
     } finally {

@@ -148,11 +148,11 @@ export default function AssignmentsPage() {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Start Date *</label>
+                    <label id="label-start-date" className="text-xs text-muted-foreground">Start Date *</label>
                     <Input type="date" value={assignment.startDate} onChange={(e) => setAssignment((p) => ({ ...p, startDate: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">End Date</label>
+                    <label id="label-end-date" className="text-xs text-muted-foreground">End Date</label>
                     <Input type="date" value={assignment.endDate} onChange={(e) => setAssignment((p) => ({ ...p, endDate: e.target.value }))} />
                   </div>
                 </div>

@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { usePermission } from '@/lib/permissions/use-permission';
 
 export default function EmployeeCreatePage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const canCreate = usePermission('hr_employees', 'create');
 
   const [form, setForm] = useState({
@@ -68,7 +68,7 @@ export default function EmployeeCreatePage() {
         branchId: form.branchId,
       } as any);
       toast.success(`Employee "${form.name.trim()}" created`);
-      router.push('/hr/employees');
+      push('/hr/employees');
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to create employee');
     }
@@ -85,7 +85,7 @@ export default function EmployeeCreatePage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/hr/employees')}>
+        <Button variant="ghost" size="sm" onClick={() => push('/hr/employees')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back
         </Button>
         <h1 className="text-2xl font-bold">Add Employee</h1>
@@ -193,7 +193,7 @@ export default function EmployeeCreatePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push('/hr/employees')}
+                onClick={() => push('/hr/employees')}
               >
                 Cancel
               </Button>

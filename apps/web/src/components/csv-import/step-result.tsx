@@ -30,27 +30,27 @@ export function StepResult({ result, onClose }: StepResultProps) {
           <span className="text-2xl font-semibold text-green-600">
             {result.created}
           </span>
-          <span className="text-sm text-gray-500">Created</span>
+          <span className="text-sm text-muted-foreground">Created</span>
         </div>
         <div className="flex flex-col items-center">
           <span className="text-2xl font-semibold text-yellow-600">
             {result.skipped}
           </span>
-          <span className="text-sm text-gray-500">Skipped</span>
+          <span className="text-sm text-muted-foreground">Skipped</span>
         </div>
         {hasErrors && (
           <div className="flex flex-col items-center">
             <span className="text-2xl font-semibold text-red-600">
               {result.errors.length}
             </span>
-            <span className="text-sm text-gray-500">Errors</span>
+            <span className="text-sm text-muted-foreground">Errors</span>
           </div>
         )}
       </div>
 
       {hasErrors && (
         <div className="w-full mt-2">
-          <p className="text-sm text-gray-600 mb-2 font-medium">Error details:</p>
+          <p className="text-sm text-muted-foreground mb-2 font-medium">Error details:</p>
           <ul className="text-sm text-red-600 space-y-1 max-h-32 overflow-y-auto">
             {result.errors.map((err, i) => (
               <li key={i}>

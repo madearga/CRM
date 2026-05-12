@@ -141,7 +141,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className={cn('flex gap-2 px-3 py-2', isUser && 'flex-row-reverse')}>
       <div
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+          'flex size-7 shrink-0 items-center justify-center rounded-full',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
         )}
       >

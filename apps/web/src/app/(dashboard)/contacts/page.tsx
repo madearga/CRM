@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,7 +26,8 @@ import { toast } from 'sonner';
 import { ImportContactsDialog } from './import-contacts-dialog';
 
 export default function ContactsPage() {
-  const router = useRouter();
+  const exportDate = useClientDateString();
+  const { push, replace } = useRouter();
   const { q: search, setSearch } = useContactsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.contacts ?? new Set(), [selections.contacts]);
@@ -37,7 +39,7 @@ export default function ContactsPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
       setDialogOpen(true);
-      router.replace('/contacts', { scroll: false });
+      replace('/contacts', { scroll: false });
     }
   }, []);
   const [importOpen, setImportOpen] = useState(false);
@@ -122,7 +124,7 @@ export default function ContactsPage() {
             { key: 'jobTitle', label: 'Job Title' },
             { key: 'lifecycleStage', label: 'Stage' },
           ]}
-          filename={`contacts-${new Date().toISOString().split('T')[0]}`}
+          filename={`contacts-${exportDate}`}
         />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -158,7 +160,7 @@ export default function ContactsPage() {
 
       {/* Search */}
       <div className="relative max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input placeholder="Search contacts..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
@@ -181,7 +183,7 @@ export default function ContactsPage() {
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/contacts/${row.id}`)}
+          onRowClick={(row) => push(`/contacts/${row.id}`)}
           rowClassName={(row) => selectedIds.has(row.id) ? 'bg-muted/30' : undefined}
         />
       )}

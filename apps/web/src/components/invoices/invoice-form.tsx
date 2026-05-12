@@ -37,7 +37,7 @@ interface InvoiceFormProps {
 }
 
 export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!invoiceId;
 
   const [form, setForm] = useState({
@@ -195,11 +195,11 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
           ...payload,
         });
         toast.success('Invoice updated');
-        router.push(`/invoices/${invoiceId}`);
+        push(`/invoices/${invoiceId}`);
       } else {
         const newId = await createInvoice.mutateAsync(payload);
         toast.success('Invoice created');
-        router.push(`/invoices/${newId}`);
+        push(`/invoices/${newId}`);
       }
     } catch (e: any) {
       toast.error(e.data?.message ?? `Failed to ${isEdit ? 'update' : 'create'} invoice`);
@@ -210,11 +210,11 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
             <FileText className="size-4" />
           </div>
           <h2 className="text-lg font-semibold">{isEdit ? 'Edit Invoice' : 'New Invoice'}</h2>
@@ -377,7 +377,7 @@ export function InvoiceForm({ invoiceId, initialData }: InvoiceFormProps) {
             <Button type="submit" disabled={createInvoice.isPending}>
               {createInvoice.isPending ? 'Saving...' : isEdit ? 'Update Invoice' : 'Create Invoice'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => back()}>Cancel</Button>
           </div>
         </div>
       </div>

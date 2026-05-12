@@ -129,7 +129,7 @@ export const create = createOrgMutation({
     const { userId, ...insertArgs } = args;
     return ctx.table('employees').insert({
       ...insertArgs,
-      ...(userId ?? undefined),
+      ...(userId ? { userId } : {}),
       status: 'active',
       hireDate: args.hireDate ?? now,
       organizationId: ctx.orgId,

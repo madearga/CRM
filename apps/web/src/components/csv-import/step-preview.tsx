@@ -39,20 +39,20 @@ export function StepPreview<T extends string>({
       </div>
 
       {/* Preview table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-2 text-left font-medium text-gray-600 w-12">
+            <tr className="bg-muted/50 border-b border-border">
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12">
                 #
               </th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600 w-24">
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">
                 Status
               </th>
               {mappedFields.map((f) => (
                 <th
                   key={f.key}
-                  className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap"
+                  className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap"
                 >
                   {f.label}
                 </th>
@@ -65,11 +65,11 @@ export function StepPreview<T extends string>({
               return (
                 <tr
                   key={row.rowIndex}
-                  className={`border-b border-gray-100 last:border-b-0 ${
+                  className={`border-b border-border last:border-b-0 ${
                     !isValid ? 'bg-red-50/50' : ''
                   }`}
                 >
-                  <td className="px-3 py-2 text-gray-500">
+                  <td className="px-3 py-2 text-muted-foreground">
                     {row.rowIndex + 1}
                   </td>
                   <td className="px-3 py-2">
@@ -88,7 +88,7 @@ export function StepPreview<T extends string>({
                     return (
                       <td
                         key={f.key}
-                        className="px-3 py-2 text-gray-800 whitespace-nowrap max-w-48 truncate"
+                        className="px-3 py-2 text-foreground whitespace-nowrap max-w-48 truncate"
                       >
                         {csvHeader ? row.data[csvHeader] : ''}
                       </td>
@@ -100,7 +100,7 @@ export function StepPreview<T extends string>({
           </tbody>
         </table>
         {validatedRows.length > 10 && (
-          <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+          <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border bg-muted/50">
             Showing 10 of {validatedRows.length} rows
           </div>
         )}

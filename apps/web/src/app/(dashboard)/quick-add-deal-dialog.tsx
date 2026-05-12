@@ -58,7 +58,6 @@ export function QuickAddDealDialog({ open, onOpenChange }: QuickAddDealDialogPro
             placeholder="Deal title *"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            autoFocus
           />
           <Input
             placeholder="Value (IDR)"

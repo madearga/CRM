@@ -34,7 +34,7 @@ interface PricelistFormProps {
 }
 
 export function PricelistForm({ pricelistId }: PricelistFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!pricelistId;
 
   const [form, setForm] = useState({
@@ -135,7 +135,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
       } else {
         const newId = await createPL.mutateAsync(payload);
         toast.success('Pricelist created');
-        router.push(`/settings/pricelists/${newId}`);
+        push(`/settings/pricelists/${newId}`);
         return;
       }
     } catch (e: any) {
@@ -148,7 +148,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-lg font-semibold">{isEdit ? 'Edit Pricelist' : 'New Pricelist'}</h2>
@@ -164,12 +164,15 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
               <Input
                 placeholder="e.g. Retail Default, Wholesale"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+
+
               />
             </div>
             <div className="space-y-2">
               <Label>Type *</Label>
-              <Select value={form.type} onValueChange={(v: any) => setForm({ ...form, type: v })}>
+              <Select value={form.type} onValueChange={(v: any) => setForm(prev => ({ ...prev, type: v }))}>
+
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fixed">Fixed Price</SelectItem>
@@ -184,7 +187,9 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
             <Textarea
               placeholder="Describe this pricelist..."
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+
+
               rows={2}
             />
           </div>
@@ -197,12 +202,15 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
                 max="100"
                 placeholder="0"
                 value={form.defaultDiscount}
-                onChange={(e) => setForm({ ...form, defaultDiscount: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, defaultDiscount: e.target.value }))}
+
+
               />
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>
-              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+              <Select value={form.currency} onValueChange={(v) => setForm(prev => ({ ...prev, currency: v }))}>
+
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="IDR">IDR (Rp)</SelectItem>
@@ -216,7 +224,9 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
                 type="number"
                 placeholder="0"
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, priority: e.target.value }))}
+
+
               />
               <p className="text-xs text-muted-foreground">Higher = wins when multiple match</p>
             </div>
@@ -272,7 +282,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
           <Save className="mr-1 h-4 w-4" />
           {isPending ? 'Saving...' : isEdit ? 'Update Pricelist' : 'Create Pricelist'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={() => back()}>Cancel</Button>
       </div>
     </form>
   );

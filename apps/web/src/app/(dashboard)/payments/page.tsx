@@ -26,7 +26,7 @@ import { ui, getErrorMessage } from '@/lib/ui-messages';
 
 const stateConfig: Record<string, { label: string; color: string }> = {
   confirmed: { label: 'Terkonfirmasi', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
-  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' },
+  draft: { label: 'Draft', color: 'bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground' },
   cancelled: { label: 'Dibatalkan', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
 };
 
@@ -115,7 +115,7 @@ export default function PaymentsPage() {
 
       <div className="flex gap-4">
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Cari berdasarkan referensi..."
             value={search}

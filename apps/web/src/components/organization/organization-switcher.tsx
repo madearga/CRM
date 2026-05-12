@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, Plus, Building2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,10 +42,11 @@ import { Id } from '@convex/_generated/dataModel';
 
 export function OrganizationSwitcher() {
   const [open, setOpen] = useState(false);
+  const organizationListId = useId();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [selectedOrgSlug, setSelectedOrgSlug] = useState<string | null>(null);
-  const router = useRouter();
+  const { push, refresh } = useRouter();
   const user = useCurrentUser();
 
   const { data: orgsData, isLoading } = useAuthQuery(
@@ -84,10 +85,10 @@ export function OrganizationSwitcher() {
         setOpen(false);
         // Navigate to the organization page after switching
         if (selectedOrgSlug) {
-          router.push(`/org/${selectedOrgSlug}`);
+          push(`/org/${selectedOrgSlug}`);
           setSelectedOrgSlug(null);
         } else {
-          router.refresh();
+          refresh();
         }
       },
       onError: (error: any) => {
@@ -104,7 +105,7 @@ export function OrganizationSwitcher() {
         setShowCreateDialog(false);
         setOrgName('');
         // Navigate to the new organization
-        router.push(`/org/${result.slug}`);
+        push(`/org/${result.slug}`);
       },
       onError: (error: any) => {
         toast.error(error.data?.message ?? 'Failed to create organization');
@@ -162,6 +163,7 @@ export function OrganizationSwitcher() {
           <Button
             variant="outline"
             role="combobox"
+            aria-controls={organizationListId}
             aria-expanded={open}
             className="w-[240px] justify-between"
             size="sm"
@@ -179,13 +181,13 @@ export function OrganizationSwitcher() {
                 </Badge>
               )}
             </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[250px] p-0">
           <Command>
             <CommandInput placeholder="Search organizations..." />
-            <CommandList>
+            <CommandList id={organizationListId}>
               <WithSkeleton isLoading={isLoading}>
                 <CommandEmpty>No organization found.</CommandEmpty>
                 <CommandGroup heading="Organizations">
@@ -215,7 +217,7 @@ export function OrganizationSwitcher() {
                       </div>
                       <Check
                         className={cn(
-                          'ml-2 h-4 w-4 shrink-0',
+                          'ml-2 size-4 shrink-0',
                           currentOrg.id === org.id ? 'opacity-100' : 'opacity-0'
                         )}
                       />

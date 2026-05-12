@@ -19,7 +19,7 @@ export function ShopFooter({ storeName = 'Store' }: ShopFooterProps) {
         <div className="flex flex-col items-center gap-1 md:items-start">
           <p className="text-sm font-semibold">{storeName}</p>
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {storeName}. All rights reserved.
+            <span suppressHydrationWarning>© {new Date().getFullYear()} {storeName}. All rights reserved.</span>
           </p>
         </div>
         <nav className="flex gap-4">

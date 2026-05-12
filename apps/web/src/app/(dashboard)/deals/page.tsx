@@ -45,7 +45,7 @@ function DealsBoardSkeleton() {
 }
 
 export default function DealsPage() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
@@ -54,7 +54,7 @@ export default function DealsPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
       setShowCreateDialog(true);
-      router.replace('/deals', { scroll: false });
+      replace('/deals', { scroll: false });
     }
   }, []);
   const [lostDragInfo, setLostDragInfo] = useState<{
