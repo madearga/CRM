@@ -39,12 +39,12 @@ export const createQueryClient = ({
         onError: (error: any) => {
           if (error.message.includes('limit')) {
             const messages = [
-              'Whoa there, speedster! 🏃‍♂️',
-              'Easy tiger! 🐅',
-              'Hold your horses! 🐴',
-              'Pump the brakes! 🚦',
-              'Slow down, turbo! 🚀',
-              'Take a breather! 😮‍💨',
+              'Slow down. Rate limit reached.',
+              'Too many requests. Wait a moment.',
+              'Rate limit hit. Try again shortly.',
+              'Slow down. Rate limit reached.',
+              'Too many requests. Wait a moment.',
+              'Rate limit hit. Try again shortly.',
             ];
 
             const randomMessage =
@@ -63,9 +63,9 @@ export const createQueryClient = ({
             toast.error(`${randomMessage}${retryInMessage}`);
           } else {
             const genericMessages = [
-              'Oops! Something went sideways 🤷',
-              'Houston, we have a problem 🚀',
-              'Uh oh, gremlins in the system! 👹',
+              'Something went wrong.',
+              'Request failed.',
+              'An error occurred.',
             ];
 
             const randomError =

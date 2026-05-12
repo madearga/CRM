@@ -202,10 +202,10 @@ export default function DashboardPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="this_month">This Month</SelectItem>
-              <SelectItem value="last_month">Last Month</SelectItem>
-              <SelectItem value="this_quarter">This Quarter</SelectItem>
-              <SelectItem value="this_year">This Year</SelectItem>
+              <SelectItem value="this_month">This month</SelectItem>
+              <SelectItem value="last_month">Last month</SelectItem>
+              <SelectItem value="this_quarter">This quarter</SelectItem>
+              <SelectItem value="this_year">This year</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -286,9 +286,10 @@ export default function DashboardPage() {
 
       {/* Row 1b: Outstanding & Overdue KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
-        <Card className="transition-shadow hover:shadow-md border-l-4 border-l-orange-400">
+        <Card className="transition-shadow hover:shadow-md border-t-2 border-t-orange-400">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="flex items-center gap-1.5">
+              <span className="inline-block size-2 rounded-full bg-orange-400" aria-hidden="true" />
               <FileText className="h-4 w-4" />
               Outstanding Invoices
             </CardDescription>
@@ -304,14 +305,22 @@ export default function DashboardPage() {
         </Card>
 
         <Card
-          className={`transition-shadow hover:shadow-md border-l-4 ${
+          className={`transition-shadow hover:shadow-md border-t-2 ${
             (analyticsOverview?.overdueAmount ?? 0) > 0
-              ? "border-l-red-500"
-              : "border-l-green-500"
+              ? "border-t-red-500"
+              : "border-t-green-500"
           }`}
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="flex items-center gap-1.5">
+              <span
+                className={`inline-block size-2 rounded-full ${
+                  (analyticsOverview?.overdueAmount ?? 0) > 0
+                    ? "bg-red-500"
+                    : "bg-green-500"
+                }`}
+                aria-hidden="true"
+              />
               <AlertTriangle className="h-4 w-4" />
               Overdue Amount
             </CardDescription>
@@ -329,7 +338,7 @@ export default function DashboardPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               {(analyticsOverview?.overdueAmount ?? 0) > 0
                 ? "Past due date — needs attention"
-                : "All invoices current 🎉"}
+                : "All invoices current"}
             </p>
           </CardContent>
         </Card>
@@ -341,7 +350,7 @@ export default function DashboardPage() {
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Revenue by Month */}
-        <Card>
+        <Card className="transition-shadow hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
@@ -354,7 +363,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Pipeline Forecast */}
-        <Card>
+        <Card className="transition-shadow hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
@@ -376,7 +385,7 @@ export default function DashboardPage() {
       {/* Row 3: Tables */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Top Products */}
-        <Card>
+        <Card className="transition-shadow hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
@@ -416,7 +425,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Invoice Aging */}
-        <Card>
+        <Card className="transition-shadow hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
@@ -430,7 +439,7 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>Bucket</TableHead>
                     <TableHead className="text-right">Invoices</TableHead>
-                    <TableHead className="text-right">Amount Due</TableHead>
+                    <TableHead className="text-right">Amount due</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -447,7 +456,7 @@ export default function DashboardPage() {
               </Table>
             ) : (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No overdue invoices 🎉
+                No overdue invoices
               </p>
             )}
           </CardContent>
@@ -455,7 +464,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 4: Sales Performance */}
-      <Card>
+      <Card className="transition-shadow hover:shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -470,9 +479,9 @@ export default function DashboardPage() {
                   <TableHead>Owner</TableHead>
                   <TableHead className="text-right">Deals</TableHead>
                   <TableHead className="text-right">Won</TableHead>
-                  <TableHead className="text-right">Win Rate</TableHead>
-                  <TableHead className="text-right">Total Value</TableHead>
-                  <TableHead className="text-right">Avg Close (days)</TableHead>
+                  <TableHead className="text-right">Win rate</TableHead>
+                  <TableHead className="text-right">Total value</TableHead>
+                  <TableHead className="text-right">Avg close (days)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

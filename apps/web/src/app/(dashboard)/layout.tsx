@@ -1,12 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2,
   LogOut,
   Moon,
+  Search,
   Sun,
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 
 
@@ -89,6 +91,10 @@ export default function DashboardLayout({
 
   const needsOnboarding = isLoggedIn && !user.activeOrganization;
 
+  const openCommandPalette = () => {
+    window.dispatchEvent(new Event('open-command-palette'));
+  };
+
   // AI Chat (owner only)
   const isOwner = user?.activeOrganization?.role === 'owner';
   const aiChat = useAiChat();
@@ -100,17 +106,46 @@ export default function DashboardLayout({
 
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={{
+        '--sidebar-width': '17rem',
+        '--sidebar-width-icon': '3.5rem',
+        '--sidebar': 'oklch(12% 0.005 260)',
+        '--sidebar-foreground': 'rgba(240,240,250,0.88)',
+        '--sidebar-primary': '#f0f0fa',
+        '--sidebar-primary-foreground': 'oklch(12% 0.005 260)',
+        '--sidebar-accent': 'rgba(240,240,250,0.06)',
+        '--sidebar-accent-foreground': 'rgba(240,240,250,0.88)',
+        '--sidebar-border': 'rgba(240,240,250,0.08)',
+        '--sidebar-ring': 'rgba(240,240,250,0.2)',
+      } as React.CSSProperties}
+    >
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-2">
-            <div className="flex size-8 items-center justify-center rounded-[32px] border border-[rgba(240,240,250,0.35)] bg-[rgba(240,240,250,0.1)] text-foreground">
-              <Building2 className="size-4" />
+        <SidebarHeader className="gap-2 p-4 pb-3">
+          <div className="flex items-center gap-3 px-1 py-2">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-foreground">
+              <Building2 className="size-[18px]" />
             </div>
-            <span className="truncate text-sm font-semibold">
-              {user?.activeOrganization?.name ?? 'CRM'}
-            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold tracking-tight text-sidebar-foreground">
+                {user?.activeOrganization?.name ?? 'CRM'}
+              </p>
+              <p className="truncate text-[11px] text-sidebar-foreground/50">
+                Workspace
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg bg-sidebar-accent px-3 text-left text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring active:scale-[0.98]"
+          >
+            <Search className="size-3.5 shrink-0" />
+            <span className="truncate">Find anything</span>
+            <kbd className="ml-auto hidden rounded border border-sidebar-border px-1.5 py-0.5 text-[10px] font-medium text-sidebar-foreground/40 md:inline-flex">
+              ⌘K
+            </kbd>
+          </button>
           <OrganizationSwitcher />
         </SidebarHeader>
 
@@ -136,63 +171,66 @@ export default function DashboardLayout({
           )}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="border-t border-sidebar-border/50 p-3">
           {isLoggedIn ? (
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <Avatar className="size-7">
-                    <AvatarImage src={user?.image ?? undefined} />
-                    <AvatarFallback className="text-xs">
-                      {user?.name
-                        ?.split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase() ?? '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="flex-1 truncate text-sm font-medium">
-                    {user?.name ?? 'User'}
-                  </span>
-                </div>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                  {theme === 'dark' ? <Sun /> : <Moon />}
-                  <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2.5 px-2 py-2">
+                <Avatar className="size-7 rounded-lg">
+                  <AvatarImage src={user?.image ?? undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {user?.name
+                      ?.split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase() ?? '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="flex-1 truncate text-[13px] font-medium text-sidebar-foreground">
+                  {user?.name ?? 'User'}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                <SidebarMenuButton
+                  className="h-8 flex-1 rounded-lg text-[12px] active:scale-[0.97]"
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                >
+                  {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                  <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => signOut()}>
-                  <LogOut />
+                <SidebarMenuButton
+                  className="h-8 flex-1 rounded-lg text-[12px] active:scale-[0.97]"
+                  onClick={() => signOut()}
+                >
+                  <LogOut className="size-3.5" />
                   <span>Sign out</span>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+              </div>
+            </div>
           ) : (
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/login">
-                    <LogOut style={{ transform: 'rotate(180deg)' }} />
-                    <span>Sign in</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarMenuButton
+              asChild
+              className="h-8 w-full rounded-lg active:scale-[0.97]"
+            >
+              <Link href="/login">
+                <LogOut className="size-3.5" style={{ transform: 'rotate(180deg)' }} />
+                <span>Sign in</span>
+              </Link>
+            </SidebarMenuButton>
           )}
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 bg-black/80 px-4 backdrop-blur">
-          <SidebarTrigger />
+        <header className="flex h-14 items-center gap-3 border-b border-border/40 px-4">
+          <SidebarTrigger className="size-8 rounded-lg active:scale-[0.97]" />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-sm font-semibold">{getPageTitle(pathname, pluginNavItems)}</h1>
+          <h1 className="text-[13px] font-medium tracking-tight text-foreground/70">
+            {getPageTitle(pathname, pluginNavItems)}
+          </h1>
         </header>
         <main className="flex-1 p-4">
           <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </Suspense>
         </main>
       </SidebarInset>

@@ -91,10 +91,10 @@ export default function PaymentTermsPage() {
       };
       if (editing) {
         await updateMutation.mutateAsync({ id: editing.id, ...payload });
-        ui.success.updated(`Termin "${form.name}"`);
+        ui.success.updated(`Term "${form.name}"`);
       } else {
         await createMutation.mutateAsync(payload);
-        ui.success.created(`Termin "${form.name}"`);
+        ui.success.created(`Term "${form.name}"`);
       }
       setDialogOpen(false);
     } catch (e: unknown) {
@@ -106,8 +106,8 @@ export default function PaymentTermsPage() {
 
   const handleDelete = async (pt: PaymentTerm) => {
     const ok = await confirm({
-      title: 'Hapus Termin Pembayaran',
-      description: `Termin "${pt.name}" akan dihapus secara permanen. Invoice yang sudah menggunakan termin ini tidak akan terpengaruh.`,
+      title: 'Hapus Term Pembayaran',
+      description: `Term "${pt.name}" akan dihapus secara permanen. Invoice yang sudah menggunakan termin ini tidak akan terpengaruh.`,
       confirmLabel: 'Hapus',
       variant: 'destructive',
     });
@@ -115,11 +115,11 @@ export default function PaymentTermsPage() {
 
     try {
       await removeMutation.mutateAsync({ id: pt.id });
-      ui.success.deleted(`Termin "${pt.name}"`);
+      ui.success.deleted(`Term "${pt.name}"`);
     } catch (e: unknown) {
       const msg = getErrorMessage(e);
       if (msg.includes('used') || msg.includes('digunakan')) {
-        ui.error.inUse(`Termin "${pt.name}"`);
+        ui.error.inUse(`Term "${pt.name}"`);
       } else {
         toast.error(msg);
       }
@@ -131,13 +131,13 @@ export default function PaymentTermsPage() {
       {confirmDialog}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Termin Pembayaran</h1>
+          <h1 className="text-2xl font-bold">Term Pembayaran</h1>
           <p className="text-sm text-muted-foreground">
             Kelola jatuh tempo dan diskon bayar cepat.
           </p>
         </div>
         <Button onClick={openCreate} disabled={submitting}>
-          <Plus className="mr-1 h-4 w-4" /> Tambah Termin
+          <Plus className="mr-1 h-4 w-4" /> Tambah Term
         </Button>
       </div>
 
@@ -187,7 +187,7 @@ export default function PaymentTermsPage() {
                       </div>
                       {!search && (
                         <Button variant="outline" size="sm" onClick={openCreate}>
-                          <Plus className="mr-1 h-4 w-4" /> Tambah Termin
+                          <Plus className="mr-1 h-4 w-4" /> Tambah Term
                         </Button>
                       )}
                     </div>
@@ -253,7 +253,7 @@ export default function PaymentTermsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Termin' : 'Tambah Termin'}</DialogTitle>
+            <DialogTitle>{editing ? 'Edit Term' : 'Tambah Term'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -284,7 +284,7 @@ export default function PaymentTermsPage() {
                 {form.dueDays === 0 ? 'Pembayaran langsung' : `Pembayaran dalam ${form.dueDays} hari`}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Diskon (hari)</label>
                 <Input
@@ -309,7 +309,7 @@ export default function PaymentTermsPage() {
             </div>
             {form.discountDays > 0 && form.discountPercent > 0 && (
               <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                💡 Diskon {form.discountPercent}% jika dibayar dalam {form.discountDays} hari pertama
+                Tip: {form.discountPercent}% discount if paid within {form.discountDays} days
               </p>
             )}
           </div>

@@ -18,7 +18,7 @@ export function MessageList({ messages }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-muted-foreground">
-        <div className="text-3xl">💬</div>
+        <div className="text-lg font-light tracking-tight">AI</div>
         <p className="text-sm font-medium">AI Assistant</p>
         <p className="text-center text-xs">
           Tanya apa saja tentang data CRM Anda.
