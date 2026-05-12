@@ -22,6 +22,7 @@ import {
   Activity,
   FileText,
   CalendarClock,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -66,6 +67,12 @@ export function CommandPalette() {
     if (!open) setQuery("");
   }, [open]);
 
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener('open-command-palette', openPalette);
+    return () => window.removeEventListener('open-command-palette', openPalette);
+  }, []);
+
   const runCommand = useCallback(
     (command: () => void) => {
       setOpen(false);
@@ -88,9 +95,9 @@ export function CommandPalette() {
         onValueChange={setQuery}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>No results found</CommandEmpty>
 
-        <CommandGroup heading="Quick Actions">
+        <CommandGroup heading="Quick actions">
           {QUICK_ACTIONS.map((action) => (
             <CommandItem
               key={action.href}

@@ -11,23 +11,30 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export const EmptyState = memo(function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+export const EmptyState = memo(function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className,
+}: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-16', className)}>
-      <div className="relative">
-        {/* Decorative ring */}
-        <div className="absolute inset-0 -m-4 rounded-full bg-muted/50" />
-        <div className="relative flex size-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-          {icon}
-        </div>
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center py-16',
+        className,
+      )}
+    >
+      <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-muted-foreground">
+        {icon}
       </div>
-      <h3 className="mt-6 text-sm font-semibold">{title}</h3>
+      <h3 className="mt-5 text-sm font-semibold text-foreground">{title}</h3>
       {description ? (
-        <p className="mt-1 max-w-[260px] text-center text-sm text-muted-foreground">
+        <p className="mt-1.5 max-w-[260px] text-center text-sm text-muted-foreground">
           {description}
         </p>
       ) : null}
-      {action ? <div className="mt-4">{action}</div> : null}
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
 });
