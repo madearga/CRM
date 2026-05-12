@@ -529,7 +529,7 @@ export default function DashboardPage() {
               <ul className="space-y-3">
                 {overview.agingDeals.slice(0, 5).map((deal) => (
                   <li key={deal.id} className="flex items-start gap-3 text-sm">
-                    <div className="mt-1 h-2 w-2 rounded-full bg-amber-400" />
+                    <div className="mt-1 size-2 rounded-full bg-amber-400" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{deal.title}</p>
                       <p className="text-xs text-muted-foreground">
@@ -565,7 +565,7 @@ export default function DashboardPage() {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
                     <li key={activity.id} className="flex items-start gap-3 text-sm">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{activity.title}</p>
                         <p className="text-xs text-muted-foreground">
@@ -594,7 +594,7 @@ export default function DashboardPage() {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
                     <li key={activity.id} className="flex items-start gap-3 text-sm">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{activity.title}</p>
                         <p className="text-xs text-muted-foreground">

@@ -33,7 +33,7 @@ import { ActivityTimeline } from '@/components/activities/activity-timeline';
 
 export default function DealDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const dealId = params.id as string;
 
   const { data: deal, isLoading } = useAuthQuery(api.deals.getById, { id: dealId as any });
@@ -54,7 +54,7 @@ export default function DealDetailPage() {
         ],
       });
       toast.success('Converted to Sale Order');
-      router.push(`/sales/${soId}`);
+      push(`/sales/${soId}`);
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Conversion failed');
     }
@@ -93,7 +93,7 @@ export default function DealDetailPage() {
       <div className="flex flex-col items-center justify-center py-16">
         <Handshake className="size-12 text-muted-foreground/50" />
         <p className="mt-3 text-sm text-muted-foreground">Deal not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/deals')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/deals')}>
           Back to Deals
         </Button>
       </div>
@@ -105,7 +105,7 @@ export default function DealDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/deals')}>
+          <Button variant="ghost" size="icon" onClick={() => push('/deals')}>
             <ArrowLeft className="size-4" />
           </Button>
           <div>
@@ -115,7 +115,7 @@ export default function DealDetailPage() {
                 {deal.stage}
               </Badge>
               {deal.archivedAt && (
-                <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+                <Badge variant="secondary" className="bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
                   Archived
                 </Badge>
               )}

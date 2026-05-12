@@ -8,8 +8,8 @@ const METHOD_CONFIG: Record<string, { label: string; icon: any; color: string }>
   credit_card: { label: "Credit Card", icon: CreditCard, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
   debit_card: { label: "Debit Card", icon: CreditCard, color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" },
   e_wallet: { label: "E-Wallet", icon: Wallet, color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
-  cheque: { label: "Cheque", icon: Scroll, color: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
-  other: { label: "Other", icon: HelpCircle, color: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400" },
+  cheque: { label: "Cheque", icon: Scroll, color: "bg-muted text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
+  other: { label: "Other", icon: HelpCircle, color: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground" },
 };
 
 export const PaymentMethodBadge = memo(({ method }: { method: string }) => {

@@ -15,7 +15,7 @@ export function ChatToggle({ onClick, isOpen }: ChatToggleProps) {
     <Button
       onClick={onClick}
       size="icon"
-      className="fixed bottom-4 right-4 z-50 h-11 w-11 rounded-full shadow-lg"
+      className="fixed bottom-4 right-4 z-50 size-11 rounded-full shadow-lg"
     >
       <Sparkles className="h-5 w-5" />
     </Button>

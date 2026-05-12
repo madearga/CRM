@@ -16,7 +16,7 @@ const SaleOrderForm = dynamic(
 
 export default function EditSaleOrderPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: so, isLoading } = useAuthQuery(api.saleOrders.getById, { id: id as any });
@@ -30,7 +30,7 @@ export default function EditSaleOrderPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Cannot edit this order</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/sales')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/sales')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back to Sales
         </Button>
       </div>

@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 
 export default function InvoicesPage() {
   const exportDate = useClientDateString();
-  const router = useRouter();
+  const { push } = useRouter();
   const {
     q: search,
     archived: showArchived,
@@ -127,14 +127,14 @@ export default function InvoicesPage() {
           ]}
           filename={`invoices-${exportDate}`}
         />
-        <Button size="sm" onClick={() => router.push('/invoices/new')}>
+        <Button size="sm" onClick={() => push('/invoices/new')}>
           <Plus className="mr-1 h-4 w-4" />New Invoice
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search invoices..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={typeFilter ?? "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? null : v)}>
@@ -179,13 +179,13 @@ export default function InvoicesPage() {
         <EmptyState
           icon={<FileText className="size-7" />} title="No invoices yet"
           description="Create your first invoice or bill to start tracking payments."
-          action={<Button variant="outline" size="sm" onClick={() => router.push('/invoices/new')}><Plus className="mr-1 h-4 w-4" />Create Invoice</Button>}
+          action={<Button variant="outline" size="sm" onClick={() => push('/invoices/new')}><Plus className="mr-1 h-4 w-4" />Create Invoice</Button>}
         />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/invoices/${row.id}`)}
+          onRowClick={(row) => push(`/invoices/${row.id}`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}

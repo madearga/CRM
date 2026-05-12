@@ -186,7 +186,7 @@ export function TeamMembersTab({ canManage }: TeamMembersTabProps) {
                 <div className="space-y-2">
                   <label id="label-email" className="text-sm font-medium">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                     <Input
                       placeholder="name@example.com"
                       className="pl-9"

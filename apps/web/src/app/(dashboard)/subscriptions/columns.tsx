@@ -36,13 +36,13 @@ const INTERVAL_COLORS: Record<string, string> = {
 const STATE_COLORS: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   paused: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  expired: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
+  expired: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
 const NameCell = memo(({ id, name }: { id: string; name: string }) => (
   <div className="flex items-center gap-3">
-    <div className="flex size-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+    <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
       <RefreshCw className="size-4" />
     </div>
     <Link href={`/subscriptions/${id}`} className="font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -58,7 +58,7 @@ const StateBadge = memo(({ state, archivedAt }: { state?: string | null; archive
       {state ?? "active"}
     </Badge>
     {archivedAt && (
-      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+      <Badge variant="secondary" className="ml-1 bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
         archived
       </Badge>
     )}

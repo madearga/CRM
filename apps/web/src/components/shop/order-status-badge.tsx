@@ -7,7 +7,7 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   shipped: { label: 'Shipped', variant: 'outline', className: 'border-cyan-500 text-cyan-700 bg-cyan-50 dark:text-cyan-400 dark:bg-cyan-950' },
   delivered: { label: 'Delivered', variant: 'outline', className: 'border-green-500 text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950' },
   cancelled: { label: 'Cancelled', variant: 'destructive', className: '' },
-  expired: { label: 'Expired', variant: 'secondary', className: 'text-gray-500' },
+  expired: { label: 'Expired', variant: 'secondary', className: 'text-muted-foreground' },
 };
 
 export function OrderStatusBadge({ status }: { status: string }) {

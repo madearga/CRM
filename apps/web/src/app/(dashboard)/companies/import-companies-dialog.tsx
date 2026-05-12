@@ -96,12 +96,12 @@ export function ImportCompaniesDialog({
             {STEP_TITLES[step as keyof typeof STEP_TITLES]}
           </h2>
           {fileName && step > 1 && (
-            <p className="text-xs text-gray-500 mt-0.5">{fileName}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{fileName}</p>
           )}
         </div>
 
         {/* Progress steps indicator */}
-        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50/50">
+        <div className="px-6 py-3 border-b border-border bg-muted/50/50">
           <div className="flex items-center gap-2">
             {(['Upload', 'Map', 'Preview', 'Result'] as const).map(
               (label, i) => (
@@ -109,7 +109,7 @@ export function ImportCompaniesDialog({
                   {i > 0 && (
                     <div
                       className={`w-8 h-px ${
-                        step > i ? 'bg-[#171717]' : 'bg-gray-200'
+                        step > i ? 'bg-[#171717]' : 'bg-border'
                       }`}
                     />
                   )}
@@ -119,7 +119,7 @@ export function ImportCompaniesDialog({
                         ? 'text-green-600'
                         : step === i + 1
                           ? 'text-[#171717]'
-                          : 'text-gray-400'
+                          : 'text-muted-foreground'
                     }`}
                   >
                     <span
@@ -128,7 +128,7 @@ export function ImportCompaniesDialog({
                           ? 'bg-green-600 text-white'
                           : step === i + 1
                             ? 'bg-[#171717] text-white'
-                            : 'bg-gray-200 text-gray-500'
+                            : 'bg-border text-muted-foreground'
                       }`}
                     >
                       {step > i + 1 ? '✓' : i + 1}
@@ -169,7 +169,7 @@ export function ImportCompaniesDialog({
 
         {/* Footer navigation */}
         {step > 1 && step < 4 && (
-          <div className="flex justify-between px-6 py-4 border-t border-gray-200">
+          <div className="flex justify-between px-6 py-4 border-t border-border">
             <Button
               variant="outline"
               onClick={handleBack}

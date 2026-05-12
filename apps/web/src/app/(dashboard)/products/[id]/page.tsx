@@ -28,7 +28,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: product, isLoading } = useAuthQuery(api.products.getById, { id: id as any });
@@ -58,7 +58,7 @@ export default function ProductDetailPage() {
     try {
       const newId = await duplicateProduct.mutateAsync({ id: id as any });
       toast.success('Product duplicated');
-      router.push(`/products/${newId}`);
+      push(`/products/${newId}`);
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to duplicate');
     }
@@ -78,7 +78,7 @@ export default function ProductDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <Package className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Product not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/products')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/products')}>
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Products
         </Button>
@@ -91,7 +91,7 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/products')}>
+          <Button variant="ghost" size="sm" onClick={() => push('/products')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default function ProductDetailPage() {
                   <span className="text-xs text-muted-foreground">SKU: {product.sku}</span>
                 )}
                 {product.archivedAt && (
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
                     Archived
                   </Badge>
                 )}
@@ -120,7 +120,7 @@ export default function ProductDetailPage() {
           <Button variant="outline" size="sm" onClick={handleDuplicate}>
             <Copy className="mr-1 h-4 w-4" />Duplicate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => router.push(`/products/${id}/edit`)}>
+          <Button variant="outline" size="sm" onClick={() => push(`/products/${id}/edit`)}>
             <Pencil className="mr-1 h-4 w-4" />Edit
           </Button>
           {product.archivedAt ? (

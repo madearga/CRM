@@ -40,7 +40,7 @@ export function StepMapColumns<T extends string>({
         <div className="space-y-2">
           {fields.map((field) => (
             <div key={field.key} className="flex items-center gap-3">
-              <label className="w-40 text-sm text-gray-600 flex items-center gap-1 shrink-0">
+              <label className="w-40 text-sm text-muted-foreground flex items-center gap-1 shrink-0">
                 {field.label}
                 {field.required && <span className="text-red-500">*</span>}
               </label>
@@ -72,14 +72,14 @@ export function StepMapColumns<T extends string>({
         <h3 className="text-sm font-medium text-[#171717] mb-3">
           Preview (first 5 rows)
         </h3>
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="bg-muted/50 border-b border-border">
                 {headers.map((h) => (
                   <th
                     key={h}
-                    className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap"
+                    className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -88,11 +88,11 @@ export function StepMapColumns<T extends string>({
             </thead>
             <tbody>
               {previewRows.map((row, i) => (
-                <tr key={i} className="border-b border-gray-100 last:border-b-0">
+                <tr key={i} className="border-b border-border last:border-b-0">
                   {headers.map((h) => (
                     <td
                       key={h}
-                      className="px-3 py-2 text-gray-800 whitespace-nowrap max-w-48 truncate"
+                      className="px-3 py-2 text-foreground whitespace-nowrap max-w-48 truncate"
                     >
                       {row[h] || <span className="text-gray-300">—</span>}
                     </td>

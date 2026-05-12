@@ -34,7 +34,7 @@ interface PricelistFormProps {
 }
 
 export function PricelistForm({ pricelistId }: PricelistFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!pricelistId;
 
   const [form, setForm] = useState({
@@ -135,7 +135,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
       } else {
         const newId = await createPL.mutateAsync(payload);
         toast.success('Pricelist created');
-        router.push(`/settings/pricelists/${newId}`);
+        push(`/settings/pricelists/${newId}`);
         return;
       }
     } catch (e: any) {
@@ -148,7 +148,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-lg font-semibold">{isEdit ? 'Edit Pricelist' : 'New Pricelist'}</h2>
@@ -282,7 +282,7 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
           <Save className="mr-1 h-4 w-4" />
           {isPending ? 'Saving...' : isEdit ? 'Update Pricelist' : 'Create Pricelist'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={() => back()}>Cancel</Button>
       </div>
     </form>
   );

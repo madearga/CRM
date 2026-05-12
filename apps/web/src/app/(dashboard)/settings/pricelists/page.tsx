@@ -25,7 +25,7 @@ const typeBadgeMap: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export default function PricelistsPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const [search, setSearch] = useState('');
 
   const { data, isLoading } = useAuthPaginatedQuery(
@@ -87,13 +87,13 @@ export default function PricelistsPage() {
             Manage pricing rules, volume discounts, and customer-specific pricing.
           </p>
         </div>
-        <Button onClick={() => router.push('/settings/pricelists/new')}>
+        <Button onClick={() => push('/settings/pricelists/new')}>
           <Plus className="mr-1 h-4 w-4" /> New Pricelist
         </Button>
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search pricelists..."
           value={search}
@@ -135,7 +135,7 @@ export default function PricelistsPage() {
                     <TableRow
                       key={pl.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => router.push(`/settings/pricelists/${pl.id}`)}
+                      onClick={() => push(`/settings/pricelists/${pl.id}`)}
                     >
                       <TableCell className="font-medium">
                         <div>
@@ -167,7 +167,7 @@ export default function PricelistsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/settings/pricelists/${pl.id}`); }}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); push(`/settings/pricelists/${pl.id}`); }}>
                               <Tag className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(pl.id); }}>

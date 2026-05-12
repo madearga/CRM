@@ -29,7 +29,7 @@ import type { InvoicePDFData } from '@/pdf/invoice-pdf';
 
 export default function InvoiceDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -133,7 +133,7 @@ export default function InvoiceDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <FileText className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Invoice not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/invoices')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/invoices')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back to Invoices
         </Button>
       </div>
@@ -151,11 +151,11 @@ export default function InvoiceDetailPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/invoices')}>
+          <Button variant="ghost" size="sm" onClick={() => push('/invoices')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
               <FileText className="size-4" />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function InvoiceDetailPage() {
             </Button>
           )}
           {invoice.state === 'draft' && (
-            <Button variant="outline" size="sm" onClick={() => router.push(`/invoices/${id}/edit`)}>
+            <Button variant="outline" size="sm" onClick={() => push(`/invoices/${id}/edit`)}>
               <Pencil className="mr-1 h-4 w-4" />Edit
             </Button>
           )}

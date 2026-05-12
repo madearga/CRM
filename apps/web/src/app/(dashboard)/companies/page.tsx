@@ -27,7 +27,7 @@ import { ImportCompaniesDialog } from './import-companies-dialog';
 
 export default function CompaniesPage() {
   const exportDate = useClientDateString();
-  const router = useRouter();
+  const { push } = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useCompaniesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.companies ?? new Set(), [selections.companies]);
@@ -167,7 +167,7 @@ export default function CompaniesPage() {
       </div>
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search companies..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Button variant={showArchived ? 'default' : 'outline'} size="sm" onClick={toggleArchived}>
@@ -194,7 +194,7 @@ export default function CompaniesPage() {
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/companies/${row.id}`)}
+          onRowClick={(row) => push(`/companies/${row.id}`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}

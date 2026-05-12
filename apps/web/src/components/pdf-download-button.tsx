@@ -47,7 +47,7 @@ export function PdfDownloadButton({
 
   return (
     <Button variant={variant} size={size} onClick={handleDownload} disabled={loading || disabledProp}>
-      {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
+      {loading ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
       {label}
     </Button>
   );

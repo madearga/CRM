@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { usePermission } from '@/lib/permissions/use-permission';
 
 export default function EmployeesPage() {
-  const router = useRouter();
+  const { push, replace } = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -33,7 +33,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
       setDialogOpen(true);
-      router.replace('/hr/employees', { scroll: false });
+      replace('/hr/employees', { scroll: false });
     }
   }, []);
 
@@ -156,7 +156,7 @@ export default function EmployeesPage() {
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search by name or NIK..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -197,7 +197,7 @@ export default function EmployeesPage() {
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/hr/employees/${row.id}`)}
+          onRowClick={(row) => push(`/hr/employees/${row.id}`)}
         />
       )}
     </div>

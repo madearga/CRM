@@ -35,13 +35,13 @@ import { toast } from 'sonner';
 import { formatDistanceToNow, format } from '@/lib/format-date';
 
 const PRIORITY_BADGE: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  low: 'bg-muted text-muted-foreground dark:bg-slate-800 dark:text-slate-400',
   medium: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
   high: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400',
 };
 
 export default function ActivitiesPage() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -50,7 +50,7 @@ export default function ActivitiesPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'create') {
       setDialogOpen(true);
-      router.replace('/activities', { scroll: false });
+      replace('/activities', { scroll: false });
     }
   }, []);
   const [tab, setTab] = useState('upcoming');

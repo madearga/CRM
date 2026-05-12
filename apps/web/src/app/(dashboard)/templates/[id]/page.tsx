@@ -13,7 +13,7 @@ import { formatMoney } from '@/lib/format-money';
 
 export default function TemplateDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: template, isLoading } = useAuthQuery(api.quotationTemplates.getById, { id: id as any });
@@ -34,7 +34,7 @@ export default function TemplateDetailPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/templates')}>
+        <Button variant="ghost" size="sm" onClick={() => push('/templates')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">

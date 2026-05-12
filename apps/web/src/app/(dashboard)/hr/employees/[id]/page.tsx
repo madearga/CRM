@@ -29,7 +29,7 @@ const convexApi = api as any;
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
+  const { push } = useRouter();
   const canEdit = usePermission('hr_employees', 'edit');
 
   const { data: employee, isLoading } = useAuthQuery(
@@ -58,7 +58,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     return (
       <div className="text-center py-16 text-muted-foreground">
         Employee not found.
-        <Button variant="link" onClick={() => router.push('/hr/employees')}>Back to list</Button>
+        <Button variant="link" onClick={() => push('/hr/employees')}>Back to list</Button>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/hr/employees')}>
+        <Button variant="ghost" size="sm" onClick={() => push('/hr/employees')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back
         </Button>
         <h1 className="text-2xl font-bold">{employee.name}</h1>

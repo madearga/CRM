@@ -216,7 +216,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
                       {variant.active ? (
                         <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">Archived</Badge>
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">Archived</Badge>
                       )}
                     </TableCell>
                     <TableCell>

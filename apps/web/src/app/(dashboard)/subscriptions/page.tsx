@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 
 export default function SubscriptionsPage() {
   const exportDate = useClientDateString();
-  const router = useRouter();
+  const { push } = useRouter();
   const {
     q: search,
     archived: showArchived,
@@ -114,14 +114,14 @@ export default function SubscriptionsPage() {
           ]}
           filename={`subscriptions-${exportDate}`}
         />
-        <Button size="sm" onClick={() => router.push('/subscriptions/new')}>
+        <Button size="sm" onClick={() => push('/subscriptions/new')}>
           <Plus className="mr-1 h-4 w-4" />New Subscription
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search subscriptions..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={stateFilter ?? "__all__"} onValueChange={(v) => setStateFilter(v === "__all__" ? null : v)}>
@@ -154,13 +154,13 @@ export default function SubscriptionsPage() {
         <EmptyState
           icon={<RefreshCw className="size-7" />} title="No subscriptions yet"
           description="Create your first subscription to automate recurring billing."
-          action={<Button variant="outline" size="sm" onClick={() => router.push('/subscriptions/new')}><Plus className="mr-1 h-4 w-4" />Create Subscription</Button>}
+          action={<Button variant="outline" size="sm" onClick={() => push('/subscriptions/new')}><Plus className="mr-1 h-4 w-4" />Create Subscription</Button>}
         />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/subscriptions/${row.id}`)}
+          onRowClick={(row) => push(`/subscriptions/${row.id}`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}

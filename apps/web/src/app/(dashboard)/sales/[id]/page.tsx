@@ -22,7 +22,7 @@ import { QuotationPDF } from '@/pdf/quotation-pdf';
 import type { QuotationPDFData } from '@/pdf/quotation-pdf';
 
 const STATE_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400',
+  draft: 'bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground',
   sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   confirmed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   invoiced: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -43,7 +43,7 @@ const WORKFLOW_ACTIONS: Record<string, { target: string; label: string; icon: an
 
 export default function SaleOrderDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: so, isLoading } = useAuthQuery(api.saleOrders.getById, { id: id as any });
@@ -89,7 +89,7 @@ export default function SaleOrderDetailPage() {
     try {
       const invId = await createInvoice.mutateAsync({ saleOrderId: id as any });
       toast.success('Invoice created');
-      router.push(`/invoices/${invId}`);
+      push(`/invoices/${invId}`);
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to create invoice');
     }
@@ -130,7 +130,7 @@ export default function SaleOrderDetailPage() {
     try {
       const newId = await duplicateSO.mutateAsync({ id: id as any });
       toast.success('Duplicated');
-      router.push(`/sales/${newId}`);
+      push(`/sales/${newId}`);
     } catch (e: any) {
       toast.error('Failed');
     }
@@ -145,7 +145,7 @@ export default function SaleOrderDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Sale order not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/sales')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/sales')}>
           <ArrowLeft className="mr-1 h-4 w-4" />Back to Sales
         </Button>
       </div>
@@ -159,7 +159,7 @@ export default function SaleOrderDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/sales')}>
+          <Button variant="ghost" size="sm" onClick={() => push('/sales')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function SaleOrderDetailPage() {
             <Copy className="mr-1 h-4 w-4" />Duplicate
           </Button>
           {['draft', 'sent'].includes(so.state) && (
-            <Button variant="outline" size="sm" onClick={() => router.push(`/sales/${id}/edit`)}>
+            <Button variant="outline" size="sm" onClick={() => push(`/sales/${id}/edit`)}>
               <Pencil className="mr-1 h-4 w-4" />Edit
             </Button>
           )}

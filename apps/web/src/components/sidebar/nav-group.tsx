@@ -49,7 +49,7 @@ export function NavGroup({ label, icon: Icon, items, defaultOpen = false }: NavG
             <span>{label}</span>
             <ChevronRight
               className={cn(
-                'ml-auto h-3.5 w-3.5 transition-transform duration-200',
+                'ml-auto size-3.5 transition-transform duration-200',
                 isOpen && 'rotate-90'
               )}
             />

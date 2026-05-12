@@ -40,7 +40,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ productId, initialData }: ProductFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!productId;
 
   const [form, setForm] = useState({
@@ -128,11 +128,11 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
       if (isEdit) {
         await updateProduct.mutateAsync({ id: productId as any, ...payload });
         toast.success('Product updated');
-        router.push(`/products/${productId}`);
+        push(`/products/${productId}`);
       } else {
         const newId = await createProduct.mutateAsync(payload);
         toast.success('Product created');
-        router.push(`/products/${newId}`);
+        push(`/products/${newId}`);
       }
     } catch (e: any) {
       toast.error(e.data?.message ?? `Failed to ${isEdit ? 'update' : 'create'} product`);
@@ -145,7 +145,7 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" type="button" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
@@ -361,7 +361,7 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
         <Button type="submit" disabled={isPending}>
           {isPending ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => back()}>
           Cancel
         </Button>
       </div>

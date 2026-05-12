@@ -28,7 +28,7 @@ export type InvoiceRow = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
+  draft: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground",
   posted: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   cancel: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
@@ -41,7 +41,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  unpaid: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
+  unpaid: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground",
   partially_paid: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
@@ -54,7 +54,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const NumberCell = memo(({ id, number }: { id: string; number: string }) => (
   <div className="flex items-center gap-3">
-    <div className="flex size-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400">
+    <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-slate-900/40 dark:text-slate-400">
       <FileText className="size-4" />
     </div>
     <Link href={`/invoices/${id}`} className="font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -70,7 +70,7 @@ const StateBadge = memo(({ state, archivedAt }: { state: string; archivedAt?: nu
       {state}
     </Badge>
     {archivedAt && (
-      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+      <Badge variant="secondary" className="ml-1 bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
         archived
       </Badge>
     )}
