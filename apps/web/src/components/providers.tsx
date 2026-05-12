@@ -11,7 +11,7 @@ export async function Providers({ children }) {
   return (
     <ConvexProvider token={token}>
       <QueryClientProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster />
         </ThemeProvider>

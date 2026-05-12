@@ -115,7 +115,7 @@ export default function DealDetailPage() {
                 {deal.stage}
               </Badge>
               {deal.archivedAt && (
-                <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+                <Badge variant="secondary" className="bg-gray-800/50 text-gray-400">
                   Archived
                 </Badge>
               )}
@@ -240,7 +240,7 @@ export default function DealDetailPage() {
                 href={`/companies/${deal.companyId}`}
                 className="flex items-center gap-2 font-medium transition-colors hover:text-indigo-600"
               >
-                <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-900/40 text-indigo-400">
                   <Building2 className="size-4" />
                 </div>
                 {deal.companyName}
@@ -279,7 +279,7 @@ export default function DealDetailPage() {
 
       {/* Lost Reason */}
       {deal.lostReason && (
-        <Card className="border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30">
+        <Card className="border-red-800/60 bg-red-950/30">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
               <XCircle className="size-4" />
