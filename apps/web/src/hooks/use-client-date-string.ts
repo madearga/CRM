@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-export function useClientDateString(fallback = 'export') {
+export function useClientDateString(fallback = '') {
   const [dateString, setDateString] = useState(fallback);
 
   useEffect(() => {

@@ -160,13 +160,11 @@ export default function ActivitiesPage() {
                 value={newActivity.title}
                 onChange={(e) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
 
-
               />
               <Textarea
                 placeholder="Description"
                 value={newActivity.description}
                 onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
-
 
                 rows={2}
               />
@@ -174,7 +172,6 @@ export default function ActivitiesPage() {
                 <Select
                   value={newActivity.type}
                   onValueChange={(v) => setNewActivity(prev => ({ ...prev, type: v }))}
-
 
                 >
                   <SelectTrigger>
@@ -189,7 +186,6 @@ export default function ActivitiesPage() {
                 <Select
                   value={newActivity.priority}
                   onValueChange={(v) => setNewActivity(prev => ({ ...prev, priority: v }))}
-
 
                 >
                   <SelectTrigger>
@@ -207,7 +203,6 @@ export default function ActivitiesPage() {
                 type="datetime-local"
                 value={newActivity.dueAt}
                 onChange={(e) => setNewActivity(prev => ({ ...prev, dueAt: e.target.value }))}
-
 
               />
               <Button onClick={handleCreate} className="w-full" disabled={createActivity.isPending || scheduleActivity.isPending}>
