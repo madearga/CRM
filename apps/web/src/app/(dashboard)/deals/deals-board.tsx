@@ -56,7 +56,7 @@ export default function DealsBoard({ dealsByStage, onDragEnd }: DealsBoardProps)
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={`min-h-[120px] flex-1 space-y-2 overflow-y-auto rounded-md transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-black/5 dark:bg-white/10' : ''
+                      snapshot.isDraggingOver ? 'bg-muted/50' : ''
                     }`}
                     style={{ maxHeight: 'calc(100vh - 260px)' }}
                   >
@@ -69,7 +69,7 @@ export default function DealsBoard({ dealsByStage, onDragEnd }: DealsBoardProps)
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`cursor-grab border bg-white shadow-sm transition-shadow dark:bg-slate-800/90 ${
+                              className={`cursor-grab border bg-card shadow-sm transition-shadow ${
                                 snapshot.isDragging ? 'shadow-lg' : 'hover:shadow-md'
                               }`}
                             >

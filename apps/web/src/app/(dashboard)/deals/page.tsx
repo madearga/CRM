@@ -35,7 +35,7 @@ function DealsBoardSkeleton() {
           </div>
           <div className="space-y-2">
             {[1, 2].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-md bg-white/60" />
+              <div key={i} className="h-20 animate-pulse rounded-md bg-card" />
             ))}
           </div>
         </div>
