@@ -132,7 +132,6 @@ export function InvoiceLineEditor({ lines, onChange, currency = "IDR" }: Invoice
                             placeholder="Search products..."
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
-                            autoFocus
                           />
                         </div>
                         <div className="max-h-48 overflow-auto">

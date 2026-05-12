@@ -293,7 +293,9 @@ export default function TaxesPage() {
               <Input
                 placeholder="contoh: PPN 11%"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+
+
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -317,7 +319,8 @@ export default function TaxesPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Tipe</label>
-                <Select value={form.type} onValueChange={(v: TaxType) => setForm({ ...form, type: v, rate: 0 })}>
+                <Select value={form.type} onValueChange={(v: TaxType) => setForm(prev => ({ ...prev, type: v, rate: 0 }))}>
+
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="percentage">Persentase</SelectItem>
@@ -328,7 +331,8 @@ export default function TaxesPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Cakupan</label>
-              <Select value={form.scope} onValueChange={(v: TaxScope) => setForm({ ...form, scope: v })}>
+              <Select value={form.scope} onValueChange={(v: TaxScope) => setForm(prev => ({ ...prev, scope: v }))}>
+
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="both">Penjualan & Pembelian</SelectItem>

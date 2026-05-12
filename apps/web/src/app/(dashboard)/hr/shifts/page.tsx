@@ -120,20 +120,20 @@ export default function ShiftsPage() {
                 </Select>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Start Time</label>
+                    <label id="label-start-time" className="text-xs text-muted-foreground">Start Time</label>
                     <Input type="time" value={newShift.startTime} onChange={(e) => setNewShift((p) => ({ ...p, startTime: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">End Time</label>
+                    <label id="label-end-time" className="text-xs text-muted-foreground">End Time</label>
                     <Input type="time" value={newShift.endTime} onChange={(e) => setNewShift((p) => ({ ...p, endTime: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Late Tolerance (minutes)</label>
+                  <label id="label-late-tolerance-minutes" className="text-xs text-muted-foreground">Late Tolerance (minutes)</label>
                   <Input type="number" min={0} value={newShift.lateToleranceMinutes} onChange={(e) => setNewShift((p) => ({ ...p, lateToleranceMinutes: Number(e.target.value) }))} />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Active Days</label>
+                  <label id="label-active-days" className="text-xs text-muted-foreground mb-1 block">Active Days</label>
                   <div className="flex gap-1 flex-wrap">
                     {DAYS.map((d) => (
                       <Button

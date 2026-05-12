@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +22,7 @@ import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function SubscriptionsPage() {
+  const exportDate = useClientDateString();
   const router = useRouter();
   const {
     q: search,
@@ -110,7 +112,7 @@ export default function SubscriptionsPage() {
             { key: 'companyName', label: 'Company' },
             { key: 'contactName', label: 'Contact' },
           ]}
-          filename={`subscriptions-${new Date().toISOString().split('T')[0]}`}
+          filename={`subscriptions-${exportDate}`}
         />
         <Button size="sm" onClick={() => router.push('/subscriptions/new')}>
           <Plus className="mr-1 h-4 w-4" />New Subscription

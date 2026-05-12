@@ -158,18 +158,24 @@ export default function ActivitiesPage() {
               <Input
                 placeholder="Activity title *"
                 value={newActivity.title}
-                onChange={(e) => setNewActivity({ ...newActivity, title: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
+
+
               />
               <Textarea
                 placeholder="Description"
                 value={newActivity.description}
-                onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
+
+
                 rows={2}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Select
                   value={newActivity.type}
-                  onValueChange={(v) => setNewActivity({ ...newActivity, type: v })}
+                  onValueChange={(v) => setNewActivity(prev => ({ ...prev, type: v }))}
+
+
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Type" />
@@ -182,7 +188,9 @@ export default function ActivitiesPage() {
                 </Select>
                 <Select
                   value={newActivity.priority}
-                  onValueChange={(v) => setNewActivity({ ...newActivity, priority: v })}
+                  onValueChange={(v) => setNewActivity(prev => ({ ...prev, priority: v }))}
+
+
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Priority" />
@@ -198,7 +206,9 @@ export default function ActivitiesPage() {
                 placeholder="Scheduled date"
                 type="datetime-local"
                 value={newActivity.dueAt}
-                onChange={(e) => setNewActivity({ ...newActivity, dueAt: e.target.value })}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, dueAt: e.target.value }))}
+
+
               />
               <Button onClick={handleCreate} className="w-full" disabled={createActivity.isPending || scheduleActivity.isPending}>
                 {newActivity.dueAt ? 'Schedule Activity' : 'Log Activity'}

@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +26,7 @@ import { toast } from 'sonner';
 import { ImportCompaniesDialog } from './import-companies-dialog';
 
 export default function CompaniesPage() {
+  const exportDate = useClientDateString();
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useCompaniesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
@@ -121,7 +123,7 @@ export default function CompaniesPage() {
             { key: 'country', label: 'Country' },
             { key: 'status', label: 'Status' },
           ]}
-          filename={`companies-${new Date().toISOString().split('T')[0]}`}
+          filename={`companies-${exportDate}`}
         />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>

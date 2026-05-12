@@ -261,7 +261,9 @@ export default function PaymentTermsPage() {
               <Input
                 placeholder="contoh: Net 30"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+
+
               />
             </div>
             <div>
@@ -269,7 +271,9 @@ export default function PaymentTermsPage() {
               <Input
                 placeholder="Pembayaran dalam 30 hari"
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+
+
               />
             </div>
             <div>
@@ -278,7 +282,9 @@ export default function PaymentTermsPage() {
                 type="number"
                 min={0}
                 value={form.dueDays}
-                onChange={(e) => setForm({ ...form, dueDays: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setForm(prev => ({ ...prev, dueDays: parseInt(e.target.value) || 0 }))}
+
+
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {form.dueDays === 0 ? 'Pembayaran langsung' : `Pembayaran dalam ${form.dueDays} hari`}
@@ -291,7 +297,9 @@ export default function PaymentTermsPage() {
                   type="number"
                   min={0}
                   value={form.discountDays}
-                  onChange={(e) => setForm({ ...form, discountDays: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setForm(prev => ({ ...prev, discountDays: parseInt(e.target.value) || 0 }))}
+
+
                   placeholder="0"
                 />
               </div>
@@ -302,7 +310,9 @@ export default function PaymentTermsPage() {
                   min={0}
                   max={100}
                   value={form.discountPercent}
-                  onChange={(e) => setForm({ ...form, discountPercent: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setForm(prev => ({ ...prev, discountPercent: parseFloat(e.target.value) || 0 }))}
+
+
                   placeholder="0"
                 />
               </div>

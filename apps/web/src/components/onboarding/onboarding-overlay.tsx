@@ -95,7 +95,6 @@ export function OnboardingOverlay() {
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               onKeyDown={handleKeyDown}
-              autoFocus
               className="h-12 border-white/10 bg-white/5 text-white placeholder:text-neutral-500"
             />
           </div>
@@ -112,7 +111,6 @@ export function OnboardingOverlay() {
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               onKeyDown={handleKeyDown}
-              autoFocus
               className="h-12 border-white/10 bg-white/5 text-white placeholder:text-neutral-500"
             />
           </div>

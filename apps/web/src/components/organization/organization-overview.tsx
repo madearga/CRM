@@ -327,7 +327,7 @@ export function OrganizationOverview({
                 id="edit-name"
                 value={editData.name}
                 onChange={(e) =>
-                  setEditData({ ...editData, name: e.target.value })
+                  setEditData(prev => ({ ...prev, name: e.target.value }))
                 }
               />
             </div>
@@ -337,7 +337,7 @@ export function OrganizationOverview({
                 id="edit-slug"
                 value={editData.slug}
                 onChange={(e) =>
-                  setEditData({ ...editData, slug: e.target.value })
+                  setEditData(prev => ({ ...prev, slug: e.target.value }))
                 }
                 placeholder="organization-slug"
               />
@@ -348,7 +348,7 @@ export function OrganizationOverview({
                 id="edit-logo"
                 value={editData.logo}
                 onChange={(e) =>
-                  setEditData({ ...editData, logo: e.target.value })
+                  setEditData(prev => ({ ...prev, logo: e.target.value }))
                 }
                 placeholder="https://example.com/logo.png"
               />

@@ -164,12 +164,15 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
               <Input
                 placeholder="e.g. Retail Default, Wholesale"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+
+
               />
             </div>
             <div className="space-y-2">
               <Label>Type *</Label>
-              <Select value={form.type} onValueChange={(v: any) => setForm({ ...form, type: v })}>
+              <Select value={form.type} onValueChange={(v: any) => setForm(prev => ({ ...prev, type: v }))}>
+
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fixed">Fixed Price</SelectItem>
@@ -184,7 +187,9 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
             <Textarea
               placeholder="Describe this pricelist..."
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+
+
               rows={2}
             />
           </div>
@@ -197,12 +202,15 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
                 max="100"
                 placeholder="0"
                 value={form.defaultDiscount}
-                onChange={(e) => setForm({ ...form, defaultDiscount: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, defaultDiscount: e.target.value }))}
+
+
               />
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>
-              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+              <Select value={form.currency} onValueChange={(v) => setForm(prev => ({ ...prev, currency: v }))}>
+
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="IDR">IDR (Rp)</SelectItem>
@@ -216,7 +224,9 @@ export function PricelistForm({ pricelistId }: PricelistFormProps) {
                 type="number"
                 placeholder="0"
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, priority: e.target.value }))}
+
+
               />
               <p className="text-xs text-muted-foreground">Higher = wins when multiple match</p>
             </div>

@@ -50,7 +50,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
     <div className="grid grid-cols-[1fr_1fr_80px_120px_120px_120px_40px] gap-2 items-end rounded-md border p-3">
       {/* Product */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Product</label>
+        <label id="label-product" className="text-xs text-muted-foreground">Product</label>
         <Select
           value={rule.productId || '__all__'}
           onValueChange={(v) => onChange('productId', v === '__all__' ? undefined : v)}
@@ -67,7 +67,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
 
       {/* Category */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Category</label>
+        <label id="label-category" className="text-xs text-muted-foreground">Category</label>
         <Select
           value={rule.productCategoryId || '__all__'}
           onValueChange={(v) => onChange('productCategoryId', v === '__all__' ? undefined : v)}
@@ -84,7 +84,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
 
       {/* Min Quantity */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Min Qty</label>
+        <label id="label-min-qty" className="text-xs text-muted-foreground">Min Qty</label>
         <Input
           type="number"
           min="0"
@@ -97,7 +97,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
 
       {/* Price / Discount / Formula */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">
+        <label id="label-pricelisttype-fixed-fixed-price-pricelisttype-percentage-discount-discount-formula" className="text-xs text-muted-foreground">
           {pricelistType === 'fixed' ? 'Fixed Price' : pricelistType === 'percentage_discount' ? 'Discount %' : 'Formula'}
         </label>
         {pricelistType === 'fixed' ? (
@@ -131,7 +131,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
 
       {/* Start Date */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Start</label>
+        <label id="label-start" className="text-xs text-muted-foreground">Start</label>
         <Input
           type="date"
           className="h-8 text-sm"
@@ -142,7 +142,7 @@ export function PriceRuleRow({ rule, pricelistType, onChange, onRemove }: PriceR
 
       {/* End Date */}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">End</label>
+        <label id="label-end" className="text-xs text-muted-foreground">End</label>
         <Input
           type="date"
           className="h-8 text-sm"

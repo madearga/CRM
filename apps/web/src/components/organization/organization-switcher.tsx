@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, Plus, Building2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,7 @@ import { Id } from '@convex/_generated/dataModel';
 
 export function OrganizationSwitcher() {
   const [open, setOpen] = useState(false);
+  const organizationListId = useId();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [selectedOrgSlug, setSelectedOrgSlug] = useState<string | null>(null);
@@ -162,6 +163,7 @@ export function OrganizationSwitcher() {
           <Button
             variant="outline"
             role="combobox"
+            aria-controls={organizationListId}
             aria-expanded={open}
             className="w-[240px] justify-between"
             size="sm"
@@ -185,7 +187,7 @@ export function OrganizationSwitcher() {
         <PopoverContent className="w-[250px] p-0">
           <Command>
             <CommandInput placeholder="Search organizations..." />
-            <CommandList>
+            <CommandList id={organizationListId}>
               <WithSkeleton isLoading={isLoading}>
                 <CommandEmpty>No organization found.</CommandEmpty>
                 <CommandGroup heading="Organizations">

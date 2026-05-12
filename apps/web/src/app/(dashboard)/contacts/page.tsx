@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,6 +26,7 @@ import { toast } from 'sonner';
 import { ImportContactsDialog } from './import-contacts-dialog';
 
 export default function ContactsPage() {
+  const exportDate = useClientDateString();
   const router = useRouter();
   const { q: search, setSearch } = useContactsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
@@ -122,7 +124,7 @@ export default function ContactsPage() {
             { key: 'jobTitle', label: 'Job Title' },
             { key: 'lifecycleStage', label: 'Stage' },
           ]}
-          filename={`contacts-${new Date().toISOString().split('T')[0]}`}
+          filename={`contacts-${exportDate}`}
         />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>

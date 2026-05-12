@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +22,7 @@ import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function SalesPage() {
+  const exportDate = useClientDateString();
   const router = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useSalesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
@@ -101,7 +103,7 @@ export default function SalesPage() {
             { key: 'contactName', label: 'Contact' },
             { key: 'invoiceStatus', label: 'Invoice' },
           ]}
-          filename={`sales-${new Date().toISOString().split('T')[0]}`}
+          filename={`sales-${exportDate}`}
         />
         <Button size="sm" onClick={() => router.push('/sales/new')}>
           <Plus className="mr-1 h-4 w-4" />New Quotation

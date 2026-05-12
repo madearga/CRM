@@ -251,7 +251,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Variant Name *</label>
+              <label id="label-variant-name" className="text-sm font-medium">Variant Name *</label>
               <Input
                 placeholder="e.g. Kaos Polos - Merah - L"
                 value={form.name}
@@ -261,7 +261,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
 
             {/* Attributes */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Attributes</label>
+              <label id="label-attributes" className="text-sm font-medium">Attributes</label>
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Key (e.g. Color)"
@@ -296,7 +296,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
             {/* Price & Cost extras */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Price Extra</label>
+                <label id="label-price-extra" className="text-sm font-medium">Price Extra</label>
                 <Input
                   type="number"
                   placeholder="0"
@@ -305,7 +305,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cost Extra</label>
+                <label id="label-cost-extra" className="text-sm font-medium">Cost Extra</label>
                 <Input
                   type="number"
                   placeholder="0"
@@ -318,7 +318,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
             {/* SKU, Barcode, Weight */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">SKU</label>
+                <label id="label-sku" className="text-sm font-medium">SKU</label>
                 <Input
                   placeholder="SKU"
                   value={form.sku}
@@ -326,7 +326,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Barcode</label>
+                <label id="label-barcode" className="text-sm font-medium">Barcode</label>
                 <Input
                   placeholder="Barcode"
                   value={form.barcode}
@@ -334,7 +334,7 @@ export function VariantManager({ productId, variants, basePrice }: VariantManage
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Weight (kg)</label>
+                <label id="label-weight-kg" className="text-sm font-medium">Weight (kg)</label>
                 <Input
                   type="number"
                   placeholder="0"

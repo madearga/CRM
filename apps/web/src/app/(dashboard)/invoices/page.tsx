@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +22,7 @@ import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function InvoicesPage() {
+  const exportDate = useClientDateString();
   const router = useRouter();
   const {
     q: search,
@@ -123,7 +125,7 @@ export default function InvoicesPage() {
             { key: 'contactName', label: 'Contact' },
             { key: 'paymentStatus', label: 'Payment' },
           ]}
-          filename={`invoices-${new Date().toISOString().split('T')[0]}`}
+          filename={`invoices-${exportDate}`}
         />
         <Button size="sm" onClick={() => router.push('/invoices/new')}>
           <Plus className="mr-1 h-4 w-4" />New Invoice

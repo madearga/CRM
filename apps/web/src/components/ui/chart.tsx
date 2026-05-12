@@ -69,37 +69,29 @@ function ChartContainer({
   );
 }
 
-const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+function buildChartCss(id: string, config: ChartConfig) {
   const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme || config.color
+    ([, itemConfig]) => itemConfig.theme || itemConfig.color
   );
-
-  if (!colorConfig.length) {
-    return null;
-  }
-
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join('\n')}
+  if (!colorConfig.length) return '';
+  return Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const vars = colorConfig
+        .map(([key, ic]) => {
+          const color = ic.theme?.[theme as keyof typeof ic.theme] || ic.color;
+          return color ? `  --color-${key}: ${color};` : null;
+        })
+        .filter(Boolean)
+        .join('\n');
+      return `${prefix} [data-chart=${id}] {\n${vars}\n}`;
+    })
+    .join('\n');
 }
-`
-          )
-          .join('\n'),
-      }}
-    />
-  );
+
+const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  const css = buildChartCss(id, config);
+  if (!css) return null;
+  return <style>{css}</style>;
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
