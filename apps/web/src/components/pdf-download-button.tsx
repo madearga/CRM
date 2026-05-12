@@ -13,6 +13,7 @@ interface PdfDownloadButtonProps {
   label?: string;
   variant?: "default" | "outline" | "destructive" | "secondary" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
+  disabled?: boolean;
 }
 
 export function PdfDownloadButton({
@@ -21,6 +22,7 @@ export function PdfDownloadButton({
   label = "Download PDF",
   variant = "outline",
   size = "sm",
+  disabled: disabledProp = false,
 }: PdfDownloadButtonProps) {
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +46,7 @@ export function PdfDownloadButton({
   }, [doc, fileName]);
 
   return (
-    <Button variant={variant} size={size} onClick={handleDownload} disabled={loading}>
+    <Button variant={variant} size={size} onClick={handleDownload} disabled={loading || disabledProp}>
       {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
       {label}
     </Button>
