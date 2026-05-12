@@ -110,10 +110,10 @@ export default function DashboardLayout({
       style={{
         '--sidebar-width': '17rem',
         '--sidebar-width-icon': '3.5rem',
-        '--sidebar': 'oklch(12% 0.005 260)',
+        '--sidebar': 'oklch(9% 0.005 260)',
         '--sidebar-foreground': 'rgba(240,240,250,0.88)',
         '--sidebar-primary': '#f0f0fa',
-        '--sidebar-primary-foreground': 'oklch(12% 0.005 260)',
+        '--sidebar-primary-foreground': 'oklch(9% 0.005 260)',
         '--sidebar-accent': 'rgba(240,240,250,0.06)',
         '--sidebar-accent-foreground': 'rgba(240,240,250,0.88)',
         '--sidebar-border': 'rgba(240,240,250,0.08)',
