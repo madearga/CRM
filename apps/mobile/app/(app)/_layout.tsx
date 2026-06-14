@@ -73,6 +73,10 @@ export default function AppLayout() {
         name="invoices"
         options={{
           title: TAB_CONFIG.invoices.title,
+          // The invoices tab owns a nested Stack (invoices/_layout.tsx) that
+          // renders its own headers (list + detail). Hide the tab-level header
+          // here so we never stack two headers on top of each other.
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name={TAB_CONFIG.invoices.icon} size={size} color={color} />
           ),

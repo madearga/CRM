@@ -37,7 +37,8 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "tailwindcss": "^3.4.19",
-    "whatwg-fetch": "^3.6.20"
+    "whatwg-fetch": "^3.6.20",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",

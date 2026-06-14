@@ -11,3 +11,10 @@
  * dependency for now.
  */
 export { api } from '../../../../convex/_generated/api';
+
+/**
+ * Convex generated types re-exported so mobile screens can type route params
+ * (e.g. `Id<'invoices'>`) and document shapes without a deep relative import.
+ * Pure type re-export — zero runtime cost, RN-safe.
+ */
+export type { Id, Doc } from '../../../../convex/_generated/dataModel';
