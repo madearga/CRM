@@ -9,6 +9,8 @@ import {
   createInternalMutation,
 } from '../functions';
 import { getOrgId, resolveCustomerId, verifyCartOwnership, timelineEntry } from './helpers';
+import { generateOrderAccessToken, hashOrderAccessToken, transitionOrderStatus, verifyOrderAccessToken } from './security';
+import { guestRateLimitGuard } from '../helpers/rateLimiter';
 import { getPaymentProvider, getProviderConfig } from './payments/index';
 
 // ---------------------------------------------------------------------------
@@ -27,8 +29,8 @@ async function findActiveCart(ctx: any, orgId: any, customerId: any | null, sess
   }
   if (sessionId) {
     const carts = await ctx
-      .table('carts', 'sessionId', (q: any) =>
-        q.eq('sessionId', sessionId).eq('status', 'active'),
+      .table('carts', 'organizationId_sessionId_status', (q: any) =>
+        q.eq('organizationId', orgId).eq('sessionId', sessionId).eq('status', 'active'),
       )
       .take(1);
     if (carts[0]) return carts[0];
@@ -74,13 +76,20 @@ export const initiateCheckout = createPublicMutation()({
   returns: z.object({
     orderId: zid('shopOrders'),
     orderNumber: z.string(),
+    orderAccessToken: z.string(),
     paymentData: z.any().nullable(),
   }),
   handler: async (ctx, args) => {
     const orgId = await getOrgId(ctx, args.organizationSlug);
 
+    // Guest rate limit for checkout
+    const preCheckCustomerId = await resolveCustomerId(ctx, orgId, ctx.userId);
+    if (!preCheckCustomerId && args.sessionId) {
+      await guestRateLimitGuard(ctx, 'checkout/initiate:public', orgId, args.sessionId);
+    }
+
     // Resolve or create customer for authenticated user
-    let customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
+    let customerId = preCheckCustomerId;
     if (!customerId && ctx.userId) {
       // First-time buyer: create customer from shipping address
       const newCustomer = await ctx.table('customers').insert({
@@ -114,6 +123,12 @@ export const initiateCheckout = createPublicMutation()({
       if (!product) {
         await restoreStock(ctx, stockSnapshots);
         throw new ConvexError({ code: 'NOT_FOUND', message: `Product ${item.productId} not found` });
+      }
+
+      // Validate product belongs to this organization (prevent cross-tenant checkout)
+      if (product.organizationId !== orgId) {
+        await restoreStock(ctx, stockSnapshots);
+        throw new ConvexError({ code: 'FORBIDDEN', message: 'Product does not belong to this organization' });
       }
 
       // Price guard
@@ -199,6 +214,9 @@ export const initiateCheckout = createPublicMutation()({
 
     // --- Create shopOrder ---
     const tlEntry = timelineEntry('pending_payment', 'Order created');
+    const orderAccessToken = generateOrderAccessToken();
+    const orderAccessTokenHash = await hashOrderAccessToken(orderAccessToken);
+    const orderAccessTokenExpiresAt = now + 1000 * 60 * 60 * 24 * 30;
     const orderId = await ctx.table('shopOrders').insert({
       organizationId: orgId,
       customerId: cart.customerId,
@@ -210,6 +228,8 @@ export const initiateCheckout = createPublicMutation()({
       totalAmount,
       currency,
       notes: args.notes,
+      orderAccessTokenHash,
+      orderAccessTokenExpiresAt,
       shippingAddress: args.shippingAddress,
       orderTimeline: [tlEntry],
     } as any);
@@ -240,7 +260,7 @@ export const initiateCheckout = createPublicMutation()({
 
     if (!ppConfig) {
       // Order created but no payment provider configured
-      return { orderId, orderNumber, paymentData: null };
+      return { orderId, orderNumber, orderAccessToken, paymentData: null };
     }
 
     const provider = getPaymentProvider('midtrans');
@@ -283,6 +303,7 @@ export const initiateCheckout = createPublicMutation()({
     return {
       orderId,
       orderNumber,
+      orderAccessToken,
       paymentData: paymentResult.clientData,
     };
   },
@@ -388,6 +409,12 @@ export const processWebhook = createInternalMutation()({
     }
 
     const orgId = order.organizationId;
+    if (!orgId) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Order has no organization' });
+    }
+    if (order.paymentRef && order.paymentRef !== args.transactionId) {
+      throw new ConvexError({ code: 'FORBIDDEN', message: 'Webhook transaction does not match bound order payment reference' });
+    }
     // Signature verification is done in the httpAction layer (crypto.subtle
     // is available there but not inside mutations).
 
@@ -412,26 +439,14 @@ export const processWebhook = createInternalMutation()({
       return { success: true };
     }
 
-    // Update order
-    const currentTimeline = order.orderTimeline ?? [];
-    await order.patch({
-      status: mapped.status as any,
+    await transitionOrderStatus(ctx, order, mapped.status, {
+      type: 'webhook',
+      provider: 'midtrans',
+      note: `Payment ${args.transactionStatus}`,
+    }, {
       paymentStatus: mapped.paymentStatus as any,
       paymentRef: args.transactionId,
-      orderTimeline: [...currentTimeline, timelineEntry(mapped.status, `Payment ${args.transactionStatus}`)],
     });
-
-    // If cancelled/expired: restore stock
-    if (mapped.status === 'cancelled' || mapped.status === 'expired') {
-      const orderItems = await ctx
-        .table('shopOrderItems', 'shopOrderId', (q: any) => q.eq('shopOrderId', order._id));
-      for (const item of orderItems) {
-        const product = await ctx.table('products').get(item.productId);
-        if (product && product.stock != null) {
-          await product.patch({ stock: product.stock + item.quantity });
-        }
-      }
-    }
 
     // If paid: create a CRM saleOrder link
     if (mapped.status === 'paid' && !order.saleOrderId) {
@@ -464,6 +479,7 @@ export const processWebhook = createInternalMutation()({
 export const checkPaymentStatus = createPublicQuery()({
   args: {
     orderId: zid('shopOrders'),
+    orderAccessToken: z.string().optional(),
   },
   returns: z.object({
     status: z.string(),
@@ -478,7 +494,7 @@ export const checkPaymentStatus = createPublicQuery()({
       ? await resolveCustomerId(ctx, order.organizationId, ctx.userId)
       : null;
     if (!customerId || order.customerId !== customerId) {
-      throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your order' });
+      await verifyOrderAccessToken(order, args.orderAccessToken);
     }
 
     return {
@@ -495,6 +511,7 @@ export const checkPaymentStatus = createPublicQuery()({
 export const cancelOrder = createPublicMutation()({
   args: {
     orderId: zid('shopOrders'),
+    orderAccessToken: z.string().optional(),
   },
   returns: z.object({ success: z.boolean() }),
   handler: async (ctx, args) => {
@@ -506,7 +523,7 @@ export const cancelOrder = createPublicMutation()({
       ? await resolveCustomerId(ctx, order.organizationId, ctx.userId)
       : null;
     if (!customerId || order.customerId !== customerId) {
-      throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your order' });
+      await verifyOrderAccessToken(order, args.orderAccessToken);
     }
 
     // Only cancel pending_payment
@@ -514,22 +531,11 @@ export const cancelOrder = createPublicMutation()({
       throw new ConvexError({ code: 'BAD_REQUEST', message: 'Can only cancel orders awaiting payment' });
     }
 
-    // Restore stock
-    const orderItems = await ctx
-      .table('shopOrderItems', 'shopOrderId', (q: any) => q.eq('shopOrderId', args.orderId));
-    for (const item of orderItems) {
-      const product = await ctx.table('products').get(item.productId);
-      if (product && product.stock != null) {
-        await product.patch({ stock: product.stock + item.quantity });
-      }
-    }
-
-    // Update status
-    const currentTimeline = order.orderTimeline ?? [];
-    await order.patch({
-      status: 'cancelled',
+    await transitionOrderStatus(ctx, order, 'cancelled', {
+      type: customerId ? 'admin' : 'guest',
+      note: 'Cancelled by customer',
+    }, {
       paymentStatus: 'failed',
-      orderTimeline: [...currentTimeline, timelineEntry('cancelled', 'Cancelled by customer')],
     });
 
     return { success: true };

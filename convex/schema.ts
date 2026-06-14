@@ -916,6 +916,7 @@ const schema = defineEntSchema(
       .index('organizationId_companyId', ['organizationId', 'companyId'])
       .index('organizationId_invoiceDate', ['organizationId', 'invoiceDate'])
       .index('organizationId_dueDate', ['organizationId', 'dueDate'])
+      .index('organizationId_saleOrderId', ['organizationId', 'saleOrderId'])
       .index('organizationId_archivedAt', ['organizationId', 'archivedAt'])
       .searchIndex('search_invoices', {
         searchField: 'number',
@@ -1245,6 +1246,7 @@ const schema = defineEntSchema(
       .field('customerId', v.id('customers'), { index: true })
       .field('sessionId', v.optional(v.union(v.string(), v.null())))
       .index('organizationId_customerId_status', ['organizationId', 'customerId', 'status'])
+      .index('organizationId_sessionId_status', ['organizationId', 'sessionId', 'status'])
       .index('sessionId', ['sessionId'])
       .edges('cart', { to: 'cartItems', ref: 'cartId' }),
 
@@ -1293,6 +1295,8 @@ const schema = defineEntSchema(
       .field('paymentProvider', v.optional(v.string()))
       .field('paymentRef', v.optional(v.string()))
       .field('paymentData', v.optional(v.record(v.string(), v.any())))
+      .field('orderAccessTokenHash', v.optional(v.string()))
+      .field('orderAccessTokenExpiresAt', v.optional(v.number()))
       .field('shippingAddress', v.optional(v.object({
         recipientName: v.string(),
         phone: v.string(),
@@ -1307,6 +1311,7 @@ const schema = defineEntSchema(
       }))))
       .index('organizationId_status', ['organizationId', 'status'])
       .index('organizationId_orderNumber', ['organizationId', 'orderNumber'])
+      .index('organizationId_paymentRef', ['organizationId', 'paymentRef'])
       .index('orderNumber', ['orderNumber'])
       .index('organizationId_customerId', ['organizationId', 'customerId'])
       .edges('items', { to: 'shopOrderItems', ref: 'shopOrderId' }),

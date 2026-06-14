@@ -1,5 +1,15 @@
 'use client';
 
+function sanitizePublicUrl(value?: string | null) {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 import { useAuthQuery, useAuthMutation } from '@/lib/convex/hooks';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -120,13 +130,13 @@ export default function CompanyDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            {company.website && (
+            {sanitizePublicUrl(company.website) && (
               <div className="flex items-start gap-2">
                 <Globe className="mt-0.5 size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Website</p>
-                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    {company.website}
+                  <a href={sanitizePublicUrl(company.website)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                    {sanitizePublicUrl(company.website)}
                   </a>
                 </div>
               </div>

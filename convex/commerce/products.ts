@@ -4,6 +4,7 @@ import {
   createPublicPaginatedQuery,
   createPublicQuery,
 } from '../functions';
+import { orgMemberProductDto, publicProductDto } from './security';
 
 const productTypeEnum = z.enum(['storable', 'consumable', 'service']);
 
@@ -186,26 +187,16 @@ export const getBySlug = createPublicQuery({ publicOnly: true })({
         active: v.active,
       }));
 
-    return {
-      id: product._id,
-      name: product.name,
-      description: product.description,
-      type: product.type,
-      category: product.category,
-      categoryName,
-      imageUrl: product.imageUrl,
-      images: product.images,
-      price: product.price,
-      cost: product.cost,
-      unit: product.unit,
-      sku: product.sku,
-      weight: product.weight,
-      stock: product.stock,
-      slug: product.slug,
-      tags: product.tags,
-      notes: product.notes,
-      variants,
-    };
+    // Check if user is authenticated org member — only expose internal fields to members
+    const isMember = ctx.userId
+      ? !!(await ctx.table('member', 'organizationId_userId', (q: any) =>
+          q.eq('organizationId', orgId).eq('userId', ctx.userId)
+        ).first())
+      : false;
+
+    return isMember
+      ? orgMemberProductDto(product, categoryName, variantDocs as any[])
+      : publicProductDto(product, categoryName, variantDocs as any[]);
   },
 });
 

@@ -104,7 +104,9 @@ export const grantAdminByEmail = createAuthMutation({
 });
 
 // Get all users with pagination for admin dashboard
-export const getAllUsers = createAuthPaginatedQuery()({
+export const getAllUsers = createAuthPaginatedQuery({
+  role: 'admin',
+})({
   args: {
     role: z.enum(['all', 'user', 'admin']).optional(),
     search: z.string().optional(),

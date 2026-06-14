@@ -587,7 +587,20 @@ export const createFromSaleOrder = createOrgMutation()({
       });
     }
 
-    const number = await nextSequence(ctx, ctx.orgId, 'invoice');
+    // Prevent duplicate invoices for the same sale order
+    const existingInvoices = await ctx
+      .table('invoices', 'organizationId_saleOrderId', (q: any) =>
+        q.eq('organizationId', ctx.orgId).eq('field_saleOrderId', args.saleOrderId)
+      )
+      .take(1);
+    if (existingInvoices.length > 0) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: 'An invoice already exists for this sale order',
+      });
+    }
+
+    const number = await nextSequence(ctx, ctx.orgId, 'invoice', undefined);
     const now = Date.now();
     const dueDate = now + 30 * 24 * 60 * 60 * 1000; // Default 30 days
 

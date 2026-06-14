@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fulfillment Module — UI Mockup & Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --font: 'Inter', system-ui, sans-serif;
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --surface-alt: #f1f5f9;
+    --border: #e2e8f0;
+    --border-bright: #cbd5e1;
+    --text: #0f172a;
+    --text-dim: #64748b;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --accent-dim: rgba(99, 102, 241, 0.08);
+    --accent-bg: rgba(99, 102, 241, 0.12);
+    --green: #10b981;
+    --green-bg: rgba(16, 185, 129, 0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.1);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.1);
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139, 92, 246, 0.1);
+    --teal: #14b8a6;
+    --teal-bg: rgba(20, 184, 166, 0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-alt: #1e293b;
+      --border: #334155;
+      --border-bright: #475569;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #818cf8;
+      --accent-dim: rgba(129, 140, 248, 0.12);
+      --accent-bg: rgba(129, 140, 248, 0.15);
+      --green: #34d399;
+      --green-bg: rgba(52, 211, 153, 0.12);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.12);
+      --red: #f87171;
+      --red-bg: rgba(248, 113, 113, 0.12);
+      --blue: #60a5fa;
+      --blue-bg: rgba(96, 165, 250, 0.12);
+      --purple: #a78bfa;
+      --purple-bg: rgba(167, 139, 250, 0.12);
+      --teal: #2dd4bf;
+      --teal-bg: rgba(45, 212, 191, 0.12);
+      --shadow: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== NAVIGATION ===== */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 52px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nav-brand {
+    font-weight: 700; font-size: 15px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    margin-right: 24px;
+  }
+  .nav-brand svg { color: var(--accent); }
+  .nav-tab {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+    border: none; background: none; font-family: var(--font);
+  }
+  .nav-tab:hover { background: var(--accent-dim); color: var(--accent); }
+  .nav-tab.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+  .nav-badge {
+    background: var(--amber-bg); color: var(--amber);
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* ===== PAGE SECTIONS ===== */
+  .section { display: none; padding: 24px; max-width: 1280px; margin: 0 auto; }
+  .section.active { display: block; }
+
+  /* ===== KPI CARDS ===== */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px 20px;
+  }
+  .kpi-label { font-size: 12px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .kpi-icon {
+    width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+  }
+  .kpi-icon.truck { background: var(--blue-bg); color: var(--blue); }
+  .kpi-icon.box { background: var(--purple-bg); color: var(--purple); }
+  .kpi-icon.check { background: var(--green-bg); color: var(--green); }
+  .kpi-icon.clock { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== TOOLBAR ===== */
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .search-box {
+    flex: 1; max-width: 320px; position: relative;
+  }
+  .search-box input {
+    width: 100%; padding: 8px 12px 8px 36px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-size: 13px; font-family: var(--font);
+    outline: none; transition: border-color 0.15s;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; height: 16px; }
+  .filter-select {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-size: 13px; font-family: var(--font);
+    outline: none; cursor: pointer;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    border: none; cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-outline { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface-alt); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 6px; }
+
+  /* ===== DATA TABLE ===== */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--surface-alt); border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--accent-dim); }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  .badge-draft { background: var(--surface-alt); color: var(--text-dim); }
+  .badge-pending { background: var(--amber-bg); color: var(--amber); }
+  .badge-picking { background: var(--blue-bg); color: var(--blue); }
+  .badge-packed { background: var(--purple-bg); color: var(--purple); }
+  .badge-shipped { background: var(--teal-bg); color: var(--teal); }
+  .badge-delivered { background: var(--green-bg); color: var(--green); }
+  .badge-exception { background: var(--red-bg); color: var(--red); }
+  .badge-cancelled { background: var(--red-bg); color: var(--red); }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+  .card-body { padding: 20px; }
+
+  /* ===== DETAIL PAGE LAYOUT ===== */
+  .detail-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .detail-header-left { display: flex; align-items: center; gap: 12px; }
+  .detail-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--blue-bg); color: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .detail-title { font-size: 18px; font-weight: 700; }
+  .detail-header-right { display: flex; align-items: center; gap: 8px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+  /* ===== TIMELINE ===== */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 9px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--border);
+  }
+  .timeline-item { position: relative; padding-bottom: 20px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-dot {
+    position: absolute; left: -23px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--surface);
+  }
+  .timeline-dot.done { background: var(--green); }
+  .timeline-dot.active { background: var(--blue); box-shadow: 0 0 0 3px var(--blue-bg); }
+  .timeline-dot.pending { background: var(--border-bright); }
+  .timeline-dot.exception { background: var(--red); }
+  .timeline-content { }
+  .timeline-title { font-size: 13px; font-weight: 600; }
+  .timeline-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .timeline-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; font-style: italic; }
+
+  /* ===== TRACKING PAGE ===== */
+  .tracking-hero {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 32px; margin-bottom: 24px;
+    text-align: center;
+  }
+  .tracking-status-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--teal-bg); color: var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .tracking-status-title { font-size: 20px; font-weight: 700; }
+  .tracking-status-sub { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
+  .tracking-id {
+    display: inline-block; margin-top: 12px; padding: 4px 12px;
+    background: var(--surface-alt); border-radius: 6px;
+    font-family: 'SF Mono', monospace; font-size: 13px; color: var(--text-dim);
+  }
+  .tracking-progress {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin: 24px 0 8px;
+  }
+  .tracking-step { display: flex; flex-direction: column; align-items: center; width: 120px; }
+  .tracking-step-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .tracking-step-dot.done { background: var(--green); color: white; }
+  .tracking-step-dot.active { background: var(--blue); color: white; box-shadow: 0 0 0 4px var(--blue-bg); }
+  .tracking-step-dot.pending { background: var(--border); color: var(--text-muted); }
+  .tracking-step-line {
+    flex: 1; height: 2px; margin: 0 -14px; position: relative; top: -14px; z-index: -1;
+  }
+  .tracking-step-line.done { background: var(--green); }
+  .tracking-step-line.pending { background: var(--border); }
+  .tracking-step-label { font-size: 11px; font-weight: 500; color: var(--text-dim); margin-top: 8px; text-align: center; }
+  .tracking-step-date { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ===== WORKFLOW DIAGRAM ===== */
+  .workflow-section { margin-top: 32px; }
+  .section-title {
+    font-size: 20px; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 24px; }
+  .mermaid-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px;
+    display: flex; justify-content: center; overflow-x: auto;
+  }
+
+  /* ===== STATE MACHINE TABLE ===== */
+  .state-table { width: 100%; }
+  .state-table th { text-align: center; }
+  .state-table td { text-align: center; font-size: 12px; }
+  .arrow { color: var(--text-muted); font-size: 16px; }
+  .arrow.active { color: var(--green); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .detail-grid { grid-template-columns: 1fr; }
+    .tracking-step { width: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- NAVIGATION -->
+<!-- ============================================================ -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+    CRM — Fulfillment
+  </div>
+  <button class="nav-tab active" onclick="showSection('list', this)">📦 Shipments</button>
+  <button class="nav-tab" onclick="showSection('detail', this)">🔍 Detail</button>
+  <button class="nav-tab" onclick="showSection('tracking', this)">📍 Tracking</button>
+  <button class="nav-tab" onclick="showSection('workflow', this)">⚙️ Workflow</button>
+  <div class="nav-spacer"></div>
+  <span class="nav-badge">3 need action</span>
+</nav>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: SHIPMENT LIST -->
+<!-- ============================================================ -->
+<div id="list" class="section active">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon truck"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
+      <div class="kpi-value">24</div>
+      <div class="kpi-label">Total Shipments</div>
+      <div class="kpi-sub">This month</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon clock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="kpi-value">7</div>
+      <div class="kpi-label">Pending Pick</div>
+      <div class="kpi-sub">Avg 1.2 days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+      <div class="kpi-value">5</div>
+      <div class="kpi-label">In Transit</div>
+      <div class="kpi-sub">Est. delivery today: 2</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="kpi-value">11</div>
+      <div class="kpi-label">Delivered</div>
+      <div class="kpi-sub">On-time rate: 91%</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search by tracking #, order #, customer...">
+    </div>
+    <select class="filter-select">
+      <option>All Status</option>
+      <option>Pending Pick</option>
+      <option>Picking</option>
+      <option>Packed</option>
+      <option>Shipped</option>
+      <option>In Transit</option>
+      <option>Delivered</option>
+      <option>Exception</option>
+    </select>
+    <select class="filter-select">
+      <option>All Couriers</option>
+      <option>JNE</option>
+      <option>J&T</option>
+      <option>SiCepat</option>
+      <option>AnterAja</option>
+      <option>Grab Express</option>
+    </select>
+    <div style="flex:1"></div>
+    <button class="btn btn-outline btn-sm">📥 Export</button>
+    <button class="btn btn-primary btn-sm">+ New Shipment</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px"><input type="checkbox" style="cursor:pointer"></th>
+          <th>Tracking #</th>
+          <th>Order</th>
+          <th>Customer</th>
+          <th>Courier</th>
+          <th>Status</th>
+          <th>Items</th>
+          <th>Est. Delivery</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00124</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0891</a></td>
+          <td>PT Maju Bersama</td>
+          <td>JNE</td>
+          <td><span class="badge badge-shipped">● Shipped</span></td>
+          <td>3 items</td>
+          <td>17 May</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00123</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0888</a></td>
+          <td>CV Sumber Rejeki</td>
+          <td>J&T</td>
+          <td><span class="badge badge-packing">● Picking</span></td>
+          <td>5 items</td>
+          <td>18 May</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00122</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0885</a></td>
+          <td>Budi Santoso</td>
+          <td>SiCepat</td>
+          <td><span class="badge badge-packed">● Packed</span></td>
+          <td>2 items</td>
+          <td>18 May</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00121</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0880</a></td>
+          <td>PT Karya Mandiri</td>
+          <td>AnterAja</td>
+          <td><span class="badge badge-pending">● Pending Pick</span></td>
+          <td>8 items</td>
+          <td>19 May</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00120</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0876</a></td>
+          <td>Dewi Lestari</td>
+          <td>Grab Express</td>
+          <td><span class="badge badge-exception">● Exception</span></td>
+          <td>1 item</td>
+          <td>16 May</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer"></td>
+          <td><strong style="font-family:'SF Mono',monospace;font-size:12px">SHP-00119</strong></td>
+          <td><a href="#" style="color:var(--accent);text-decoration:none;font-weight:500">SO-2024-0872</a></td>
+          <td>PT Abadi Jaya</td>
+          <td>JNE</td>
+          <td><span class="badge badge-delivered">● Delivered</span></td>
+          <td>4 items</td>
+          <td>15 May ✓</td>
+          <td><button class="btn btn-outline btn-sm btn-icon">⋯</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: SHIPMENT DETAIL -->
+<!-- ============================================================ -->
+<div id="detail" class="section">
+  <div class="detail-header">
+    <div class="detail-header-left">
+      <button class="btn btn-outline btn-sm" onclick="showSection('list', document.querySelectorAll('.nav-tab')[0])">← Back</button>
+      <div class="detail-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+      </div>
+      <div>
+        <div class="detail-title">SHP-00124</div>
+        <div style="font-size:13px;color:var(--text-dim)">from <a href="#" style="color:var(--accent)">SO-2024-0891</a> · PT Maju Bersama</div>
+      </div>
+      <span class="badge badge-shipped" style="margin-left:8px">● Shipped</span>
+    </div>
+    <div class="detail-header-right">
+      <button class="btn btn-outline btn-sm">🖨️ Print Label</button>
+      <button class="btn btn-outline btn-sm">📋 Copy Tracking #</button>
+      <button class="btn btn-primary btn-sm">Update Status</button>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Shipment Info -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Shipment Info</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Courier</span><span style="font-size:13px;font-weight:500">JNE — REG</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Tracking Number</span><span style="font-size:13px;font-weight:500;font-family:'SF Mono',monospace">JNE-9827361540</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Weight</span><span style="font-size:13px;font-weight:500">2.4 kg</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Dimensions</span><span style="font-size:13px;font-weight:500">30×20×15 cm</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Shipping Cost</span><span style="font-size:13px;font-weight:500">Rp 28.000</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Est. Delivery</span><span style="font-size:13px;font-weight:500">17 May 2026</span></div>
+      </div>
+    </div>
+
+    <!-- Delivery Address -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Delivery Address</span></div>
+      <div class="card-body">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">PT Maju Bersama</div>
+        <div style="font-size:13px;color:var(--text-dim);line-height:1.6">
+          Gedung Graha Pratama Lt. 5<br>
+          Jl. Sudirman Kav. 45-46<br>
+          Jakarta Selatan 12190<br>
+          DKI Jakarta, Indonesia
+        </div>
+        <div style="margin-top:10px;font-size:13px;color:var(--text-dim)">
+          📞 +62 21 5550 1234
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Items (3)</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:500">Laptop Stand Aluminium</div>
+            <div style="font-size:12px;color:var(--text-muted)">SKU: LS-ALU-001</div>
+          </div>
+          <div style="font-size:13px;font-weight:500">×2</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:500">USB-C Hub 7-in-1</div>
+            <div style="font-size:12px;color:var(--text-muted)">SKU: HUB-USBC-007</div>
+          </div>
+          <div style="font-size:13px;font-weight:500">×1</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:500">Wireless Mouse M590</div>
+            <div style="font-size:12px;color:var(--text-muted)">SKU: MSE-WL-590</div>
+          </div>
+          <div style="font-size:13px;font-weight:500">×3</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-header"><span class="card-title">Tracking Timeline</span></div>
+    <div class="card-body">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <div class="timeline-content">
+            <div class="timeline-title">Package shipped</div>
+            <div class="timeline-meta">15 May 2026, 14:32 · JNE Jakarta Selatan</div>
+            <div class="timeline-note">Package picked up by courier</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <div class="timeline-content">
+            <div class="timeline-title">In transit — Sorting center</div>
+            <div class="timeline-meta">15 May 2026, 18:45 · JNE Hub Tangerang</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot active"></div>
+          <div class="timeline-content">
+            <div class="timeline-title">In transit — Out for delivery</div>
+            <div class="timeline-meta">16 May 2026, 07:20 · JNE Jakarta Selatan</div>
+            <div class="timeline-note">Courier: Ahmad R. (0812-3456-7890)</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot pending"></div>
+          <div class="timeline-content">
+            <div class="timeline-title" style="color:var(--text-muted)">Delivered</div>
+            <div class="timeline-meta">Est. 17 May 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: CUSTOMER TRACKING PAGE -->
+<!-- ============================================================ -->
+<div id="tracking" class="section">
+  <div class="tracking-hero">
+    <div class="tracking-status-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+    </div>
+    <div class="tracking-status-title">Package In Transit</div>
+    <div class="tracking-status-sub">Your package is on the way — out for delivery</div>
+    <div class="tracking-id">JNE-9827361540</div>
+
+    <div class="tracking-progress">
+      <div class="tracking-step">
+        <div class="tracking-step-dot done">✓</div>
+        <div class="tracking-step-line done"></div>
+        <div class="tracking-step-label">Picked Up</div>
+        <div class="tracking-step-date">15 May</div>
+      </div>
+      <div class="tracking-step">
+        <div class="tracking-step-dot done">✓</div>
+        <div class="tracking-step-line done"></div>
+        <div class="tracking-step-label">In Transit</div>
+        <div class="tracking-step-date">15 May</div>
+      </div>
+      <div class="tracking-step">
+        <div class="tracking-step-dot active">3</div>
+        <div class="tracking-step-line pending"></div>
+        <div class="tracking-step-label">Out for Delivery</div>
+        <div class="tracking-step-date">16 May</div>
+      </div>
+      <div class="tracking-step">
+        <div class="tracking-step-dot pending">4</div>
+        <div class="tracking-step-label">Delivered</div>
+        <div class="tracking-step-date">Est. 17 May</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Order Details</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Order</span><a href="#" style="font-size:13px;font-weight:500;color:var(--accent)">SO-2024-0891</a></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Courier</span><span style="font-size:13px;font-weight:500">JNE REG</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Items</span><span style="font-size:13px;font-weight:500">3 products (6 qty)</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--text-dim)">Shipping to</span><span style="font-size:13px;font-weight:500">Jakarta Selatan</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Delivery Updates</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot active"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">Out for delivery</div>
+              <div class="timeline-meta">Today, 07:20 · Jakarta Selatan</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot done"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">Arrived at sorting center</div>
+              <div class="timeline-meta">Yesterday, 18:45 · Tangerang</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot done"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">Package picked up</div>
+              <div class="timeline-meta">Yesterday, 14:32 · Jakarta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: WORKFLOW & STATE MACHINE -->
+<!-- ============================================================ -->
+<div id="workflow" class="section">
+  <div class="workflow-section">
+    <div class="section-title">⚙️ Fulfillment Workflow</div>
+    <div class="section-subtitle">End-to-end flow from sale order confirmation to delivery</div>
+
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    SO["📋 Sale Order\nConfirmed"] --> PICK["📦 Pending Pick"]
+    PICK --> PICKING["👷 Picking"]
+    PICKING --> PACKED["📦 Packed"]
+    PACKED --> READY["✅ Ready to Ship"]
+    READY --> SHIP["🚚 Shipped"]
+    SHIP --> TRANSIT["🔄 In Transit"]
+    TRANSIT --> OFD["📍 Out for Delivery"]
+    OFD --> DEL["✅ Delivered"]
+    OFD --> EX["⚠️ Exception"]
+    EX --> RETRY["🔄 Retry Delivery"]
+    RETRY --> OFD
+    EX --> RETURN["↩️ Return to Sender"]
+    RETURN --> RTS["📦 Returned"]
+    SHIP --> EX
+    TRANSIT --> EX
+
+    style SO fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    style PICK fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style PICKING fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    style PACKED fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
+    style READY fill:#d1fae5,stroke:#10b981,color:#065f46
+    style SHIP fill:#ccfbf1,stroke:#14b8a6,color:#115e59
+    style TRANSIT fill:#ccfbf1,stroke:#14b8a6,color:#115e59
+    style OFD fill:#ccfbf1,stroke:#14b8a6,color:#115e59
+    style DEL fill:#d1fae5,stroke:#10b981,color:#065f46
+    style EX fill:#fee2e2,stroke:#ef4444,color:#991b1b
+    style RETRY fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style RETURN fill:#fee2e2,stroke:#ef4444,color:#991b1b
+    style RTS fill:#f1f5f9,stroke:#64748b,color:#475569
+      </div>
+    </div>
+  </div>
+
+  <div class="workflow-section">
+    <div class="section-title">🔄 State Machine</div>
+    <div class="section-subtitle">Valid state transitions for fulfillment</div>
+
+    <div class="card">
+      <div class="card-body">
+        <table class="state-table">
+          <thead>
+            <tr>
+              <th>From State</th>
+              <th></th>
+              <th>To State</th>
+              <th>Trigger</th>
+              <th>Auto?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge badge-pending">Pending Pick</span></td><td class="arrow active">→</td><td><span class="badge badge-picking">Picking</span></td><td>Warehouse staff starts picking</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-picking">Picking</span></td><td class="arrow active">→</td><td><span class="badge badge-packed">Packed</span></td><td>All items picked & packed</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-packed">Packed</span></td><td class="arrow active">→</td><td><span class="badge badge-shipped">Shipped</span></td><td>Courier picks up package</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-shipped">Shipped</span></td><td class="arrow active">→</td><td><span class="badge badge-shipped">In Transit</span></td><td>Courier scans at hub</td><td>🔄 Auto</td></tr>
+            <tr><td><span class="badge badge-shipped">In Transit</span></td><td class="arrow active">→</td><td><span class="badge badge-packed">Out for Delivery</span></td><td>Courier assigned to route</td><td>🔄 Auto</td></tr>
+            <tr><td><span class="badge badge-packed">Out for Delivery</span></td><td class="arrow active">→</td><td><span class="badge badge-delivered">Delivered</span></td><td>Recipient confirms receipt</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-packed">Out for Delivery</span></td><td class="arrow active">→</td><td><span class="badge badge-exception">Exception</span></td><td>Failed delivery attempt</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-exception">Exception</span></td><td class="arrow active">→</td><td><span class="badge badge-packed">Out for Delivery</span></td><td>Retry scheduled</td><td>Manual</td></tr>
+            <tr><td><span class="badge badge-exception">Exception</span></td><td class="arrow active">→</td><td><span class="badge badge-cancelled">Returned</span></td><td>Return to sender</td><td>Manual</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="workflow-section">
+    <div class="section-title">🏗️ Integration with Existing CRM</div>
+    <div class="section-subtitle">How fulfillment connects to your current sale order flow</div>
+
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph CRM["Existing CRM"]
+        SO["Sale Order"] --> INV["Invoice"]
+        SO --> DEL["Delivery Status"]
+    end
+
+    subgraph FUL["New Fulfillment Module"]
+        SHP["Shipment"] --> TRK["Tracking"]
+        SHP --> LABEL["Shipping Label"]
+        SHP --> EVENT["Delivery Events"]
+    end
+
+    SO -->|"confirmed → create shipment"| SHP
+    TRK -->|"webhook/cron"| EVENT
+    EVENT -->|"update"| DEL
+    EVENT -->|"notify"| CUST["📧 Customer"]
+
+    style SO fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    style INV fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
+    style DEL fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style SHP fill:#d1fae5,stroke:#10b981,color:#065f46
+    style TRK fill:#ccfbf1,stroke:#14b8a6,color:#115e59
+    style LABEL fill:#ccfbf1,stroke:#14b8a6,color:#115e59
+    style EVENT fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style CUST fill:#fee2e2,stroke:#ef4444,color:#991b1b
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', flowchart: { useMaxWidth: true, htmlLabels: true } });
+
+  function showSection(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (el) el.classList.add('active');
+  }
+</script>
+</body>
+</html>

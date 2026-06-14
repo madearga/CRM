@@ -31,12 +31,21 @@ function formatValue(value: any): string {
   return String(value);
 }
 
-function escapeCSV(value: string): string {
-  if (!value) return '""';
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
+/** Prefix cell values that begin with spreadsheet formula metacharacters. */
+function sanitizeCSVCell(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`;
   }
   return value;
+}
+
+function escapeCSV(value: string): string {
+  if (!value) return '""';
+  const sanitized = sanitizeCSVCell(value);
+  if (sanitized.includes(',') || sanitized.includes('"') || sanitized.includes('\n')) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
+  }
+  return sanitized;
 }
 
 /**

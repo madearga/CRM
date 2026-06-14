@@ -244,6 +244,8 @@ export const verify = createOrgMutation({})({
     }
 
     try {
+      validateExternalUrl(`${plugin.url}/api/plugin/manifest`);
+
       const response = await fetch(`${plugin.url}/api/plugin/manifest`, {
         headers: { Authorization: `Bearer ${plugin.apiKey}` },
         signal: AbortSignal.timeout(10000),
@@ -303,6 +305,11 @@ export const update = createOrgMutation({})({
       ...(args.name && { name: args.name }),
       ...(args.url && { url: args.url.replace(/\/$/, '') }),
     });
+
+    // Re-validate URL after update to prevent SSRF
+    if (args.url) {
+      validateExternalUrl(args.url.replace(/\/$/, ''));
+    }
 
     return { success: true };
   },
@@ -386,9 +393,9 @@ export const triggerSync = createOrgMutation({})({
     const startTime = Date.now();
 
     try {
+      validateExternalUrl(`${plugin.url}/api/plugin/data?table=${args.table}&limit=100`);
+
       const response = await fetch(
-        `${plugin.url}/api/plugin/data?table=${args.table}&limit=100`,
-        {
           headers: { Authorization: `Bearer ${plugin.apiKey}` },
           signal: AbortSignal.timeout(30000),
         }

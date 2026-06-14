@@ -99,6 +99,10 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
     }
   };
 
+  const removeTag = (tag: string) => {
+    setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -369,6 +373,4 @@ export function ProductForm({ productId, initialData }: ProductFormProps) {
   );
 }
 
-function removeTag(tag: string) {
-  // noop — handled via setForm in parent scope
-}
+

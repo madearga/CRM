@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
-import { getOrgId, resolveCustomerId, verifyCartOwnership } from './helpers';
+import { getOrgId, resolveCustomerId } from './helpers';
+import { requireCartAccess, requireGuestMutationSession } from './security';
+import { guestRateLimitGuard } from '../helpers/rateLimiter';
 import { createPublicMutation, createPublicQuery } from '../functions';
 import { authClient } from '../auth';
 import { getAuth } from '../auth';
@@ -24,10 +26,10 @@ async function findActiveCustomerCart(ctx: any, orgId: any, customerId: any) {
 }
 
 /** Find active cart for a guest session. */
-async function findActiveSessionCart(ctx: any, sessionId: string) {
+async function findActiveSessionCart(ctx: any, orgId: any, sessionId: string) {
   const carts = await ctx
-    .table('carts', 'sessionId', (q: any) =>
-      q.eq('sessionId', sessionId).eq('status', 'active')
+    .table('carts', 'organizationId_sessionId_status', (q: any) =>
+      q.eq('organizationId', orgId).eq('sessionId', sessionId).eq('status', 'active')
     )
     .take(1);
   return carts[0] ?? null;
@@ -56,7 +58,7 @@ async function getOrCreateCart(
   // Guest: find by sessionId
   if (!sessionId) throw new ConvexError({ code: 'BAD_REQUEST', message: 'sessionId required for guests' });
 
-  const existing = await findActiveSessionCart(ctx, sessionId);
+  const existing = await findActiveSessionCart(ctx, orgId, sessionId);
   if (existing) return existing;
 
   // Guest carts need a customer record. We won't have one for pure guests,
@@ -149,7 +151,7 @@ export const getCart = createPublicQuery()({
     if (customerId) {
       cart = await findActiveCustomerCart(ctx, orgId, customerId);
     } else if (args.sessionId) {
-      cart = await findActiveSessionCart(ctx, args.sessionId);
+      cart = await findActiveSessionCart(ctx, orgId, args.sessionId);
     } else {
       return null;
     }
@@ -201,10 +203,16 @@ export const addItem = createPublicMutation()({
   handler: async (ctx, args) => {
     const orgId = await getOrgId(ctx, args.organizationSlug);
     const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
+    requireGuestMutationSession(customerId, args.sessionId);
+
+    // Guest rate limit
+    if (!customerId && args.sessionId) {
+      await guestRateLimitGuard(ctx, 'cart/mutate:public', orgId, args.sessionId);
+    }
 
     // Get or create cart
     const cart = await getOrCreateCart(ctx, orgId, customerId, args.sessionId);
-    verifyCartOwnership(cart, customerId, args.sessionId);
+    requireCartAccess(cart, orgId, customerId, args.sessionId);
 
     // Get product & verify stock
     const product = await ctx.table('products').getX(args.productId);
@@ -270,7 +278,11 @@ export const removeItem = createPublicMutation()({
 
     const orgId = cart.organizationId;
     const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
-    verifyCartOwnership(cart, customerId, args.sessionId);
+    requireCartAccess(cart, orgId, customerId, args.sessionId);
+
+    if (!customerId && args.sessionId) {
+      await guestRateLimitGuard(ctx, 'cart/mutate:public', orgId, args.sessionId);
+    }
 
     await ctx.table('cartItems').getX(args.cartItemId).delete();
     return true;
@@ -290,7 +302,11 @@ export const updateQuantity = createPublicMutation()({
 
     const orgId = cart.organizationId;
     const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
-    verifyCartOwnership(cart, customerId, args.sessionId);
+    requireCartAccess(cart, orgId, customerId, args.sessionId);
+
+    if (!customerId && args.sessionId) {
+      await guestRateLimitGuard(ctx, 'cart/mutate:public', orgId, args.sessionId);
+    }
 
     // Quantity <= 0 → delete
     if (args.quantity <= 0) {
@@ -323,12 +339,17 @@ export const clearCart = createPublicMutation()({
     if (customerId) {
       cart = await findActiveCustomerCart(ctx, orgId, customerId);
     } else if (args.sessionId) {
-      cart = await findActiveSessionCart(ctx, args.sessionId);
+      cart = await findActiveSessionCart(ctx, orgId, args.sessionId);
     }
 
     if (!cart) return true;
 
-    verifyCartOwnership(cart, customerId, args.sessionId);
+    requireCartAccess(cart, orgId, customerId, args.sessionId);
+
+    // Guest rate limit
+    if (!customerId && args.sessionId) {
+      await guestRateLimitGuard(ctx, 'cart/mutate:public', orgId, args.sessionId);
+    }
 
     const items = await ctx
       .table('cartItems', 'cartId', (q: any) => q.eq('cartId', cart._id));
@@ -351,6 +372,9 @@ export const mergeGuestCart = createPublicMutation()({
     if (!ctx.userId) {
       throw new ConvexError({ code: 'UNAUTHENTICATED', message: 'Must be logged in to merge cart' });
     }
+
+    // Rate limit for merge operation
+    await guestRateLimitGuard(ctx, 'cart/mutate:public', orgId, args.sessionId);
 
     const customerId = await resolveCustomerId(ctx, orgId, ctx.userId);
 
@@ -380,7 +404,7 @@ export const mergeGuestCart = createPublicMutation()({
     }
 
     // Find guest cart
-    const guestCart = await findActiveSessionCart(ctx, args.sessionId);
+    const guestCart = await findActiveSessionCart(ctx, orgId, args.sessionId);
     if (!guestCart) return true; // Nothing to merge
 
     // Get or create authenticated cart

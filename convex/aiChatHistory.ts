@@ -174,7 +174,10 @@ export const listConversations = createOrgQuery()({
       .order('desc')
       .take(args.limit ?? 20);
 
-    return conversations.map((c: any) => ({
+    // Filter by userId (user-scoped: each user sees only their own conversations)
+    const userFiltered = conversations.filter((c: any) => c.userId === ctx.userId);
+
+    return userFiltered.map((c: any) => ({
       id: c._id,
       title: c.title,
       updatedAt: c.updatedAt,

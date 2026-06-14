@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Package } from 'lucide-react';
 
 import { api } from '@convex/_generated/api';
@@ -16,18 +16,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function OrderDetailPage() {
   const { push } = useRouter();
   const { slug, id: orderNumber } = useParams<{ slug: string; id: string }>();
+  const searchParams = useSearchParams();
+  const orderAccessToken = searchParams.get('token') ?? undefined;
   const isAuth = useIsAuth();
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
 
   const { data: order, isLoading } = usePublicQuery(
     api.commerce.orders.getOrderDetail,
-    orderNumber && orgSlug ? { orderNumber, organizationSlug: orgSlug } : 'skip',
+    orderNumber && slug ? { orderNumber, organizationSlug: slug, orderAccessToken } : 'skip',
   );
 
   const cancelOrder = usePublicMutation(api.commerce.checkout.cancelOrder as any);
 
-  if (!isAuth) {
+  if (!isAuth && !orderAccessToken) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
         <Package className="mx-auto size-12 text-muted-foreground" />
@@ -118,7 +120,7 @@ export default function OrderDetailPage() {
             disabled={cancelOrder.isPending}
             onClick={async () => {
               try {
-                await cancelOrder.mutateAsync({ orderId: order.id } as any);
+                await cancelOrder.mutateAsync({ orderId: order.id, orderAccessToken } as any);
                 push(`/${slug}/orders`);
               } catch {
                 /* handled by mutation */

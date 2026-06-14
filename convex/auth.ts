@@ -76,7 +76,7 @@ export const authClient = createClient<DataModel>(
 
           // Check admin role
           const adminEmails = getEnv().ADMIN;
-          if (adminEmails?.includes(user.email) && mainUser.role !== 'admin') {
+          if (adminEmails?.some(adminEmail => adminEmail.toLowerCase() === user.email.toLowerCase()) && mainUser.role !== 'admin') {
             await table('user').getX(mainUser._id).patch({ role: 'admin' });
           }
 
@@ -186,8 +186,9 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
     trustedOrigins: [
       baseURL,
       process.env.NEXT_PUBLIC_CONVEX_SITE_URL || '',
-      'http://localhost:3000',
-      'http://localhost:3005',
+      ...(process.env.NODE_ENV !== 'production'
+        ? ['http://localhost:3000', 'http://localhost:3005']
+        : []),
     ].filter(Boolean),
     plugins: [
       organization({

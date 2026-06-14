@@ -20,8 +20,11 @@ export const handleAiChat = httpAction(async (ctx, request) => {
   // Handle CORS preflight
   const rawOrigin = request.headers.get('origin') ?? '*';
   const siteUrl = getEnv().NEXT_PUBLIC_SITE_URL || 'http://localhost:3005';
+  const siteHostname = new URL(siteUrl).hostname;
+  // Exact hostname match only — no suffix matching to prevent bypass
+  const originHostname = rawOrigin !== '*' ? new URL(rawOrigin).hostname : null;
   const allowedOrigin =
-    rawOrigin === '*' || rawOrigin === siteUrl || rawOrigin.endsWith(new URL(siteUrl).hostname)
+    rawOrigin === '*' || rawOrigin === siteUrl || originHostname === siteHostname
       ? rawOrigin
       : siteUrl;
   const corsHeaders = {

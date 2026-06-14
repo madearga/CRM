@@ -56,12 +56,20 @@ function rangesOverlap(aStart: number, aEnd: number | null | undefined, bStart: 
 }
 
 async function assertNoAssignmentConflict(ctx: any, employeeId: any, startDate: number, endDate: number | null | undefined) {
-  const existing = await ctx
-    .table('shiftAssignments', 'employeeId_startDate', (q: any) => q.eq('employeeId', employeeId))
-    .take(200);
-  const conflict = existing.find((assignment: any) => rangesOverlap(assignment.startDate, assignment.endDate, startDate, endDate));
-  if (conflict) {
-    throw new ConvexError({ code: 'CONFLICT', message: 'Employee already has an overlapping assignment' });
+  // Paginate to avoid missing assignments beyond .take(200) limit
+  let cursor: string | null = null;
+  let hasMore = true;
+  while (hasMore) {
+    const result = await ctx
+      .table('shiftAssignments', 'employeeId_startDate', (q: any) => q.eq('employeeId', employeeId))
+      .paginate({ cursor, numItems: 200 });
+    const existing = result.page;
+    const conflict = existing.find((assignment: any) => rangesOverlap(assignment.startDate, assignment.endDate, startDate, endDate));
+    if (conflict) {
+      throw new ConvexError({ code: 'CONFLICT', message: 'Employee already has an overlapping assignment' });
+    }
+    hasMore = result.isDone === false;
+    cursor = result.continueCursor;
   }
 }
 

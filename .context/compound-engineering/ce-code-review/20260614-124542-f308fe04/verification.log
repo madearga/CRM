@@ -1,0 +1,11 @@
+Verification commands run after fixes:
+
+1. pnpm lint src/app/(dashboard)/page.tsx src/lib/format-date.ts src/components/insights-widget.tsx
+   Result: ESLint: No issues found
+
+2. pnpm typecheck (scoped to modified files)
+   Result: No errors in page.tsx, format-date.ts, or insights-widget.tsx
+   Note: Pre-existing TS parse errors in convex/externalPlugins.ts remain unrelated to this change.
+
+3. pnpm vitest run src/__tests__/empty-state.test.tsx
+   Result: PASS (5 tests)

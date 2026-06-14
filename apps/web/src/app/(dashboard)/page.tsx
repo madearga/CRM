@@ -1,60 +1,60 @@
-"use client";
+'use client';
 
 import {
   ArrowRightLeft,
-  Building2,
   Calendar,
   FileText,
   Handshake,
   Mail,
   Phone,
   TrendingUp,
-  Activity,
   AlertTriangle,
   Plus,
   DollarSign,
   Target,
   BarChart3,
   Clock,
-} from "lucide-react";
-import { formatDistanceToNow, format } from "@/lib/format-date";
-import { useState } from "react";
-import dynamic from "next/dynamic";
-
+} from 'lucide-react';
+import { formatDistanceToNow, format } from '@/lib/format-date';
+import { useState } from 'react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
 
 const RevenueChart = dynamic(
-  () => import("./revenue-chart").then((m) => ({ default: m.RevenueChart })),
+  () => import('./revenue-chart').then((m) => ({ default: m.RevenueChart })),
   {
     ssr: false,
-    loading: () => <div className="h-[300px] animate-pulse rounded-lg bg-muted" />,
+    loading: () => (
+      <div className="h-[300px] animate-pulse rounded-lg bg-muted" />
+    ),
   }
 );
-const PipelineChart = dynamic(() => import("./pipeline-chart"), {
+const PipelineChart = dynamic(() => import('./pipeline-chart'), {
   ssr: false,
   loading: () => (
     <div className="h-[300px] animate-pulse rounded-lg bg-muted" />
   ),
 });
 
-import { api } from "@convex/_generated/api";
-import { useAuthQuery } from "@/lib/convex/hooks";
+import { api } from '@convex/_generated/api';
+import { useAuthQuery } from '@/lib/convex/hooks';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -62,26 +62,29 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
+import { formatCurrency } from '@/lib/format';
+import { EmptyState } from '@/components/empty-state';
 import {
-  STAGE_CHART_COLORS,
-  STAGE_BAR_COLORS,
-} from "@/lib/constants";
-import { formatCurrency } from "@/lib/format";
-import { useDashboardParams, type DateRange } from "@/hooks/use-dashboard-params";
-import { QuickAddDealDialog } from "./quick-add-deal-dialog";
-import { InsightsWidget } from "@/components/insights-widget";
+  useDashboardParams,
+  type DateRange,
+} from '@/hooks/use-dashboard-params';
+import { QuickAddDealDialog } from './quick-add-deal-dialog';
+import { InsightsWidget } from '@/components/insights-widget';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function ChangeIndicator({ value }: { value: number }) {
-  if (value === 0) return <span className="text-xs text-muted-foreground">0%</span>;
+  if (value === 0)
+    return <span className="text-xs text-muted-foreground">0%</span>;
   const positive = value > 0;
   return (
-    <span className={`text-xs font-medium ${positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-      {positive ? "+" : ""}
+    <span
+      className={`text-xs font-medium ${positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+    >
+      {positive ? '+' : ''}
       {value}%
     </span>
   );
@@ -91,8 +94,8 @@ function SkeletonDashboard() {
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
       <Skeleton className="h-8 w-48" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
@@ -106,6 +109,28 @@ function SkeletonDashboard() {
       </div>
       <Skeleton className="h-64 rounded-xl" />
     </div>
+  );
+}
+
+function DashboardEmptyState({
+  icon,
+  title,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  action: { label: string; href: string };
+}) {
+  return (
+    <EmptyState
+      icon={icon}
+      title={title}
+      action={
+        <Button variant="outline" size="sm" asChild>
+          <Link href={action.href}>{action.label}</Link>
+        </Button>
+      }
+    />
   );
 }
 
@@ -160,7 +185,14 @@ export default function DashboardPage() {
   );
 
   const isLoading =
-    overviewLoading || revenueLoading || salesLoading || forecastLoading;
+    overviewLoading ||
+    revenueLoading ||
+    salesLoading ||
+    forecastLoading ||
+    agingLoading ||
+    productsLoading ||
+    comparisonLoading ||
+    analyticsOverview === undefined;
 
   if (isLoading) return <SkeletonDashboard />;
 
@@ -175,10 +207,11 @@ export default function DashboardPage() {
   }
 
   const activePipelineValue = overview.dealsByStage
-    .filter((s) => s.stage !== "won" && s.stage !== "lost")
+    .filter((s) => s.stage !== 'won' && s.stage !== 'lost')
     .reduce((sum, s) => sum + s.value, 0);
 
   const wonDealsMonth = comparisonData?.current.dealsWon ?? 0;
+  const hasOverdue = (analyticsOverview?.overdueAmount ?? 0) > 0;
   const conversionRate =
     comparisonData && comparisonData.current.dealsCreated > 0
       ? Math.round(
@@ -216,132 +249,148 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <DollarSign className="h-4 w-4" />
-              Revenue (Month)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">
-              {formatCurrency(comparisonData?.current.revenue ?? 0)}
-            </CardTitle>
-            <div className="mt-1 flex items-center gap-2">
-              <ChangeIndicator value={comparisonData?.change.revenue ?? 0} />
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link href="/invoices" className="group block">
+          <Card className="transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4" />
+                Revenue (Month)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle className="font-mono text-2xl lg:text-3xl">
+                {formatCurrency(comparisonData?.current.revenue ?? 0)}
+              </CardTitle>
+              <div className="mt-1 flex items-center gap-2">
+                <ChangeIndicator value={comparisonData?.change.revenue ?? 0} />
+                <span className="text-xs text-muted-foreground">
+                  vs last month
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4" />
-              Active Pipeline
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">
-              {formatCurrency(activePipelineValue)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {overview.totalDeals} total deals
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/deals" className="group block">
+          <Card className="transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4" />
+                Active Pipeline
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle className="font-mono text-2xl lg:text-3xl">
+                {formatCurrency(activePipelineValue)}
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {overview.totalDeals} total deals
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <Handshake className="h-4 w-4" />
-              Deals Won (Month)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="text-3xl">{wonDealsMonth}</CardTitle>
-            <div className="mt-1 flex items-center gap-2">
-              <ChangeIndicator value={comparisonData?.change.dealsWon ?? 0} />
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/deals" className="group block">
+          <Card className="transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Handshake className="h-4 w-4" />
+                Deals Won (Month)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle className="text-2xl lg:text-3xl">
+                {wonDealsMonth}
+              </CardTitle>
+              <div className="mt-1 flex items-center gap-2">
+                <ChangeIndicator value={comparisonData?.change.dealsWon ?? 0} />
+                <span className="text-xs text-muted-foreground">
+                  vs last month
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <Target className="h-4 w-4" />
-              Conversion Rate
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">{conversionRate}%</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {comparisonData?.current.dealsCreated ?? 0} deals created
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <Link href="/deals" className="group block">
+          <Card className="transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Target className="h-4 w-4" />
+                Conversion Rate
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle className="font-mono text-2xl lg:text-3xl">
+                {conversionRate}%
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {comparisonData?.current.dealsCreated ?? 0} deals created
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-      {/* Row 1b: Outstanding & Overdue KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
-        <Card className="transition-shadow hover:shadow-md border-t-2 border-t-orange-400">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <span className="inline-block size-2 rounded-full bg-orange-400" aria-hidden="true" />
-              <FileText className="h-4 w-4" />
-              Outstanding Invoices
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-2xl text-orange-600 dark:text-orange-400">
-              {formatCurrency(analyticsOverview?.outstandingAmount ?? 0)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Posted invoices awaiting payment
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/invoices" className="group block">
+          <Card className="border-t-2 border-t-orange-400 transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <span
+                  className="inline-block size-2 rounded-full bg-orange-400"
+                  aria-hidden="true"
+                />
+                <FileText className="h-4 w-4" />
+                Outstanding Invoices
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle className="font-mono text-2xl text-orange-600 dark:text-orange-400">
+                {formatCurrency(analyticsOverview?.outstandingAmount ?? 0)}
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Posted invoices awaiting payment
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card
-          className={`transition-shadow hover:shadow-md border-t-2 ${
-            (analyticsOverview?.overdueAmount ?? 0) > 0
-              ? "border-t-red-500"
-              : "border-t-green-500"
-          }`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <span
-                className={`inline-block size-2 rounded-full ${
-                  (analyticsOverview?.overdueAmount ?? 0) > 0
-                    ? "bg-red-500"
-                    : "bg-green-500"
+        <Link href="/invoices" className="group block">
+          <Card
+            className={`border-t-2 transition-all hover:border-primary/30 hover:shadow-md ${
+              hasOverdue ? 'border-t-red-500' : 'border-t-green-500'
+            }`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <span
+                  className={`inline-block size-2 rounded-full ${
+                    hasOverdue ? 'bg-red-500' : 'bg-green-500'
+                  }`}
+                  aria-hidden="true"
+                />
+                <AlertTriangle className="h-4 w-4" />
+                Overdue Amount
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CardTitle
+                className={`font-mono text-2xl ${
+                  hasOverdue
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-green-600 dark:text-green-400'
                 }`}
-                aria-hidden="true"
-              />
-              <AlertTriangle className="h-4 w-4" />
-              Overdue Amount
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle
-              className={`font-mono text-2xl ${
-                (analyticsOverview?.overdueAmount ?? 0) > 0
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-green-600 dark:text-green-400"
-              }`}
-            >
-              {formatCurrency(analyticsOverview?.overdueAmount ?? 0)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {(analyticsOverview?.overdueAmount ?? 0) > 0
-                ? "Past due date — needs attention"
-                : "All invoices current"}
-            </p>
-          </CardContent>
-        </Card>
+              >
+                {formatCurrency(analyticsOverview?.overdueAmount ?? 0)}
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {hasOverdue
+                  ? 'Past due date — needs attention'
+                  : 'All invoices current'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Insights */}
@@ -372,11 +421,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {forecastData && forecastData.length > 0 ? (
-              <PipelineChart dealsByStage={forecastData?.map((s: any) => ({ stage: s.stage, count: s.dealCount, value: s.totalValue })) ?? []} />
+              <PipelineChart
+                dealsByStage={
+                  forecastData?.map((s: any) => ({
+                    stage: s.stage,
+                    count: s.dealCount,
+                    value: s.totalValue,
+                  })) ?? []
+                }
+              />
             ) : (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No pipeline data yet
-              </p>
+              <DashboardEmptyState
+                icon={<Target className="h-5 w-5" />}
+                title="No pipeline data yet"
+                action={{ label: 'View deals', href: '/deals' }}
+              />
             )}
           </CardContent>
         </Card>
@@ -417,9 +476,11 @@ export default function DashboardPage() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No product data yet
-              </p>
+              <DashboardEmptyState
+                icon={<BarChart3 className="h-5 w-5" />}
+                title="No product data yet"
+                action={{ label: 'Add product', href: '/products/new' }}
+              />
             )}
           </CardContent>
         </Card>
@@ -455,9 +516,11 @@ export default function DashboardPage() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No overdue invoices
-              </p>
+              <DashboardEmptyState
+                icon={<Clock className="h-5 w-5" />}
+                title="No overdue invoices"
+                action={{ label: 'View invoices', href: '/invoices' }}
+              />
             )}
           </CardContent>
         </Card>
@@ -492,7 +555,7 @@ export default function DashboardPage() {
                     <TableCell className="text-right">{s.wonDeals}</TableCell>
                     <TableCell className="text-right">
                       <Badge
-                        variant={s.winRate >= 50 ? "default" : "secondary"}
+                        variant={s.winRate >= 50 ? 'default' : 'secondary'}
                         className="text-xs"
                       >
                         {s.winRate}%
@@ -501,77 +564,58 @@ export default function DashboardPage() {
                     <TableCell className="text-right font-mono">
                       {formatCurrency(s.totalValue)}
                     </TableCell>
-                    <TableCell className="text-right">{s.avgCloseDays}d</TableCell>
+                    <TableCell className="text-right">
+                      {s.avgCloseDays}d
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No sales data yet
-            </p>
+            <DashboardEmptyState
+              icon={<TrendingUp className="h-5 w-5" />}
+              title="No sales data yet"
+              action={{ label: 'View deals', href: '/deals' }}
+            />
           )}
         </CardContent>
       </Card>
 
-      {/* Row 5: Recent Activities + Upcoming */}
+      {/* Row 5: Activities */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Aging Deals */}
-        {overview.agingDeals && overview.agingDeals.length > 0 ? (
-          <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-700">
-                <AlertTriangle className="h-5 w-5" />
-                Deals Needing Attention
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {overview.agingDeals.slice(0, 5).map((deal) => (
-                  <li key={deal.id} className="flex items-start gap-3 text-sm">
-                    <div className="mt-1 size-2 rounded-full bg-amber-400" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{deal.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        <Badge variant="outline" className="mr-1 text-xs capitalize">
-                          {deal.stage}
-                        </Badge>
-                        {deal.daysInStage}d in stage
-                      </p>
-                    </div>
-                    {deal.value != null ? (
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                        {formatCurrency(deal.value)}
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ) : null}
-
         {/* Recent Activities */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Activities
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {overview.recentActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No recent activities</p>
+              <DashboardEmptyState
+                icon={<FileText className="h-5 w-5" />}
+                title="No recent activities"
+                action={{ label: 'View activities', href: '/activities' }}
+              />
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {overview.recentActivities.map((activity) => {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
-                    <li key={activity.id} className="flex items-start gap-3 text-sm">
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(activity.createdAt))}
-                        </p>
-                      </div>
+                    <li key={activity.id}>
+                      <Link
+                        href="/activities"
+                        className="flex items-start gap-3 rounded-md p-2 text-sm transition-colors hover:bg-muted"
+                      >
+                        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate">{activity.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(activity.createdAt)}
+                          </p>
+                        </div>
+                      </Link>
                     </li>
                   );
                 })}
@@ -583,24 +627,36 @@ export default function DashboardPage() {
         {/* Upcoming Activities */}
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Activities</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Upcoming Activities
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {overview.upcomingActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming activities</p>
+              <DashboardEmptyState
+                icon={<Calendar className="h-5 w-5" />}
+                title="No upcoming activities"
+                action={{ label: 'View activities', href: '/activities' }}
+              />
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {overview.upcomingActivities.map((activity) => {
                   const Icon = ACTIVITY_ICONS[activity.type] ?? FileText;
                   return (
-                    <li key={activity.id} className="flex items-start gap-3 text-sm">
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(activity.dueAt), "MMM d, yyyy")}
-                        </p>
-                      </div>
+                    <li key={activity.id}>
+                      <Link
+                        href="/activities"
+                        className="flex items-start gap-3 rounded-md p-2 text-sm transition-colors hover:bg-muted"
+                      >
+                        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate">{activity.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(activity.dueAt, 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                      </Link>
                     </li>
                   );
                 })}

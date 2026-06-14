@@ -5,22 +5,17 @@ import { useSearchParams, useRouter , useParams } from 'next/navigation';
 import Link from 'next/link';
 import { XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePublicMutation } from '@/lib/convex/hooks/convex-hooks';
-import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
-import { payWithSnap } from '@/lib/commerce/midtrans-snap';
 
 export default function CheckoutFailedPage() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const { push } = useRouter();
   const orderNumber = searchParams.get('order') ?? '';
+  const token = searchParams.get('token') ?? '';
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
   const [retrying, setRetrying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-
-  const cancelOrderMutation = usePublicMutation(
-    api.commerce.checkout.cancelOrder as any,
-  );
 
   async function handleRetry() {
     setRetrying(true);
@@ -43,10 +38,8 @@ export default function CheckoutFailedPage() {
 
     setCancelling(true);
     try {
-      // Note: cancelOrder requires orderId. The URL has orderNumber.
-      // Best-effort: redirect to orders detail where cancellation UI exists.
-      toast.success('Order cancelled.');
-      push(`/${slug}/cart`);
+      toast.info('Open the order detail page to cancel this order securely.');
+      push(`/${slug}/orders/${orderNumber}${tokenParam}`);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to cancel order.');
     } finally {

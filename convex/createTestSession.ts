@@ -4,6 +4,9 @@ import { v } from "convex/values";
 export const createSession = mutation({
   args: { userId: v.string(), orgId: v.string() },
   handler: async (ctx, args) => {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Test sessions are not available in production");
+    }
     const token = "test-token-" + Date.now();
     // @ts-ignore
     await ctx.db.insert("betterAuth.session", {

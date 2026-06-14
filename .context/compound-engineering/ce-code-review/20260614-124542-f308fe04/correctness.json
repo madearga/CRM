@@ -1,0 +1,41 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "category": "data/loading",
+      "severity": "low",
+      "confidence": 100,
+      "location": "apps/web/src/app/(dashboard)/page.tsx:92-95",
+      "title": "Loading gate does not cover all dashboard queries",
+      "description": "`isLoading` only waits on `overviewLoading || revenueLoading || salesLoading || forecastLoading`. `comparisonLoading` (used for Revenue, Active Pipeline, Deals Won, Conversion Rate) and `analyticsOverview` (used for Outstanding/Overdue Amount) are not included, so the polished KPI cards can render with $0 values while those queries are still loading. This is pre-existing but is now more visible because the cards are interactive links."
+    }
+  ],
+  "residual_risks": [
+    {
+      "category": "accessibility",
+      "severity": "low",
+      "confidence": 50,
+      "location": "apps/web/src/app/(dashboard)/page.tsx:KPI cards",
+      "title": "Whole-card links can break if interactive children are added later",
+      "description": "The KPI cards are now wrapped in `<Link>` with `group block`. Today the inner `<Card>` contains no buttons, menus, or nested anchors, so it is valid HTML and keyboard-navigable. If future UI adds interactive children inside the card (e.g., a '...' menu, a second action link, or a copy button), it will create invalid nested anchors and break screen-reader/keyboard behavior."
+    },
+    {
+      "category": "data-behavior",
+      "severity": "low",
+      "confidence": 100,
+      "location": "apps/web/src/app/(dashboard)/page.tsx:activities grid",
+      "title": "Standalone 'Deals Needing Attention' callout removed",
+      "description": "The diff removes the conditional `overview.agingDeals` card from the dashboard page. The data is still rendered inside `<InsightsWidget overview={overview} />`, so the information is not lost, but the standalone callout is gone. This is an intentional data-behavior change, not a logic bug."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "title": "No tests for new link behavior",
+      "description": "There are no automated checks that KPI cards route to /deals or /invoices and that activity rows route to /activities. A simple Playwright or component test should assert hrefs and keyboard reachability."
+    },
+    {
+      "title": "No a11y validation for nested links",
+      "description": "Because the whole card is now a link, an a11y lint rule or manual check should verify no nested interactive elements are introduced inside KPI or activity cards."
+    }
+  ]
+}

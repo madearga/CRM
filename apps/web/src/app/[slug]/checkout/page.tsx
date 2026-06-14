@@ -141,26 +141,27 @@ export default function CheckoutPage() {
         notes: values.notes,
       } as any);
 
-      const { orderNumber, paymentData } = result as any;
+      const { orderNumber, orderAccessToken, paymentData } = result as any;
+      const orderTokenParam = orderAccessToken ? `&token=${encodeURIComponent(orderAccessToken)}` : "";
 
       if (!paymentData?.snapToken) {
         toast.error('Payment initiation failed. Please try again.');
-        push(`/${slug}/checkout/failed?order=${orderNumber}`);
+        push(`/${slug}/checkout/failed?order=${orderNumber}${orderTokenParam}`);
         return;
       }
 
       await payWithSnap(paymentData.snapToken as string, {
         onSuccess: () => {
-          push(`/${slug}/checkout/success?order=${orderNumber}`);
+          push(`/${slug}/checkout/success?order=${orderNumber}${orderTokenParam}`);
         },
         onPending: () => {
-          push(`/${slug}/checkout/pending?order=${orderNumber}`);
+          push(`/${slug}/checkout/pending?order=${orderNumber}${orderTokenParam}`);
         },
         onClose: () => {
-          push(`/${slug}/checkout/pending?order=${orderNumber}`);
+          push(`/${slug}/checkout/pending?order=${orderNumber}${orderTokenParam}`);
         },
         onError: () => {
-          push(`/${slug}/checkout/failed?order=${orderNumber}`);
+          push(`/${slug}/checkout/failed?order=${orderNumber}${orderTokenParam}`);
         },
       });
     } catch (err: any) {

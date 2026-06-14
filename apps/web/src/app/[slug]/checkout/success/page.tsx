@@ -9,6 +9,8 @@ export default function CheckoutSuccessPage() {
   const { slug } = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get('order') ?? '';
+  const token = searchParams.get('token') ?? '';
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 py-12">
@@ -33,7 +35,7 @@ export default function CheckoutSuccessPage() {
       <div className="flex flex-col gap-3 sm:flex-row">
         {orderNumber && (
           <Button asChild>
-            <Link href={`/${slug}/orders/${orderNumber}`}>
+            <Link href={`/${slug}/orders/${orderNumber}${tokenParam}`}>
               View Order Details
             </Link>
           </Button>

@@ -84,8 +84,9 @@ http.route({
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } catch (err: any) {
+      console.error('Webhook processing failed:', err);
       return new Response(
-        JSON.stringify({ error: err.message ?? 'Internal error' }),
+        JSON.stringify({ error: 'Webhook processing failed' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }

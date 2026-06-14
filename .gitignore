@@ -8,4 +8,11 @@ convex/_generated
 *.tsbuildinfo
 .DS_Store
 .superpowers/
+
+# Deepsec scanning workspace
+.deepsec/
+
+# Pi session exports (may contain credentials)
+**/pi-session-*.html
+**/pi-session-*.json
 .worktrees/

@@ -1,0 +1,85 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "id": "ps-1",
+      "anchor": 50,
+      "bucket": "soft",
+      "severity": "P2",
+      "rule": {
+        "file": "AGENTS.md",
+        "section": "Project Preferences > Programming Language",
+        "quote": "Prefer TypeScript for type safety"
+      },
+      "violation": {
+        "file": "apps/web/src/app/(dashboard)/page.tsx",
+        "lines": [
+          "forecastData?.map((s: any) => ({",
+          "  stage: s.stage,",
+          "  count: s.dealCount,",
+          "  value: s.totalValue,",
+          "})) ?? []"
+        ],
+        "summary": "The pipeline forecast mapper casts each element to `any`, bypassing the generated Convex return type for `api.analytics.pipelineForecast`."
+      },
+      "note": "Tension exists because `apps/web/eslint.config.mjs` explicitly disables `@typescript-eslint/no-explicit-any`. However, the AGENTS.md preference for type safety still makes this a soft-bucket hygiene issue. The mapper can be narrowed to the generated type or a local interface that matches `PipelineChart['dealsByStage']`."
+    },
+    {
+      "id": "ps-2",
+      "anchor": 50,
+      "bucket": "soft",
+      "severity": "P3",
+      "rule": {
+        "file": "AGENTS.md",
+        "section": "Project Preferences > Programming Language",
+        "quote": "Prefer TypeScript for type safety"
+      },
+      "violation": {
+        "file": "apps/web/src/app/(dashboard)/page.tsx",
+        "lines": [
+          "function EmptyState({",
+          "  icon: Icon,",
+          "  title,",
+          "  action,",
+          "}: {",
+          "  icon: typeof FileText;",
+          "  title: string;",
+          "  action?: { label: string; href: string };",
+          "}) { ... }",
+          "",
+          "const ACTIVITY_ICONS: Record<string, typeof Phone> = {"
+        ],
+        "summary": "Icon prop and map values are typed via `typeof` on specific Lucide icons (`FileText`, `Phone`) rather than the library's public icon type."
+      },
+      "note": "This happens to compile because all `lucide-react` icons share the same component signature, but it miscommunicates intent and is brittle if the library ever diverges its component types. The idiomatic public type is `LucideIcon` from `lucide-react`."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "ps-risk-1",
+      "severity": "P3",
+      "summary": "DashboardPage remains a large orchestrator component.",
+      "detail": "AGENTS.md states 'Keep functions small and focused'. After extracting `EmptyState`, `DashboardPage` still spans hundreds of lines and renders six distinct sections (KPI cards, charts, tables, activities). Page-level orchestrators are often unavoidably large, but further section-level extraction would align more closely with the stated preference."
+    },
+    {
+      "id": "ps-risk-2",
+      "severity": "P2",
+      "summary": "Removal of the 'Deals Needing Attention' section eliminates the only visible consumer of `overview.agingDeals`.",
+      "detail": "The diff removes the entire 'Deals Needing Attention' card and its `overview.agingDeals` rendering. No project standard forbids removing UI, but verify that `agingDeals` data is intentionally no longer surfaced on the dashboard or used elsewhere."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "ps-test-1",
+      "severity": "P2",
+      "summary": "No tests for the new `EmptyState` component or its CTA link behavior.",
+      "detail": "AGENTS.md says 'Write tests alongside new features'. `EmptyState` is a new reusable component with conditional `Button`/`Link` rendering; it should have at least unit tests covering both the 'with action' and 'without action' states."
+    },
+    {
+      "id": "ps-test-2",
+      "severity": "P2",
+      "summary": "No tests asserting navigation targets for Link-wrapped KPI cards and activity rows.",
+      "detail": "The diff wraps KPI cards and individual activity list items in `next/link`. Tests should verify that the declared `href` values (`/invoices`, `/deals`, `/activities`) are present and reachable."
+    }
+  ]
+}

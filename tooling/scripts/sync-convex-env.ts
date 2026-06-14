@@ -99,7 +99,12 @@ async function syncConvexEnv() {
         }
       }
 
-      // Set the variable
+      // Set the variable — validate value does not contain shell metacharacters
+      if (/[$`"\\|&;(){}<>]/.test(value)) {
+        console.error(`⚠️  ${varName}: Value contains unsafe characters, skipping`);
+        errorCount++;
+        continue;
+      }
       execSync(`npx convex env set ${varName}="${value}"`, {
         stdio: ['pipe', 'pipe', 'pipe'], // Don't show output
       });

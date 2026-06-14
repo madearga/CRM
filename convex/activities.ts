@@ -4,6 +4,34 @@ import { z } from 'zod';
 
 import { createOrgMutation, createOrgQuery } from './functions';
 
+/** Verify entity exists and belongs to the active organization. */
+async function verifyEntityBelongsToOrg(ctx: any, orgId: any, entityType: string, entityId: string) {
+  const tableMap: Record<string, string> = {
+    company: 'companies',
+    contact: 'contacts',
+    deal: 'deals',
+    product: 'products',
+    saleOrder: 'saleOrders',
+    invoice: 'invoices',
+    purchaseOrder: 'purchaseOrders',
+    ticket: 'tickets',
+    expense: 'expenses',
+    employee: 'employees',
+    task: 'tasks',
+  };
+  const tableName = tableMap[entityType];
+  if (!tableName) {
+    throw new ConvexError({ code: 'BAD_REQUEST', message: `Unknown entity type: ${entityType}` });
+  }
+  const entity = await ctx.table(tableName).get(entityId as any);
+  if (!entity) {
+    throw new ConvexError({ code: 'NOT_FOUND', message: `${entityType} not found` });
+  }
+  if (entity.organizationId !== orgId) {
+    throw new ConvexError({ code: 'FORBIDDEN', message: `${entityType} does not belong to this organization` });
+  }
+}
+
 const activityTypeSchema = z.enum([
   'call',
   'email',
@@ -185,6 +213,9 @@ export const create = createOrgMutation()({
   handler: async (ctx, args) => {
     const { orgId } = ctx;
 
+    // Verify referenced entity belongs to this org (prevent cross-tenant activity creation)
+    await verifyEntityBelongsToOrg(ctx, orgId, args.entityType, args.entityId);
+
     return await ctx.table('activities').insert({
       title: args.title,
       description: args.description,
@@ -215,6 +246,9 @@ export const schedule = createOrgMutation()({
   },
   handler: async (ctx, args) => {
     const { orgId } = ctx;
+
+    // Verify referenced entity belongs to this org (prevent cross-tenant activity creation)
+    await verifyEntityBelongsToOrg(ctx, orgId, args.entityType, args.entityId);
 
     return await ctx.table('activities').insert({
       title: args.title,

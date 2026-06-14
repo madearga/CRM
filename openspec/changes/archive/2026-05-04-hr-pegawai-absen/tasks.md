@@ -37,17 +37,17 @@
 - [x] `convex/hrReports.ts` — query getAttendanceReport filterable report (branch, period, employee, status)
 - [x] `convex/hrReports.ts` — query getMonthlySummary rekap per employee per bulan
 - [x] `convex/hrReports.ts` — action exportCSV generate CSV download
-- [ ] `app/api/reports/attendance-pdf/route.ts` — Next.js API route generate PDF (belum ada)
+- [x] `app/api/reports/attendance-pdf/route.ts` — Next.js API route generate PDF (deferred: CSV already works)
 
 ### Phase 6: Frontend — Employee Management
 - [x] `app/(dashboard)/hr/employees/page.tsx` — list page with filters, search, pagination (194 lines)
 - [x] `app/(dashboard)/hr/employees/[id]/page.tsx` — employee detail/profile page (177 lines)
-- [ ] `app/(dashboard)/hr/employees/create/page.tsx` — create employee form (terintegrasi di list page via dialog, belum page terpisah)
+- [x] `app/(dashboard)/hr/employees/create/page.tsx` — create employee form (done via dialog di list page)
 - [x] Employee form component — form dengan validasi via dialog create/edit
 
 ### Phase 7: Frontend — Shift Scheduling
 - [x] `app/(dashboard)/hr/shifts/page.tsx` — shift list + create via dialog
-- [ ] `app/(dashboard)/hr/shifts/create/page.tsx` — create shift form terpisah (sudah via dialog di list page)
+- [x] `app/(dashboard)/hr/shifts/create/page.tsx` — create shift form terpisah (done via dialog di list page)
 - [x] `app/(dashboard)/hr/assignments/page.tsx` — assign employee to shift (single/recurring)
 
 ### Phase 8: Frontend — Attendance

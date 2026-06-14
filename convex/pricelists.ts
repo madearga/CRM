@@ -1,6 +1,30 @@
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
+
+/**
+ * Safe arithmetic expression evaluator.
+ * Only allows: numbers, +, -, *, /, %, parentheses, whitespace, 
+ * and the 'base' variable (replaced with the actual base price before evaluation).
+ */
+function safeEval(expression: string): number {
+  // Strip whitespace for validation
+  const clean = expression.replace(/\s+/g, '');
+  
+  // Only allow safe characters: digits, operators, parentheses, decimal points, 'base'
+  const safeRegex = /^[\d+\-*/.%()base]+$/;
+  if (!safeRegex.test(clean)) {
+    throw new Error('Invalid characters in formula');
+  }
+  
+  // Disallow consecutive operators that could be suspicious (e.g., --, ++, /*)
+  if (/[+\-*/%]{2,}/.test(clean.replace(/\d+\.\d+|\d+/g, ''))) {
+    throw new Error('Invalid operator sequence in formula');
+  }
+  
+  // Use Function only after strict validation — the regex guarantee makes this safe
+  return new Function('return ' + expression)() as number;
+}
 import {
   createOrgMutation,
   createOrgPaginatedQuery,
@@ -265,6 +289,17 @@ export const resolvePrice = createOrgQuery()({
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Product not found' });
     }
 
+    // Validate company belongs to this organization
+    if (args.companyId) {
+      const company = await ctx.table('companies').get(args.companyId);
+      if (!company || company.organizationId !== ctx.orgId) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message: 'Company does not belong to your organization',
+        });
+      }
+    }
+
     const basePrice = product.price ?? 0;
     let pricelistId: any;
     let pricelist: any;
@@ -368,7 +403,7 @@ export const resolvePrice = createOrgQuery()({
         // Simple formula evaluation: base * 0.9, base - 1000, etc.
         try {
           const formula = bestRule.formula.replace(/base/gi, String(basePrice));
-          finalPrice = new Function('return ' + formula)() as number;
+          finalPrice = safeEval(formula);
           if (isNaN(finalPrice)) finalPrice = basePrice;
         } catch {
           finalPrice = basePrice;
@@ -517,7 +552,7 @@ export const resolvePrices = createOrgQuery()({
           } else if (pricelist.type === 'formula' && bestRule.formula) {
             try {
               const formula = bestRule.formula.replace(/base/gi, String(basePrice));
-              finalPrice = new Function('return ' + formula)() as number;
+              finalPrice = safeEval(formula);
               if (isNaN(finalPrice)) finalPrice = basePrice;
             } catch { finalPrice = basePrice; }
           }

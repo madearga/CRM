@@ -51,6 +51,9 @@ export function getProviderConfig(args: {
     case 'midtrans':
       serverKey = process.env.MIDTRANS_SERVER_KEY ?? '';
       clientKey = process.env.MIDTRANS_CLIENT_KEY ?? '';
+      if (!serverKey) {
+        throw new Error('MIDTRANS_SERVER_KEY is not configured — webhook signature validation requires this key');
+      }
       break;
     default:
       throw new Error(`No env mapping for provider "${providerName}"`);

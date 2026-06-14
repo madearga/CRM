@@ -469,8 +469,17 @@ export const updateMemberRole = createAuthMutation({
     // Permission: member update
     await hasPermission(ctx, { permissions: { member: ['update'] } });
 
+    // Validate that the member belongs to the active organization
+    const member = await ctx.table('member').getX(args.memberId);
+    if (member.organizationId !== ctx.user.activeOrganization?.id) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'Member does not belong to your active organization',
+      });
+    }
+
     // Update member role directly
-    await ctx.table('member').getX(args.memberId).patch({ role: args.role });
+    await member.patch({ role: args.role });
 
     return null;
   },
@@ -625,6 +634,17 @@ export const getOrganizationOverview = createAuthQuery()({
 
           if (!inv || inv.organizationId !== org._id) {
             return null;
+          }
+
+          // Verify requester is the invitation recipient or an org member
+          if (inv.email !== ctx.user.email) {
+            const isOrgMember = !!(await ctx
+              .table('member', 'organizationId_userId', (q: any) =>
+                q.eq('organizationId', org._id).eq('userId', ctx.user._id)
+              ).first());
+            if (!isOrgMember) {
+              return null;
+            }
           }
 
           return inv;

@@ -23,7 +23,7 @@ export default function CorrectionsPage() {
 
   const handleApprove = async (id: string) => {
     try {
-      await review.mutateAsync({ id, action: 'approve' } as any);
+      await review.mutateAsync({ id, status: 'approved' } as any);
       toast.success('Correction approved');
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to approve');
@@ -32,7 +32,7 @@ export default function CorrectionsPage() {
 
   const handleReject = async (id: string) => {
     try {
-      await review.mutateAsync({ id, action: 'reject' } as any);
+      await review.mutateAsync({ id, status: 'rejected' } as any);
       toast.success('Correction rejected');
     } catch (e: any) {
       toast.error(e.data?.message ?? 'Failed to reject');
