@@ -1,0 +1,55 @@
+{
+  "reviewer": "scope-guardian",
+  "document": "docs/plans/2026-06-14-001-feat-mobile-crm-react-native-plan.md",
+  "review_date": "2026-06-14",
+  "findings": [
+    {
+      "severity": "P0",
+      "title": "Phase 1 scope contradicts 'web-parity-lite' goal by porting six full web modules",
+      "evidence": "Scope Boundaries states the goal is 'web-parity-lite functionality focused on dashboard, deals, contacts/companies, activities, invoices, and HR.' Implementation Units U5-U10 then build complete read/update screens for all six modules. The Risks table explicitly flags 'Scope creep trying to port all web features' as High likelihood / High impact, yet the plan itself does exactly that without cutting any module from Phase 1.",
+      "suggested_fix": "Define a true Phase 1 MVP: pick 2-3 modules that solve the stated on-the-go problem (e.g., dashboard read-only + activities + overdue invoices). Move deals pipeline editing, contacts/companies, full HR, and invoice reminders to Phase 1.5 or Phase 2. Add explicit cut criteria such as 'ship P0 without lower-priority modules.'"
+    },
+    {
+      "severity": "P1",
+      "title": "U2 shared-package refactor unnecessarily modifies working web files",
+      "evidence": "U2 Files list includes 'Modify: apps/web/src/lib/convex/auth-client.ts to re-export from @crm/auth' and 'Modify: apps/web/src/env.ts to re-export or align with @crm/config.' The web app already works; populating shared packages for mobile consumption does not require changing web imports.",
+      "suggested_fix": "Keep the web auth-client and env files untouched. Populate @crm/auth and @crm/config with platform-agnostic exports, then create thin mobile wrappers in apps/mobile/src/lib/. Refactor web imports only in a separate, optional cleanup task if the shared packages prove stable."
+    },
+    {
+      "severity": "P1",
+      "title": "U4 creates a full primitive design system before any screen is proven",
+      "evidence": "U4 creates theme.ts plus seven primitive components (button, card, badge, input, skeleton, text, empty-state) under the heading 'minimal set.' The goal is 'reusable across all mobile screens,' but no screen exists yet to validate which primitives are actually needed. Complexity smell test: >8 files or >2 new abstractions needs proportional goal.",
+      "suggested_fix": "Start with only the four primitives required by the MVP screens (Card, Button, Badge, Skeleton). Build Text/Input/EmptyState inline inside the first screens and extract when reused a second time. Defer the standalone design-system unit until after at least one screen is implemented."
+    },
+    {
+      "severity": "P2",
+      "title": "Navigation library choice is deferred while output structure assumes Expo Router",
+      "evidence": "Open Questions / Deferred to Implementation says: 'Final navigation library choice (React Navigation vs Expo Router) after spike.' Yet Output Structure shows file-based routes: 'app/(auth)/login.tsx', 'app/(app)/_layout.tsx', 'app/(app)/index.tsx', and 'app/(app)/deals/[id].tsx', which is the Expo Router convention.",
+      "suggested_fix": "Resolve the navigation decision in U1 (scaffold/spike) before producing the output structure. If the choice remains genuinely deferred, replace the Expo Router-specific paths with a neutral placeholder structure and decide routing as part of the spike outcome."
+    },
+    {
+      "severity": "P2",
+      "title": "U10 HR module adds GPS/location scope not in requirements",
+      "evidence": "Requirement R7 says: 'Users can access HR attendance and employee list where applicable.' U10 Approach adds: 'If mutation exists, add a Clock In/Out button that uses device time/location (optional GPS if backend supports).' Location/GPS is not listed in Requirements Trace, not in Scope Boundaries, and not in Deferred items. It is a new capability introduced inside an implementation unit.",
+      "suggested_fix": "Remove device time/location/GPS from Phase 1. Build read-only attendance and employee list. If clock-in/out is needed later, add it as a separate requirement with backend support verified first."
+    },
+    {
+      "severity": "P2",
+      "title": "No priority tiers make scope-creep mitigation unenforceable",
+      "evidence": "Implementation Units U1-U11 are presented as a single flat phase with dependencies but no P0/P1/P2 labels. The Risks table acknowledges scope creep is the highest-likelihood, highest-impact risk, yet the plan provides no mechanism to drop or sequence modules if implementation takes longer than expected.",
+      "suggested_fix": "Assign explicit priority tiers and a phase split. Example: P0 = U1-U3 + dashboard (U5) only; P1 = activities (U8) + invoices read-only (U9) + internal builds (U11); P2 = deals (U6), contacts (U7), HR (U10). Document that P0 must ship independently."
+    },
+    {
+      "severity": "P3",
+      "title": "U5 dashboard consolidated hook duplicates existing web query surface",
+      "evidence": "U5 creates 'apps/mobile/src/hooks/use-dashboard-data.ts' with the goal to create 'a consolidated hook useDashboardData that mirrors the web DashboardPage query set.' The web already exposes useAuthQuery/useAuthMutation in convex-hooks.ts and the dashboard query surface in api.dashboard.overview / api.analytics.*.",
+      "suggested_fix": "Consume the existing dashboard queries directly in the mobile screen. Only create a mobile-specific hook if the web hook imports web-only modules (e.g., next/navigation). Avoid introducing a parallel query composition layer that must be kept in sync."
+    },
+    {
+      "severity": "P3",
+      "title": "Operational documentation additions are premature for an unproven scaffold",
+      "evidence": "Documentation / Operational Notes calls for 'README.md under apps/mobile/', 'Update root README.md', and 'Create a runbook for adding a new mobile screen using the established pattern.' The runbook depends on a pattern that has not yet been validated.",
+      "suggested_fix": "Write a minimal apps/mobile/README.md as part of U1 (dev setup + env vars). Defer the root README update and the runbook until at least three screens are implemented and the pattern is actually established."
+    }
+  ]
+}

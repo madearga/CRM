@@ -1,0 +1,56 @@
+{
+  "reviewer": "coherence",
+  "document": "docs/plans/2026-06-14-001-feat-mobile-crm-react-native-plan.md",
+  "reviewed_at": "2026-06-14T15:25:47+07:00",
+  "findings": [
+    {
+      "severity": "P1",
+      "confidence": 100,
+      "title": "Output structure assumes Expo Router while navigation library remains an open question",
+      "evidence": "Open Questions / Deferred to Implementation states: \"Final navigation library choice (React Navigation vs Expo Router) after spike.\" However, Output Structure uses file-based routing conventions that only work with Expo Router, e.g., `app/(auth)/login.tsx`, `app/(app)/_layout.tsx`, `app/(app)/deals/[id].tsx`. React Navigation does not use a file-system `app/` directory with group folders like `(auth)` and `(app)` or dynamic route segments like `[id].tsx`.",
+      "suggested_fix": "Either (a) resolve the navigation library decision to Expo Router before finalizing the plan and remove React Navigation from the open question, or (b) if React Navigation is still a candidate, replace the Output Structure with a navigation-agnostic layout (e.g., a single `src/screens/` or `src/navigation/` tree) and defer concrete file paths until after the spike."
+    },
+    {
+      "severity": "P1",
+      "confidence": 75,
+      "title": "Problem Frame claims 'better notification support' but push notifications are out of scope",
+      "evidence": "Problem Frame states: \"A native mobile app provides faster input, better notification support, and a UX tailored to small screens.\" Scope Boundaries explicitly lists \"push notifications\" under Out of scope and again under Deferred to follow-up work. Mobile 'notification support' that is materially better than the web experience is generally realized through push notifications, which this plan defers.",
+      "suggested_fix": "Remove 'better notification support' from the Problem Frame benefits, or clarify that Phase 1 notification improvements are limited to in-app/local notifications and explicitly state that push notifications are excluded until follow-up work."
+    },
+    {
+      "severity": "P1",
+      "confidence": 100,
+      "title": "R1 requires existing session sharing but the exact token exchange mechanism is unresolved",
+      "evidence": "Requirements Trace R1: \"Authenticated users can access mobile app using existing CRM credentials/session.\" Open Questions / Deferred to Implementation lists: \"Exact Better Auth token exchange mechanism for mobile vs web session sharing.\" U3 (mobile auth and Convex provider) depends on this mechanism and cannot be implemented without resolving it.",
+      "suggested_fix": "Move the Better Auth token exchange mechanism from 'Deferred to Implementation' to 'Resolved During Planning' with a concrete decision (e.g., shared session cookie via webview login, token-based exchange, or deep-link auth callback), or add a dedicated spike/task to resolve it before U3 begins."
+    },
+    {
+      "severity": "P2",
+      "confidence": 100,
+      "title": "Requirements list mixes functional, platform, and architectural concerns without grouping",
+      "evidence": "Requirements Trace presents a flat numbered list: R1 auth, R2 dashboard, R3 deals, R4 contacts/companies, R5 activities, R6 invoices, R7 HR, R8 distribution, R9 shared code. These span user-facing functionality (R2-R7), platform support (R8), auth (R1), and cross-platform architecture (R9).",
+      "suggested_fix": "Group requirements by logical theme while preserving original R# IDs, e.g., 'Authentication' (R1), 'Core Mobile Features' (R2-R7), 'Distribution' (R8), 'Shared Code' (R9)."
+    },
+    {
+      "severity": "P2",
+      "confidence": 100,
+      "title": "Ambiguous Expo SDK version target: 'latest stable (52/53)' names two versions",
+      "evidence": "U1 Approach says: \"Use Expo SDK latest stable (52/53).\" The phrase 'latest stable' implies a single version, but '52/53' lists two distinct SDK versions. A reader cannot determine whether to pin to SDK 52, SDK 53, or whichever is latest at implementation time.",
+      "suggested_fix": "Replace with a single pinned version (e.g., 'Expo SDK 52') or add a decision rule (e.g., 'Use the highest stable Expo SDK available at implementation time, with a minimum of SDK 52')."
+    },
+    {
+      "severity": "P2",
+      "confidence": 75,
+      "title": "HR clock-in/out behavior is conditional with no defined fallback",
+      "evidence": "R7 says: \"Users can access HR attendance and employee list where applicable.\" U10 Approach says: \"If mutation exists, add a 'Clock In/Out' button that uses device time/location (optional GPS if backend supports it).\" It is not stated what the UI should show when the mutation or GPS support does not exist, nor what 'where applicable' or 'backend supports it' means concretely.",
+      "suggested_fix": "Define the fallback behavior for the clock-in feature (e.g., hide the button, show a read-only attendance view, or show a 'not available' message) and specify how the mobile app detects whether the backend supports clock-in/out and GPS."
+    },
+    {
+      "severity": "P3",
+      "confidence": 75,
+      "title": "R7 qualifier 'where applicable' is undefined",
+      "evidence": "R7: \"Users can access HR attendance and employee list where applicable.\" The document never defines which users or under what conditions the HR module is applicable.",
+      "suggested_fix": "Clarify the applicability condition, e.g., 'for users whose role includes HR access' or 'when the organization has HR features enabled'."
+    }
+  ]
+}

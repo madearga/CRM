@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "CRM Mobile",
+    "slug": "crm-mobile",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "crmmobile",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.crm.mobile"
+    },
+    "android": {
+      "package": "com.crm.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "tsconfigPaths": true
+    }
+  }
+}
