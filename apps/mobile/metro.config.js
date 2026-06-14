@@ -11,11 +11,16 @@ const path = require("path");
  *  2. HARD-FAIL if any browser-only transitive dependency tries to enter the
  *     React Native bundle. These come from apps/web / shared code and must
  *     never ship to native. List: next, sonner, recharts, vaul, tailwindcss,
- *     @radix-ui/*. (tailwindcss is a build-time tool for NativeWind; it is not
- *     imported at runtime, so blocking it here is safe and desired.)
+ *     @radix-ui/* EXCEPT `@radix-ui/react-slot` (see resolveRequest below).
+ *     (tailwindcss is a build-time tool for NativeWind; it is not imported at
+ *     runtime, so blocking it here is safe and desired.)
+ *  3. Rewrite `@radix-ui/react-slot` to a local RN-compatible stub. The
+ *     upstream package is web-only, but `expo-router@5.1.11` references it
+ *     from `build/ui/Slot.js`. Our stub is mobile-only and a no-op at runtime.
  */
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../../");
+const localSlotStub = path.resolve(projectRoot, "mocks/react-slot.tsx");
 
 const config = getDefaultConfig(projectRoot);
 
@@ -33,13 +38,17 @@ config.resolver.unstable_enablePackageExports = true;
 config.resolver.disableHierarchicalLookup = true;
 
 // --- Browser-only blocklist -----------------------------------------------------
+// Keep `@radix-ui/react-slot` OUT of the blocklist — it is aliased via
+// `resolveRequest` below to a local stub.
 const browserOnlyBlocklist = [
   /[\\/]node_modules[\\/]next([\\/])/,
   /[\\/]node_modules[\\/]sonner([\\/])/,
   /[\\/]node_modules[\\/]recharts([\\/])/,
   /[\\/]node_modules[\\/]vaul([\\/])/,
   /[\\/]node_modules[\\/]tailwindcss([\\/])/,
-  /[\\/]node_modules[\\/]@radix-ui([\\/])/,
+  // Block every @radix-ui/* package EXCEPT react-slot. The negative
+  // lookahead lets the resolveRequest alias do its job below.
+  /[\\/]node_modules[\\/]@radix-ui[\\/](?!react-slot([\\/]|$))/,
 ];
 
 const existingBlockList = config.resolver.blockList
@@ -49,6 +58,21 @@ const existingBlockList = config.resolver.blockList
   : [];
 
 config.resolver.blockList = [...existingBlockList, ...browserOnlyBlocklist];
+
+// --- @radix-ui/react-slot alias (RN-friendly stub) -----------------------------
+// `expo-router@5.1.11/build/ui/Slot.js` `require()`s `@radix-ui/react-slot`,
+// which is a web-only package. We don't want the real package (would pull
+// web-only code) but Metro insists the require resolves. Rewrite to the local
+// stub before the default resolver runs.
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === "@radix-ui/react-slot") {
+    return { type: "sourceFile", filePath: localSlotStub };
+  }
+  return defaultResolveRequest
+    ? defaultResolveRequest(context, moduleName, platform)
+    : context.resolveRequest(context, moduleName, platform);
+};
 
 // --- NativeWind v4 --------------------------------------------------------------
 // Processes ./global.css (Tailwind) into the RN-compatible stylesheet injected

@@ -13,20 +13,41 @@
     "module": "Preserve",
     "moduleResolution": "bundler",
     "target": "ESNext",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "noEmit": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@crm/domain": ["../../packages/domain/src/index.ts"],
-      "@crm/domain/*": ["../../packages/domain/src/*"],
-      "@crm/auth": ["../../packages/auth/src/index.ts"],
-      "@crm/config": ["../../packages/config/src/index.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@crm/domain": [
+        "../../packages/domain/src/index.ts"
+      ],
+      "@crm/domain/*": [
+        "../../packages/domain/src/*"
+      ],
+      "@crm/auth": [
+        "../../packages/auth/src/index.ts"
+      ],
+      "@crm/config": [
+        "../../packages/config/src/index.ts"
+      ]
     },
-    "types": ["nativewind/types"]
+    "types": [
+      "nativewind/types"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../../convex/externalPlugins.ts"
+  ]
 }

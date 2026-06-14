@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { Text, View } from "react-native";
 
 // Proves the Turborepo workspace bridge works from RN: @crm/domain is resolved
@@ -20,6 +21,12 @@ export default function Index() {
       <Text className="mt-6 font-mono text-xs text-muted-foreground">
         @crm/domain deal stages: {DEAL_STAGES.join(", ")}
       </Text>
+      <Link
+        href="/gallery"
+        className="mt-8 text-sm font-medium text-primary"
+      >
+        Open U4 component gallery →
+      </Link>
     </View>
   );
 }
