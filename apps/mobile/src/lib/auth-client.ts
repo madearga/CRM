@@ -1,20 +1,31 @@
 /**
  * Mobile Better Auth client.
  *
- * Throwaway U0 spike client. For production code this should be built from the
- * shared {@link createCrmAuthClient} factory in `@crm/auth`; the spike inlines
- * the plugin configuration to keep the proof-of-concept self-contained.
+ * Production version of the U0 spike client. Uses `better-auth/react` (NOT
+ * `@convex-dev/better-auth/react`) for the reactive `useSession` atom binding
+ * — this is RN-safe (no `react-dom` / `window` / `document`).
  *
- * Uses:
- *  - `better-auth/react` (NOT `@convex-dev/better-auth/react`): RN-safe
- *    react/nanostores binding, no `react-dom` / `window` / `document`.
- *  - `crossDomainClient` with an `expo-secure-store` adapter so the session
- *    cookie survives app restarts.
- *  - `convexClient` to expose `authClient.convex.token()`.
+ * Reuse strategy: the plugin *set* mirrors the shared {@link createCrmAuthClient}
+ * factory in `@crm/auth` (inferAdditionalFields + crossDomainClient +
+ * convexClient). We cannot call that factory directly because it deliberately
+ * builds from `better-auth/client` (agnostic, no react hook) — and mobile
+ * needs the reactive `useSession` hook that only `better-auth/react`'s
+ * `createAuthClient` wires up. Constants (`storagePrefix`) come from
+ * `@crm/config` so both clients stay in sync.
+ *
+ * Persistence:
+ *  - `crossDomainClient({ storage: secureAuthStorage })` persists the session
+ *    cookie + session data via `expo-secure-store`
+ *    (`whenUnlockedThisDeviceOnly`, see secure-storage.ts).
+ *
+ * @see docs/plans/2026-06-14-001-feat-mobile-crm-react-native-plan.md U3
  */
 import { createAuthClient } from 'better-auth/react';
-import { convexClient, crossDomainClient } from '@convex-dev/better-auth/client/plugins';
 import { inferAdditionalFields } from 'better-auth/client/plugins';
+import {
+  convexClient,
+  crossDomainClient,
+} from '@convex-dev/better-auth/client/plugins';
 
 import { DEFAULT_AUTH_STORAGE_PREFIX } from '@crm/config';
 
@@ -33,5 +44,22 @@ export const authClient = createAuthClient({
   ],
 });
 
-// Re-export the hooks/actions the spike screen consumes.
+/**
+ * Mint a fresh Convex JWT for the active Better Auth session.
+ *
+ * `authClient.convex.token()` hits the server-side `/convex/token` endpoint
+ * (added by the `convex` server plugin). It returns `{ data: { token }, error }`
+ * on success or `{ data: null, error }` when there is no session / the session
+ * is expired. We normalise both shapes into `string | null`.
+ *
+ * This replaces the throwaway `fetchConvexToken` reference the spike imported
+ * from `@crm/auth` (which was never actually exported there).
+ */
+export async function exchangeConvexToken(): Promise<string | null> {
+  const result = await authClient.convex.token();
+  if (result.error) return null;
+  return result.data?.token ?? null;
+}
+
+// Re-export the hooks/actions the provider + screens consume.
 export const { signIn, signOut, signUp, useSession } = authClient;
