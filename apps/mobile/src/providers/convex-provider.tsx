@@ -19,6 +19,7 @@ import { ConvexProvider } from 'convex/react';
 
 import { convexClient } from '@/lib/convex-client';
 import { exchangeConvexToken } from '@/lib/auth-client';
+import { useNetwork } from '@/hooks/use-network';
 
 export function ConvexClientProvider({ children }: { children: React.ReactNode }) {
   // Install the auth token fetcher exactly once. `setAuth` is idempotent for
@@ -27,5 +28,30 @@ export function ConvexClientProvider({ children }: { children: React.ReactNode }
     convexClient.setAuth(exchangeConvexToken);
   }, []);
 
+  // Wire in the dependency-free network listener so Convex can react to
+  // connectivity changes. The ConvexReactClient WebSocket auto-reconnects on
+  // its own, but this hook gives us a future seam to force an immediate retry
+  // or to invalidate queries once we are back online.
+  useConvexNetworkListener();
+
   return <ConvexProvider client={convexClient}>{children}</ConvexProvider>;
+}
+
+/**
+ * Network listener for the shared Convex client.
+ *
+ * Today Convex's WebSocket transport handles reconnection internally, so no
+ * manual intervention is required. This hook keeps the integration point small
+ * and explicit: if we later want to eagerly re-authenticate or invalidate
+ * cached queries on reconnect, this is the single place to add that logic.
+ */
+function useConvexNetworkListener() {
+  const { isOnline } = useNetwork();
+
+  React.useEffect(() => {
+    if (!isOnline) return;
+    // Future: force a token re-check or call a Convex reconnect helper here.
+    // For U8, the auto-reconnect behavior is sufficient; the UI banner is the
+    // primary feedback surface.
+  }, [isOnline]);
 }

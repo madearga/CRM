@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ActivityRow, type ActivityRowItem } from '@/components/activity-row';
+import { ActivityRow } from '@/components/activity-row';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +31,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'recent', label: 'Recent' },
 ];
+
+/** Shape of a Convex activities doc as consumed by the list. */
+interface ActivityListItem {
+  _id: string;
+  title: string;
+  type: string;
+  status?: 'planned' | 'done' | 'cancelled';
+  dueAt?: number;
+  scheduledAt?: number;
+  completedAt?: number;
+}
 
 export default function ActivitiesScreen() {
   const router = useRouter();
@@ -104,10 +115,16 @@ export default function ActivitiesScreen() {
             action={<Button onPress={goNew}>New activity</Button>}
           />
         ) : (
-          <FlatList<ActivityRowItem>
-            data={data as ActivityRowItem[]}
+          <FlatList<ActivityListItem>
+            data={data as ActivityListItem[]}
             keyExtractor={(item) => item._id}
-            renderItem={({ item }) => <ActivityRow activity={item} />}
+            renderItem={({ item }) => (
+              <ActivityRow
+                title={item.title}
+                type={item.type}
+                dueAt={item.scheduledAt ?? item.dueAt ?? Number.NaN}
+              />
+            )}
             ItemSeparatorComponent={() => (
               <View className="ml-[64px] h-px bg-border" />
             )}

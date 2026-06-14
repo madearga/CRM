@@ -1,0 +1,45 @@
+# .easignore — appended to .gitignore by EAS Build when uploading the project
+# context tarball. Anything listed here is excluded from the build environment.
+#
+# Keep this tight: EAS needs the mobile app AND the workspace packages it
+# imports (@crm/domain, @crm/auth, @crm/config), so DO NOT ignore packages/*,
+# pnpm-workspace.yaml, or the workspace root node_modules resolution.
+#
+# See: https://docs.expo.dev/build-reference/monorepos/#how-to-include-specific-
+# files-when-uploading-the-project-to-eas-build
+
+# --- Web app (not part of the mobile build) ---
+apps/web
+apps/docs
+apps/*/web-build
+apps/*/dist
+apps/*/.next
+
+# --- Node / build artifacts ---
+**/node_modules/
+**/.expo/
+**/dist/
+**/build/
+**/*.log
+**/.DS_Store
+
+# --- Native build outputs (prebuild / EAS local) ---
+apps/mobile/ios
+apps/mobile/android
+
+# --- Version control & CI ---
+.git
+.github
+.husky
+
+# --- Docs & plans (not needed at build time) ---
+docs
+*.md
+!apps/mobile/README.md
+!packages/*/README.md
+!pnpm-workspace.yaml
+
+# --- Design / scratch artifacts ---
+*.psd
+*.sketch
+*.fig

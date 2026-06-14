@@ -72,9 +72,79 @@ This protects the mobile bundle from accidentally pulling in web-only code via s
 
 If NativeWind ever conflicts with a future React/Expo bump, screens can drop className and use `StyleSheet.create` with tokens from `src/styles/theme.ts` without changing the visual system. Keep `tailwind.config.js` colors and `theme.ts` colors in sync.
 
-## Status
+## EAS internal distribution (U9)
 
-**U1 — scaffold complete.** Only a hello-world screen (`app/index.tsx`) is shipped. Auth providers, navigation tabs, and feature screens arrive in later units (U3+).
+The app ships via **EAS Build** with three profiles defined in [`eas.json`](./eas.json):
+
+| Profile | Distribution | Dev client | Purpose |
+| --- | --- | --- | --- |
+| `development` | internal (`simulator: true` / `apk`) | ✅ | Day-to-day dev builds against a dev Convex deployment. |
+| `preview` | internal (TestFlight internal testers + ad-hoc APK) | ❌ | Stakeholder QA builds — the **primary MVP distribution profile**. |
+| `production` | App Store / Play Store archive | ❌ | Production-signed binary. **Does not auto-submit** — public store submission is deferred past MVP. |
+
+### Prerequisites checklist
+
+Before the first build, the following must exist (identify owners before running `eas build`):
+
+- [ ] **Apple Developer Program** account (Team Agent) — owner: _TBD_. Needed for iOS signing + TestFlight internal testing.
+- [ ] **Google Play Console** account — owner: _TBD_. Needed for the Android internal testing track.
+- [ ] **EAS project** — run `cd apps/mobile && eas init` once. This creates the Expo project and writes `extra.eas.projectId` into `app.json` (currently the placeholder `REPLACE_AFTER_EAS_INIT`).
+- [ ] **`EXPO_TOKEN`** secret in the GitHub repo (`Settings → Secrets and variables → Actions`) — a token from an Expo account that has access to the EAS project. Used by the CI workflow.
+- [ ] **Tester lists** — Apple TestFlight internal testers (max 100) and Google Play internal testers (Google Group email list).
+- [ ] **Placeholder icon/splash replaced** — `assets/icon.png`, `assets/adaptive-icon.png`, and `assets/splash.png` are currently solid-color placeholders. Drop branded assets in (same filenames/sizes) before a stakeholder build.
+
+### Build commands
+
+First-time EAS project setup (run once, from `apps/mobile`):
+
+```bash
+cd apps/mobile
+eas login            # or set EXPO_TOKEN
+eas init             # creates project, writes projectId into app.json
+eas build:configure  # optional: reconfigure profiles interactively
+```
+
+Local build (no CI):
+
+```bash
+# Preview build for stakeholders (primary MVP profile)
+eas build --profile preview --platform ios
+eas build --profile preview --platform android
+
+# Dev-client build for development
+eas build --profile development --platform ios
+
+# Production archive (does NOT submit to stores)
+eas build --profile production --platform ios
+```
+
+CI builds on push to `main` and via manual dispatch — see [`.github/workflows/deploy-mobile.yml`](../../.github/workflows/deploy-mobile.yml). Pull requests run `typecheck` only (no paid build).
+
+### Environment variable mapping
+
+EAS Build inlines any `EXPO_PUBLIC_*` variable into the JS bundle at build time. The mapping from shared `@crm/config` names to the mobile `EXPO_PUBLIC_*` names (see [`src/lib/config.ts`](./src/lib/config.ts)) is:
+
+| `@crm/config` name | Mobile bundle var | Classification | Where it lives |
+| --- | --- | --- | --- |
+| `CONVEX_URL` | `EXPO_PUBLIC_CONVEX_URL` | **Public** (embedded in bundle) | `eas.json` `env` or EAS secret |
+| `CONVEX_SITE_URL` | `EXPO_PUBLIC_CONVEX_SITE_URL` | **Public** (embedded in bundle) | `eas.json` `env` or EAS secret |
+| `SITE_URL` *(== plan's `BETTER_AUTH_URL`)* | `EXPO_PUBLIC_SITE_URL` | **Public** (embedded in bundle) | `eas.json` `env` or EAS secret |
+| `BETTER_AUTH_SECRET` | _(none — never prefixed `EXPO_PUBLIC_`)_ | **Server-only** | Stays in Convex / Better Auth server. **MUST NOT reach the bundle.** |
+| signing credentials | _(managed by EAS / credentials.json)_ | **Build-only secret** | EAS credentials; never in repo or bundle |
+
+`eas.json` currently carries `REPLACE_WITH_*` placeholder strings in each profile's `env`. Replace them with the real per-environment URLs, **or** (recommended for production) create them as EAS secrets so the values are not committed:
+
+```bash
+eas secret:create --name EXPO_PUBLIC_CONVEX_URL       --value https://<prod>.convex.cloud
+eas secret:create --name EXPO_PUBLIC_CONVEX_SITE_URL  --value https://<prod>.convex.site
+eas secret:create --name EXPO_PUBLIC_SITE_URL         --value https://app.example.com
+```
+
+> **Guardrail:** never create an EAS secret whose name starts with `EXPO_PUBLIC_BETTER_AUTH_SECRET`. Any `EXPO_PUBLIC_*` var is inlined into the client bundle and would leak the server secret. `BETTER_AUTH_SECRET` is consumed only by the Convex backend and Better Auth server.
+
+### `.easignore`
+
+[`.easignore`](./.easignore) excludes the web app, docs, and build artifacts from the EAS context upload while keeping `packages/*` (required because the mobile bundle imports `@crm/domain`, `@crm/auth`, `@crm/config`).
 
 ## Verification (run from `apps/mobile`)
 
@@ -86,3 +156,7 @@ npx expo export --platform ios   # produces dist/_expo/static/js/ios/entry-*.hbc
 ```
 
 The blocklist is exercised by temporarily adding e.g. `import 'next/image';` to any file under `app/` and re-running `npx expo export --platform ios` — Metro fails fast with `Unable to resolve module next/image`.
+
+## Status
+
+**U1 — scaffold complete.** Only a hello-world screen (`app/index.tsx`) is shipped. Auth providers, navigation tabs, and feature screens arrive in later units (U3+). **U9 — EAS internal distribution configured** (profiles, CI workflow, app.json, placeholder assets). First real build blocked on `eas init` (project ID) — see prerequisites above.

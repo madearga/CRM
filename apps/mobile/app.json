@@ -8,12 +8,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "jsEngine": "hermes",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.crm.mobile"
+      "bundleIdentifier": "com.crm.mobile",
+      "buildNumber": "1",
+      "icon": "./assets/icon.png"
     },
     "android": {
-      "package": "com.crm.mobile"
+      "package": "com.crm.mobile",
+      "versionCode": 1,
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0f"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -22,6 +36,11 @@
     "plugins": ["expo-router"],
     "experiments": {
       "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_AFTER_EAS_INIT"
+      }
     }
   }
 }

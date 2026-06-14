@@ -18,16 +18,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/providers/auth-provider';
 import { ConvexClientProvider } from '@/providers/convex-provider';
+import { NetworkProvider } from '@/providers/network-provider';
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <ConvexClientProvider>
-        <AuthProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }} />
-        </AuthProvider>
-      </ConvexClientProvider>
+      <NetworkProvider>
+        <ConvexClientProvider>
+          <AuthProvider>
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false }} />
+          </AuthProvider>
+        </ConvexClientProvider>
+      </NetworkProvider>
     </SafeAreaProvider>
   );
 }

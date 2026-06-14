@@ -13,9 +13,11 @@
  * default iOS/Android chrome.
  */
 import { Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { NetworkBanner } from '@/components/network-banner';
+import { useNetwork } from '@/hooks/use-network';
 import { colors } from '@/styles/theme';
 
 type TabKey = 'dashboard' | 'activities' | 'invoices' | 'more';
@@ -32,21 +34,23 @@ const TAB_CONFIG: Record<
 
 export default function AppLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: true,
-        headerTintColor: colors.foreground,
-        headerStyle: { backgroundColor: colors.background },
-        headerTitleStyle: { color: colors.foreground },
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarButton: (props) => <Pressable {...(props as object)} />,
-      }}
-    >
+    <View className="flex-1">
+      <TabNetworkBanner />
+      <Tabs
+        screenOptions={{
+          headerShown: true,
+          headerTintColor: colors.foreground,
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { color: colors.foreground },
+          tabBarStyle: {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.mutedForeground,
+          tabBarButton: (props) => <Pressable {...(props as object)} />,
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -92,5 +96,26 @@ export default function AppLayout() {
         }}
       />
     </Tabs>
+    </View>
+  );
+}
+
+/**
+ * Global connectivity banner rendered above the bottom tabs.
+ *
+ * Shows a persistent warning when offline, and a brief success confirmation
+ * when connectivity is restored. Hidden the rest of the time so it does not
+ * compete with screen content for attention.
+ */
+function TabNetworkBanner() {
+  const { isOnline, wasRecentlyOffline, checkNow } = useNetwork();
+
+  if (isOnline && !wasRecentlyOffline) return null;
+
+  return (
+    <NetworkBanner
+      online={isOnline}
+      onRetry={checkNow}
+    />
   );
 }
