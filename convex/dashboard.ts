@@ -263,3 +263,153 @@ export const agingDeals = createAuthQuery()({
       .sort((a, b) => b.daysInStage - a.daysInStage);
   },
 });
+
+// ---------------------------------------------------------------------------
+// Mobile dashboard overview — all MVP KPIs in a single round trip.
+// Business KPIs (deals, invoices, revenue) are org-scoped.
+// Activity items are scoped to the calling user (their attention list),
+// mirroring the `upcomingActivities` pattern in `overview`.
+// ---------------------------------------------------------------------------
+export const mobileOverview = createAuthQuery()({
+  args: {},
+  returns: z.object({
+    openDealsCount: z.number(),
+    overdueActivitiesCount: z.number(),
+    overdueInvoicesTotal: z.number(),
+    revenueMTD: z.number(),
+    recentActivities: z.array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        type: z.string(),
+        entityType: z.string(),
+        entityId: z.string(),
+        dueAt: z.number(),
+      })
+    ),
+    overdueInvoices: z.array(
+      z.object({
+        id: z.string(),
+        number: z.string(),
+        amountDue: z.number(),
+        totalAmount: z.number(),
+        dueDate: z.number(),
+        currency: z.string().optional(),
+      })
+    ),
+  }),
+  handler: async (ctx) => {
+    const orgId = ctx.user.activeOrganization?.id;
+    if (!orgId) {
+      throw new ConvexError({
+        code: 'UNAUTHORIZED',
+        message: 'No active organization',
+      });
+    }
+
+    const now = Date.now();
+
+    // Start of the current calendar month (for revenue MTD).
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthStartMs = monthStart.getTime();
+
+    // Fetch all independent data in parallel so this stays a single round trip.
+    const [orgDeals, userActivities, postedInvoices, invoicesSinceMonthStart] =
+      await Promise.all([
+        // Open deals: not archived, not won, not lost (org-scoped pipeline health).
+        ctx
+          .table('deals', 'organizationId', (q) =>
+            q.eq('organizationId', orgId)
+          )
+          .take(1000),
+        // Calling user's activities with a due date (uses
+        // assigneeId_organizationId_dueAt index).
+        ctx
+          .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
+            q.eq('assigneeId', ctx.user._id).eq('organizationId', orgId)
+          )
+          .take(500),
+        // Posted invoices -> source for overdue total + top-5 list.
+        ctx
+          .table('invoices', 'organizationId_state', (q) =>
+            q.eq('organizationId', orgId).eq('state', 'posted')
+          )
+          .take(2000),
+        // Invoices dated this month -> source for revenue MTD.
+        ctx
+          .table('invoices', 'organizationId_invoiceDate', (q) =>
+            q.eq('organizationId', orgId).gte('invoiceDate', monthStartMs)
+          )
+          .take(2000),
+      ]);
+
+    // --- Open deals count ---
+    const openDealsCount = orgDeals.filter(
+      (d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost'
+    ).length;
+
+    // --- Activities: open = not completed / not cancelled; must have a dueAt ---
+    const openUserActivities = userActivities.filter(
+      (a) =>
+        a.dueAt !== undefined &&
+        a.completedAt === undefined &&
+        a.status !== 'done' &&
+        a.status !== 'cancelled'
+    );
+    const overdueActivitiesCount = openUserActivities.filter(
+      (a) => a.dueAt! < now
+    ).length;
+
+    // Recent/upcoming activities for the user: soonest due first (overdue
+    // surfaces at the top so it gets attention). Top 5.
+    const recentActivities = [...openUserActivities]
+      .sort((a, b) => a.dueAt! - b.dueAt!)
+      .slice(0, 5)
+      .map((a) => ({
+        id: a._id,
+        title: a.title,
+        type: a.type,
+        entityType: a.entityType,
+        entityId: a.entityId,
+        dueAt: a.dueAt!,
+      }));
+
+    // --- Overdue invoices: posted, not archived, past dueDate ---
+    const overdueInvoiceList = postedInvoices
+      .filter((inv) => !inv.archivedAt && inv.dueDate < now)
+      .sort((a, b) => a.dueDate - b.dueDate); // most overdue first
+    const overdueInvoicesTotal = overdueInvoiceList.reduce(
+      (sum, inv) => sum + (inv.amountDue ?? 0),
+      0
+    );
+    const overdueInvoices = overdueInvoiceList.slice(0, 5).map((inv) => ({
+      id: inv._id,
+      number: inv.number,
+      amountDue: inv.amountDue ?? 0,
+      totalAmount: inv.totalAmount ?? 0,
+      dueDate: inv.dueDate,
+      currency: inv.currency,
+    }));
+
+    // --- Revenue MTD: customer invoices this month, not cancelled/archived ---
+    const revenueMTD = invoicesSinceMonthStart
+      .filter(
+        (inv) =>
+          inv.type === 'customer_invoice' &&
+          inv.state !== 'cancel' &&
+          !inv.archivedAt
+      )
+      .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
+
+    return {
+      openDealsCount,
+      overdueActivitiesCount,
+      overdueInvoicesTotal,
+      revenueMTD,
+      recentActivities,
+      overdueInvoices,
+    };
+  },
+});
