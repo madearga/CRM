@@ -1,0 +1,131 @@
+{
+  "reviewer": "correctness",
+  "findings": [
+    {
+      "title": "Network probe creates unhandled promise rejections on every successful probe",
+      "severity": "P1",
+      "file": "apps/mobile/src/lib/network.ts",
+      "line": 47,
+      "confidence": 100,
+      "autofix_class": "safe",
+      "owner": "mobile-networking",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "On every successful network probe, the timeoutPromise rejects via the abort listener after Promise.race has already resolved. That rejected promise has no handler, producing an unhandled promise rejection. In Hermes with promise-rejection tracking or strict crash handlers, this can surface as a crash or noise in error monitoring.",
+      "evidence": "In probeNetwork, timeoutPromise installs a signal abort listener that calls reject(new Error('probe-aborted')). The finally block unconditionally calls controller.abort(). When fetch wins the race, the abort listener fires after the race resolved, rejecting timeoutPromise with no catch. The same pattern can also leave the fetch promise itself unhandled if the timeout path wins and finally aborts an in-flight fetch.",
+      "suggested_fix": "Suppress or avoid the loser's rejection. Options: (1) attach `.catch(() => {})` to timeoutPromise after creation; (2) remove the reject-on-abort logic and only use the abort listener for timer cleanup, keeping timeout as the sole rejection path; or (3) use `AbortSignal.timeout` with a Hermes fallback so no racing promise is needed."
+    },
+    {
+      "title": "Activities list 'Retry' button is a no-op",
+      "severity": "P1",
+      "file": "apps/mobile/app/(app)/activities/index.tsx",
+      "line": 113,
+      "confidence": 100,
+      "autofix_class": "safe",
+      "owner": "mobile-activities",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The error-state retry button calls `setTab(tab)` with the current tab value. React treats this as a no-op, so tapping Retry does not remount the query, force a refetch, or give the user any feedback. If the inline error path is ever reached, the user is stuck.",
+      "evidence": "`<Button variant=\"outline\" onPress={() => setTab(tab)}>Retry</Button>`. `tab` is the current state, so the setter does nothing. Additionally, Convex `useQuery` throws on server errors rather than returning `null`, so the `isError` branch based on `data === null` is likely unreachable; the screen has no ErrorBoundary to catch thrown query errors.",
+      "suggested_fix": "Either wrap the query in an ErrorBoundary (as the invoices screen does) and remount on retry via a `retryKey`, or change the retry handler to increment a local nonce that re-mounts the query component. Also verify whether `data === null` is the correct error signal for `convex/react` useQuery."
+    },
+    {
+      "title": "Mobile dashboard query counts paid/posted invoices as overdue",
+      "severity": "P1",
+      "file": "convex/dashboard.ts",
+      "line": 378,
+      "confidence": 75,
+      "autofix_class": "safe",
+      "owner": "backend-dashboard",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "`mobileOverview` filters overdue invoices by `!inv.archivedAt && inv.dueDate < now` but does not require `amountDue > 0` or `state === 'posted'`. A posted invoice that has been fully paid (amountDue=0) but still has a past dueDate will be counted as overdue, inflating the attention metric and total. The mobile client code (invoice-row.tsx) correctly gates overdue on `amountDue > 0`, so the two sides disagree.",
+      "evidence": "`const overdueInvoiceList = postedInvoices.filter((inv) => !inv.archivedAt && inv.dueDate < now)`. The query already narrows to `state === 'posted'`, but amountDue and payment status are not checked. The client's `isInvoiceOverdue` requires `inv.amountDue > 0`.",
+      "suggested_fix": "Add `inv.amountDue > 0` (and ideally `inv.paymentStatus !== 'paid'`) to the server-side overdue filter so the dashboard total matches the client's overdue classification."
+    },
+    {
+      "title": "Network provider allows overlapping probes that corrupt failure-count state",
+      "severity": "P2",
+      "file": "apps/mobile/src/providers/network-provider.tsx",
+      "line": 64,
+      "confidence": 75,
+      "autofix_class": "safe",
+      "owner": "mobile-networking",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "`checkNow` is invoked by the mount effect, the polling interval, and the app-state listener. There is no guard against concurrent execution. Two probes can update the shared `consecutiveFailuresRef` and `setState` in a racy order, producing a final state that does not reflect the most recent probe result (e.g., a late stale failure can flip the app to 'checking' after a successful probe already marked it online).",
+      "evidence": "`checkNow` reads and writes `consecutiveFailuresRef` and calls `setState` from `.then`/`.catch` handlers. The `setIsChecking(true)` at the start is not conditional. If the poll timer fires just as a foreground-triggered probe is in flight, both run to completion and interleave their state updates.",
+      "suggested_fix": "Add an `isProbingRef` that returns early when a probe is already in flight, or track a probe generation id and ignore stale results in the handlers."
+    },
+    {
+      "title": "Invoice detail mis-formats percentage discounts as money",
+      "severity": "P2",
+      "file": "apps/mobile/app/(app)/invoices/[id].tsx",
+      "line": 173,
+      "confidence": 75,
+      "autofix_class": "safe",
+      "owner": "mobile-invoices",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "When `discountType === 'percentage'`, the label renders `Discount (10%)` but the value is still `formatMoney(inv.discountAmount, currency)`. If `discountAmount` stores the percentage value (e.g., 10), the row reads `Rp 10` instead of `10%`, which is confusing and wrong.",
+      "evidence": "`<TotalsRow label={`Discount${inv.discountType === 'percentage' ? ` (${inv.discountAmount}%)` : ''}`} value={`- ${formatMoney(inv.discountAmount, currency)}`} />`. The branch appends a '%' to the label but does not change the value formatter.",
+      "suggested_fix": "For percentage discounts, format the value as `${inv.discountAmount}%` (or compute the actual discount amount from subtotal * discountAmount / 100) and only use `formatMoney` for fixed-amount discounts."
+    },
+    {
+      "title": "formatCurrencyCompact ignores currency parameter for compact values",
+      "severity": "P2",
+      "file": "apps/mobile/src/lib/format.ts",
+      "line": 42,
+      "confidence": 100,
+      "autofix_class": "safe",
+      "owner": "mobile-formatting",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The compact formatter accepts a `currency` argument but always emits `Rp ... jt/rb/M` regardless of the currency. For any non-IDR org, the dashboard KPI will show the wrong currency symbol (e.g., USD revenue rendered as 'Rp 1,2 jt').",
+      "evidence": "`compactSymbol` hard-codes `Rp ${locale} ${suffix}` and is used for all values >= 1,000. The `currency` parameter is only consulted in the fallback branch below 1,000 via `formatCurrency(value, currency)`.",
+      "suggested_fix": "Use the provided `currency` to choose the symbol in compactSymbol, and choose localized suffixes (or fall back to the full `formatCurrency` for currencies that lack compact suffixes)."
+    },
+    {
+      "title": "Dashboard overdue-invoice total assumes all overdue invoices share the first row's currency",
+      "severity": "P2",
+      "file": "apps/mobile/app/(app)/index.tsx",
+      "line": 266,
+      "confidence": 75,
+      "autofix_class": "safe",
+      "owner": "mobile-dashboard",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "`overdueInvoicesCurrency={data.overdueInvoices[0]?.currency}` passes the first invoice's currency to `AttentionCard`. The `overdueInvoicesTotal` is a plain numeric sum across all overdue invoices, but if the org invoices in multiple currencies the label can imply the total is in that single currency. This is a data-integrity risk for multi-currency workspaces.",
+      "evidence": "`AttentionCard` receives `overdueInvoicesTotal` (a summed number) and `overdueInvoicesCurrency` from only the first row. The dashboard query returns `currency` per invoice, but the total is not grouped or normalized by currency.",
+      "suggested_fix": "Either (a) group the overdue total by currency and render the dominant one with a 'mixed currencies' hint, or (b) only show the total when all overdue invoices share the same currency."
+    },
+    {
+      "title": "Provider nesting may leave Convex connection unauthenticated on cold start",
+      "severity": "P2",
+      "file": "apps/mobile/app/_layout.tsx",
+      "line": 26,
+      "confidence": 50,
+      "autofix_class": "risky",
+      "owner": "mobile-auth",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "`ConvexClientProvider` is outside `AuthProvider` and installs the token fetcher once with `setAuth(exchangeConvexToken)`. The fetcher reads the Better Auth session from `expo-secure-store` via `authClient.convex.token()`. If Convex connects before the session atom has resolved (or if the initial fetcher call returns `null`), the connection may remain unauthenticated because Convex does not automatically re-fetch the token when the session later becomes available. The current query mounts are delayed until auth resolves (via the `/` gate), which mitigates the risk, but the coupling is fragile.",
+      "evidence": "Root layout order: `<ConvexClientProvider><AuthProvider>...</AuthProvider></ConvexClientProvider>`. `ConvexClientProvider.useEffect` calls `convexClient.setAuth(exchangeConvexToken)` once. `AuthProvider` reads the session via `useSession()` inside it. `exchangeConvexToken` has no dependency on the resolved React session; it relies on cross-domain storage being populated.",
+      "suggested_fix": "Make `ConvexClientProvider` itself subscribe to the Better Auth session (or accept a session signal) so it can re-install the auth fetcher when the session transitions from null to present. Alternatively, move `AuthProvider` outside `ConvexClientProvider` and pass the resolved token into the Convex provider once available."
+    }
+  ],
+  "residual_risks": [
+    "`better-auth/react`'s `useSession` and nanostores atom have not been verified inside Expo SDK 53 / React Native 0.79. If the hook depends on DOM-specific APIs or async storage reads, the launch-time session resolution could hang or fail silently.",
+    "`expo-secure-store` synchronous `getItem`/`setItem` run on the JS thread. Slow keychain/keystore access on Android can cause ANRs or UI stutter during auth state transitions.",
+    "`StatusBar style=\"light\"` is hardcoded. If iOS ever renders the app in light mode (app.json `userInterfaceStyle: 'automatic'`), status-bar text becomes invisible against a light background.",
+    "The Metro blocklist regex for `@radix-ui/*` uses a negative lookahead. While JavaScript supports it, some Metro/regex tooling or older Hermes transforms could mis-handle it; a build-time smoke test is needed.",
+    "`mobileEnv()` stubs `BETTER_AUTH_SECRET` with a placeholder. A misconfigured EAS secret named `EXPO_PUBLIC_BETTER_AUTH_SECRET_STUB` would still leak a real secret into the bundle."
+  ],
+  "testing_gaps": [
+    "No integration test that exercises the full auth flow: sign in → Convex token exchange → authenticated query → sign out → storage cleared.",
+    "No test that verifies the network provider state machine under rapid foreground/background transitions and concurrent probes.",
+    "No test for the `mobileOverview` handler edge cases: paid-but-past-due invoices, multi-currency overdue invoices, and empty-org first-run state.",
+    "No test that the `activities/index.tsx` error boundary/retry path actually remounts the query (currently it cannot because the branch is unreachable or the handler is a no-op).",
+    "No E2E or build-time test that the browser-only blocklist actually blocks `next`, `recharts`, etc., from the native bundle."
+  ]
+}

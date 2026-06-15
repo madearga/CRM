@@ -68,12 +68,19 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const [wasRecentlyOffline, setWasRecentlyOffline] = useState(false);
   const consecutiveFailuresRef = useRef(0);
   const restoredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const probingRef = useRef(false);
   const mountedRef = useRef(true);
 
   const probeUrl = useMemo(() => mobileEnv().CONVEX_URL, []);
 
   const checkNow = useCallback(() => {
     if (!mountedRef.current) return;
+    // Guard against overlapping probes: a probe may still be in flight when a
+    // foreground event, a poll tick, or a manual `checkNow()` fires. Skip in
+    // that case rather than stacking concurrent fetches that would race to
+    // update state and skew the consecutive-failure counter.
+    if (probingRef.current) return;
+    probingRef.current = true;
 
     setIsChecking(true);
     probeNetwork(probeUrl, DEFAULT_POLL_INTERVAL_MS / 6)
@@ -113,6 +120,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .finally(() => {
+        probingRef.current = false;
         if (mountedRef.current) setIsChecking(false);
       });
   }, [probeUrl, state]);

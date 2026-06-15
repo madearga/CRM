@@ -28,6 +28,14 @@ interface ErrorBoundaryState {
   retryKey: number;
 }
 
+/**
+ * Generic, user-facing copy shown in place of any thrown error message. We
+ * intentionally do NOT surface `error.message`: backend / Convex errors can
+ * echo internal details (function names, ids, stack hints) that should never
+ * reach the UI. Callers can still override via the `message` prop.
+ */
+const GENERIC_ERROR_MESSAGE = 'Something went wrong while loading.';
+
 export class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
@@ -35,6 +43,8 @@ export class ErrorBoundary extends Component<
   override state: ErrorBoundaryState = { error: null, retryKey: 0 };
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    // Capture the error to trigger the fallback UI, but never render its raw
+    // message — see {@link GENERIC_ERROR_MESSAGE}.
     return { error };
   }
 
@@ -46,10 +56,9 @@ export class ErrorBoundary extends Component<
     const { error, retryKey } = this.state;
 
     if (error) {
-      const body =
-        this.props.message ??
-        error.message ??
-        'Something went wrong while loading.';
+      // Sanitized copy: prefer an explicit prop override, otherwise the
+      // generic message. `error.message` is deliberately NOT used.
+      const body = this.props.message ?? GENERIC_ERROR_MESSAGE;
 
       return (
         <View className="flex-1 items-center justify-center px-6">

@@ -10,6 +10,16 @@ import {
   aggregateActivitiesByOrg,
 } from './aggregates';
 
+import {
+  OPEN_DEAL_STAGES,
+  isOpenActivity,
+  isOverdueActivity,
+  isInvoiceOverdue,
+  isRevenueInvoice,
+  monthStartOf,
+  type DashboardInvoice,
+} from '@crm/domain';
+
 // Dashboard overview: pipeline value, deal counts by stage, company count, recent activities
 export const overview = createAuthQuery()({
   args: {},
@@ -308,64 +318,98 @@ export const mobileOverview = createAuthQuery()({
     }
 
     const now = Date.now();
+    const monthStartMs = monthStartOf(now);
 
-    // Start of the current calendar month (for revenue MTD).
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const monthStartMs = monthStart.getTime();
+    // ---------------------------------------------------------------
+    // Read budget guard
+    //
+    // P0 fix: the previous implementation loaded up to 5,500 documents
+    // (deals 1000 + activities 500 + posted invoices 2000 + month invoices
+    // 2000) in a single round trip. For real workspaces this risks
+    // hitting Convex function read/byte limits. We now use targeted
+    // index queries with per-source caps:
+    //
+    //   - open deals: one targeted `organizationId_stage` query per open
+    //     stage (new/contacted/proposal). Aggregate counts by stage exist
+    //     (`aggregateDealsByStage`) but they cannot exclude archived
+    //     deals, so per-stage queries with cap are the correct
+    //     alternative. Each stage is bounded by OPEN_DEALS_PER_STAGE_CAP.
+    //   - overdue activities: `assigneeId_organizationId_dueAt` with
+    //     `lt('dueAt', now)` — only past-due rows.
+    //   - recent activities: ordered `assigneeId_organizationId_dueAt`
+    //     asc, bounded window, then filter to open.
+    //   - overdue invoices: `organizationId_dueDate` with `lt('dueDate',
+    //     now)` — only past-due rows. P1 fix adds the
+    //     `amountDue > 0 && paymentStatus !== 'paid'` guard so
+    //     fully-paid-but-still-posted invoices do not inflate the
+    //     overdue total.
+    //   - revenue MTD: `organizationId_invoiceDate` gte monthStart.
+    //
+    // Aggregates were not available for the multi-field filters needed
+    // (state + archivedAt + amountDue + paymentStatus). We use
+    // capped/targeted queries instead. Caps are documented; raise them
+    // in the same PR if a real workspace reports under-counts.
+    // ---------------------------------------------------------------
+    const OPEN_DEALS_PER_STAGE_CAP = 500;
+    const OVERDUE_ACTIVITIES_CAP = 200;
+    const RECENT_ACTIVITIES_FETCH = 25;
+    const OVERDUE_INVOICES_CAP = 500;
+    const REVENUE_MTD_INVOICES_CAP = 1000;
 
-    // Fetch all independent data in parallel so this stays a single round trip.
-    const [orgDeals, userActivities, postedInvoices, invoicesSinceMonthStart] =
+    const openStageQueries = OPEN_DEAL_STAGES.map((stage) =>
+      ctx
+        .table('deals', 'organizationId_stage', (q) =>
+          q.eq('organizationId', orgId).eq('stage', stage)
+        )
+        .take(OPEN_DEALS_PER_STAGE_CAP)
+    );
+
+    const [openDealsByStage, overdueActivityRows, recentActivityRows, pastDueInvoices, monthInvoices] =
       await Promise.all([
-        // Open deals: not archived, not won, not lost (org-scoped pipeline health).
+        Promise.all(openStageQueries),
         ctx
-          .table('deals', 'organizationId', (q) =>
-            q.eq('organizationId', orgId)
+          .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
+            q
+              .eq('assigneeId', ctx.user._id)
+              .eq('organizationId', orgId)
+              .lt('dueAt', now)
           )
-          .take(1000),
-        // Calling user's activities with a due date (uses
-        // assigneeId_organizationId_dueAt index).
+          .take(OVERDUE_ACTIVITIES_CAP),
         ctx
           .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
             q.eq('assigneeId', ctx.user._id).eq('organizationId', orgId)
           )
-          .take(500),
-        // Posted invoices -> source for overdue total + top-5 list.
+          .order('asc')
+          .take(RECENT_ACTIVITIES_FETCH),
         ctx
-          .table('invoices', 'organizationId_state', (q) =>
-            q.eq('organizationId', orgId).eq('state', 'posted')
+          .table('invoices', 'organizationId_dueDate', (q) =>
+            q.eq('organizationId', orgId).lt('dueDate', now)
           )
-          .take(2000),
-        // Invoices dated this month -> source for revenue MTD.
+          .take(OVERDUE_INVOICES_CAP),
         ctx
           .table('invoices', 'organizationId_invoiceDate', (q) =>
             q.eq('organizationId', orgId).gte('invoiceDate', monthStartMs)
           )
-          .take(2000),
+          .take(REVENUE_MTD_INVOICES_CAP),
       ]);
 
     // --- Open deals count ---
-    const openDealsCount = orgDeals.filter(
-      (d) => !d.archivedAt && d.stage !== 'won' && d.stage !== 'lost'
+    // Flatten per-stage results and filter archived; archived open-stage
+    // deals must not inflate the pipeline-health count.
+    const openDealsCount = openDealsByStage
+      .flat()
+      .filter((d) => d.archivedAt === undefined).length;
+
+    // --- Activities ---
+    // Overdue: open (planned, not done/cancelled, not completed) AND past due.
+    const overdueActivitiesCount = overdueActivityRows.filter((a) =>
+      isOverdueActivity(a, now)
     ).length;
 
-    // --- Activities: open = not completed / not cancelled; must have a dueAt ---
-    const openUserActivities = userActivities.filter(
-      (a) =>
-        a.dueAt !== undefined &&
-        a.completedAt === undefined &&
-        a.status !== 'done' &&
-        a.status !== 'cancelled'
-    );
-    const overdueActivitiesCount = openUserActivities.filter(
-      (a) => a.dueAt! < now
-    ).length;
-
-    // Recent/upcoming activities for the user: soonest due first (overdue
-    // surfaces at the top so it gets attention). Top 5.
-    const recentActivities = [...openUserActivities]
-      .sort((a, b) => a.dueAt! - b.dueAt!)
+    // Recent: top 5 open user activities by dueAt ascending (overdue first).
+    const recentActivities = recentActivityRows
+      .filter((a) => isOpenActivity(a))
+      .sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0))
       .slice(0, 5)
       .map((a) => ({
         id: a._id,
@@ -376,31 +420,30 @@ export const mobileOverview = createAuthQuery()({
         dueAt: a.dueAt!,
       }));
 
-    // --- Overdue invoices: posted, not archived, past dueDate ---
-    const overdueInvoiceList = postedInvoices
-      .filter((inv) => !inv.archivedAt && inv.dueDate < now)
-      .sort((a, b) => a.dueDate - b.dueDate); // most overdue first
+    // --- Overdue invoices ---
+    // P1 fix: require amountDue > 0 and paymentStatus !== 'paid' so that
+    // posted invoices which have been fully settled (state not transitioned
+    // to 'paid') do not inflate the overdue total. Filters live in the
+    // shared `isInvoiceOverdue` classifier (see @crm/domain/dashboard).
+    const overdueInvoiceList = (pastDueInvoices as unknown as DashboardInvoice[])
+      .filter((inv) => isInvoiceOverdue(inv, now))
+      .sort((a, b) => a.dueDate - b.dueDate);
     const overdueInvoicesTotal = overdueInvoiceList.reduce(
       (sum, inv) => sum + (inv.amountDue ?? 0),
       0
     );
     const overdueInvoices = overdueInvoiceList.slice(0, 5).map((inv) => ({
-      id: inv._id,
-      number: inv.number,
+      id: (inv as any)._id,
+      number: (inv as any).number,
       amountDue: inv.amountDue ?? 0,
       totalAmount: inv.totalAmount ?? 0,
       dueDate: inv.dueDate,
-      currency: inv.currency,
+      currency: (inv as any).currency,
     }));
 
-    // --- Revenue MTD: customer invoices this month, not cancelled/archived ---
-    const revenueMTD = invoicesSinceMonthStart
-      .filter(
-        (inv) =>
-          inv.type === 'customer_invoice' &&
-          inv.state !== 'cancel' &&
-          !inv.archivedAt
-      )
+    // --- Revenue MTD ---
+    const revenueMTD = (monthInvoices as unknown as DashboardInvoice[])
+      .filter((inv) => isRevenueInvoice(inv))
       .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
 
     return {

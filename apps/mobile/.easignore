@@ -15,6 +15,15 @@ apps/*/web-build
 apps/*/dist
 apps/*/.next
 
+# --- Secrets / credentials (never ship to EAS build context) ---
+# Explicit: any .env file, .env.local*, or credentials.json must never
+# reach the EAS build tarball. Belt-and-suspenders with .gitignore.
+**/.env*
+**/.env.local*
+**/credentials.json
+**/*.p8
+**/*.p12
+
 # --- Node / build artifacts ---
 **/node_modules/
 **/.expo/

@@ -9,6 +9,7 @@ import {
 import { createAuditLog } from './auditLogs';
 import { nextSequence } from './shared/sequenceGenerator';
 import type { AuthMutationCtx } from './functions';
+import { assertCanReadInvoice } from '@crm/domain';
 
 // ---------------------------------------------------------------------------
 // Enums & Types
@@ -280,10 +281,20 @@ export const getById = createOrgQuery()({
     })),
   }),
   handler: async (ctx, args) => {
-    const inv = await ctx.table('invoices').get(args.id);
-    if (!inv || inv.organizationId !== ctx.orgId) {
-      throw new ConvexError({ code: 'NOT_FOUND', message: 'Invoice not found' });
-    }
+    // SECURITY: IDOR guard.
+    // `ctx.orgId` is injected by `createOrgQuery` from the authenticated
+    // session's `user.activeOrganization.id` (server-trusted, NOT a client
+    // input). We MUST compare the fetched invoice's `organizationId`
+    // against it and throw NOT_FOUND on mismatch — otherwise a user in org A
+    // could pass any invoice id leaked from org B and read it. The
+    // comparison and throw are routed through the shared
+    // `assertCanReadInvoice` helper (see @crm/domain/invoiceAccess) so the
+    // guard is testable, reviewable, and consistent across read paths.
+    const rawInv = await ctx.table('invoices').get(args.id);
+    const inv = assertCanReadInvoice(
+      rawInv as unknown as { organizationId: string } | null,
+      ctx.orgId
+    ) as typeof rawInv;
 
     const lines = await inv.edge('lines');
     const payments = await inv.edge('payments');

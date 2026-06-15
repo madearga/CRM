@@ -3,10 +3,15 @@
  *
  * Provider tree (outermost → innermost):
  *   SafeAreaProvider  — insets for notch/home-indicator
- *   ConvexClientProvider — installs the Better Auth token fetcher on the
- *                          shared ConvexReactClient and provides `useQuery`
- *                          / `useMutation` to the tree.
+ *   NetworkProvider    — connectivity state for the Convex listener
  *   AuthProvider        — reactive session state machine driving navigation.
+ *                         Mounts OUTSIDE ConvexClientProvider so the session
+ *                         is resolved before Convex attempts a token
+ *                         handshake (avoids the cold-start
+ *                         "unauthenticated despite valid token" gap).
+ *   ConvexClientProvider — subscribes to AuthProvider's status, installs the
+ *                          Better Auth token fetcher once `authenticated`, and
+ *                          provides `useQuery` / `useMutation` to the tree.
  *
  * The `<Stack>` renders the route groups: `index` (auth gate redirect),
  * `(auth)` (login), `(app)` (bottom tabs), plus the standalone U4 gallery.
@@ -24,12 +29,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <NetworkProvider>
-        <ConvexClientProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <ConvexClientProvider>
             <StatusBar style="light" />
             <Stack screenOptions={{ headerShown: false }} />
-          </AuthProvider>
-        </ConvexClientProvider>
+          </ConvexClientProvider>
+        </AuthProvider>
       </NetworkProvider>
     </SafeAreaProvider>
   );

@@ -13,7 +13,7 @@
  * schemas yet). On success the screen pops back; the new activity shows up in
  * the Upcoming list via Convex live queries.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -132,8 +132,22 @@ export default function NewActivityScreen() {
   // Success flash: briefly show a saved state before navigating back so the
   // user gets feedback without a toast/haptics dependency (added in U8).
   const [justSaved, setJustSaved] = useState(false);
+  // Timer ref for the post-save navigation so we can clear it on unmount and
+  // avoid navigating after the screen is gone (e.g. user pops manually).
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleActivity = useMutation(api.activities.schedule);
+
+  // Clear any pending post-save navigation timer when the screen unmounts so
+  // we never call `router.back()`/`router.replace` on a stale navigation.
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) {
+        clearTimeout(navTimerRef.current);
+        navTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const scheduledAt = useMemo(() => {
     const opt = DUE_OPTIONS.find((o) => o.key === dueKey) ?? DUE_OPTIONS[2];
@@ -183,7 +197,8 @@ export default function NewActivityScreen() {
       // Brief success flash, then pop. The Upcoming list refreshes via Convex
       // live query automatically.
       setJustSaved(true);
-      setTimeout(() => {
+      navTimerRef.current = setTimeout(() => {
+        navTimerRef.current = null;
         if (router.canGoBack()) router.back();
         else router.replace('/(app)/activities');
       }, 350);

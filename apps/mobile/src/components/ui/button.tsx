@@ -2,9 +2,7 @@ import {
   ActivityIndicator,
   Pressable,
   Text,
-  View,
   type PressableProps,
-  type TextProps,
   type ViewStyle,
 } from "react-native";
 import { cn } from "@/lib/utils";

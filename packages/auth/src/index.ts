@@ -1,7 +1,9 @@
 export {
   createCrmAuthClient,
+  crmAuthClientPlugins,
   type CrmAuthClient,
   type CreateCrmAuthClientOptions,
+  type CrmAuthClientPluginsOptions,
   type CrmAuthStorage,
   type SignIn,
   type SignOut,

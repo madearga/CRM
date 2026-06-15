@@ -10,9 +10,7 @@ import {
   crossDomainClient,
 } from '@convex-dev/better-auth/client/plugins';
 
-import {
-  DEFAULT_AUTH_STORAGE_PREFIX,
-} from '@crm/config';
+import { DEFAULT_AUTH_STORAGE_PREFIX } from '@crm/config';
 
 /**
  * Synchronous key/value storage contract required by Better Auth's
@@ -63,14 +61,44 @@ export interface CreateCrmAuthClientOptions {
 }
 
 /**
- * Create the shared, platform-agnostic Better Auth client used by the CRM.
+ * Options for {@link crmAuthClientPlugins}. Mirrors the storage-related subset
+ * of {@link CreateCrmAuthClientOptions} so the plugin list can be built once
+ * and shared across client flavours (agnostic `better-auth/client` vs React
+ * `better-auth/react`).
+ */
+export interface CrmAuthClientPluginsOptions {
+  /**
+   * Optional platform storage. When provided, the `crossDomainClient` plugin
+   * is enabled so session cookies survive across the web↔mobile/API boundary.
+   * Omit on platforms that rely on cookie-based sessions only (SSR web).
+   */
+  storage?: CrmAuthStorage;
+  /**
+   * Storage key prefix for cross-domain session data. Defaults to the shared
+   * `DEFAULT_AUTH_STORAGE_PREFIX` constant.
+   */
+  storagePrefix?: string;
+  /**
+   * Disable the cross-domain client's in-memory + storage session cache.
+   * Useful when a platform wants every `useSession` to hit the network.
+   */
+  disableCrossDomainCache?: boolean;
+  /**
+   * Extra Better Auth client plugins (e.g. a fully-configured
+   * `organizationClient({ ac, roles })` from the web app, social providers,
+   * etc.). These are appended after the shared defaults.
+   */
+  plugins?: BetterAuthClientPlugin[];
+}
+
+/**
+ * Build the canonical CRM Better Auth client plugin list.
  *
- * This factory deliberately imports from `better-auth/client` (NOT
- * `better-auth/react`) and from `@convex-dev/better-auth/client/plugins`
- * (NOT `.../react`), so it introduces zero web-only / React-only runtime
- * dependencies. It never imports `next`, `next/headers`, `react-dom/server`,
- * the Convex server `auth` instance, or `@convex/authPermissions` — those
- * remain web/server concerns and can be layered on via `options.plugins`.
+ * This is the **single source of truth** for which plugins every CRM client
+ * (web, mobile, server-side) must enable, so the React Native client cannot
+ * silently drift out of sync with the web/server client. Both
+ * `better-auth/client`'s `createAuthClient` and `better-auth/react`'s
+ * `createAuthClient` accept the resulting `BetterAuthClientPlugin[]`.
  *
  * Plugins always included:
  *  - `inferAdditionalFields()` — keeps client typing in sync with the server
@@ -85,14 +113,14 @@ export interface CreateCrmAuthClientOptions {
  *    cookies in platform storage so mobile (or any non-browser client) can
  *    authenticate against the same backend.
  */
-export function createCrmAuthClient(options: CreateCrmAuthClientOptions) {
+export function crmAuthClientPlugins(
+  options: CrmAuthClientPluginsOptions = {},
+): BetterAuthClientPlugin[] {
   const {
-    baseURL,
     storage,
     storagePrefix = DEFAULT_AUTH_STORAGE_PREFIX,
     disableCrossDomainCache,
     plugins: extraPlugins = [],
-    fetchOptions,
   } = options;
 
   const plugins: BetterAuthClientPlugin[] = [
@@ -112,10 +140,34 @@ export function createCrmAuthClient(options: CreateCrmAuthClientOptions) {
   }
 
   plugins.push(...extraPlugins);
+  return plugins;
+}
+
+/**
+ * Create the shared, platform-agnostic Better Auth client used by the CRM.
+ *
+ * This factory deliberately imports from `better-auth/client` (NOT
+ * `better-auth/react`) and from `@convex-dev/better-auth/client/plugins`
+ * (NOT `.../react`), so it introduces zero web-only / React-only runtime
+ * dependencies. It never imports `next`, `next/headers`, `react-dom/server`,
+ * the Convex server `auth` instance, or `@convex/authPermissions` — those
+ * remain web/server concerns and can be layered on via `options.plugins`.
+ *
+ * Plugin selection is delegated to {@link crmAuthClientPlugins} so the
+ * agnostic client and the React Native client stay in lockstep.
+ */
+export function createCrmAuthClient(options: CreateCrmAuthClientOptions) {
+  const { baseURL, storage, storagePrefix, disableCrossDomainCache, plugins, fetchOptions } =
+    options;
 
   return createAuthClient({
     baseURL,
-    plugins,
+    plugins: crmAuthClientPlugins({
+      storage,
+      storagePrefix,
+      disableCrossDomainCache,
+      plugins,
+    }),
     fetchOptions,
   });
 }

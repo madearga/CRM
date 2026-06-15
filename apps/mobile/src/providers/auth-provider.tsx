@@ -31,7 +31,7 @@ import React, {
   useReducer,
 } from 'react';
 
-import type { SessionUser } from '@crm/auth';
+import { isSessionPayload, toSessionUser, type SessionUser } from '@crm/auth';
 
 import { authClient, signOut as authSignOut, useSession } from '@/lib/auth-client';
 import { convexClient } from '@/lib/convex-client';
@@ -68,18 +68,12 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function toAuthSession(data: unknown): AuthSession | null {
-  if (!data || typeof data !== 'object') return null;
-  const v = data as { session?: unknown; user?: unknown };
-  if (!v.session || !v.user) return null;
-  const s = v.session as Record<string, unknown>;
-  const u = v.user as Record<string, unknown>;
-  if (typeof s.id !== 'string' || typeof u.id !== 'string' || typeof u.email !== 'string') {
-    return null;
-  }
-  return {
-    session: { ...s, id: s.id } as AuthSession['session'],
-    user: { ...u, id: u.id, email: u.email } as SessionUser,
-  };
+  // Delegate structural validation + user normalisation to the shared
+  // `@crm/auth/session` helpers instead of duplicating the field checks here.
+  if (!isSessionPayload(data)) return null;
+  const user = toSessionUser(data.user);
+  if (!user) return null;
+  return { session: data.session, user };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -130,8 +124,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore — local cleanup is mandatory regardless */
     } finally {
-      clearSecureAuthStorage();
-      convexClient.clearAuth();
+      // Scrub secure storage first. clearSecureAuthStorage overwrites any
+      // un-deletable key with an empty string, so `cleared` is true once no
+      // usable token remains. Retry once on a catastrophic failure; we never
+      // strand the user in `signingOut` — SIGN_OUT_COMPLETE always fires.
+      if (!clearSecureAuthStorage().cleared) {
+        clearSecureAuthStorage();
+      }
+      // Always reset Convex auth. Wrap in try/catch so a throw here can never
+      // leave the machine stuck in `signingOut`.
+      try {
+        convexClient.clearAuth();
+      } catch {
+        /* ignore — Convex will re-handshake on next setAuth */
+      }
       dispatch({ type: 'SIGN_OUT_COMPLETE' });
     }
   }, []);

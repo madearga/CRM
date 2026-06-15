@@ -18,7 +18,7 @@ export interface ProbeResult {
   durationMs?: number;
 }
 
-const DEFAULT_PROBE_TIMEOUT_MS = 5000;
+export const DEFAULT_PROBE_TIMEOUT_MS = 5000;
 const DEFAULT_PROBE_METHOD = 'HEAD';
 
 /**
@@ -35,29 +35,50 @@ export async function probeNetwork(
   method: string = DEFAULT_PROBE_METHOD,
 ): Promise<ProbeResult> {
   const controller = new AbortController();
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    const timer = setTimeout(() => reject(new Error('probe-timeout')), timeoutMs);
-    controller.signal.addEventListener('abort', () => {
-      clearTimeout(timer);
-      reject(new Error('probe-aborted'));
-    });
-  });
   const start = performance.now();
 
+  // Fetch competitor. Captured in a variable (instead of inlined in the
+  // race) so we can attach an explicit rejection sink below.
+  const fetchPromise = fetch(url, {
+    method,
+    signal: controller.signal,
+    cache: 'no-store',
+    headers: { 'x-crm-probe': 'network-check' },
+  });
+
+  // Timeout competitor: rejects after `timeoutMs`, or immediately when the
+  // controller aborts (e.g. another probe won). `{ once: true }` lets the
+  // listener be reclaimed along with the short-lived signal.
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    const timer = setTimeout(() => reject(new Error('probe-timeout')), timeoutMs);
+    controller.signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(new Error('probe-aborted'));
+      },
+      { once: true },
+    );
+  });
+
+  // Race safety: `Promise.race` only surfaces the *first* settler, but the
+  // losing promise can still reject later (e.g. the timeout fires after a
+  // fast fetch succeeds, or the fetch rejects after a timeout wins and we
+  // abort it in `finally`). Relying on the engine to absorb that losing
+  // rejection is fragile (and outright unsafe on some Promise polyfills /
+  // Hermes). Attach a no-op rejection sink to BOTH competitors so neither can
+  // ever surface as an unhandled rejection — the `Promise.race` below is the
+  // single consumer that decides the outcome.
+  fetchPromise.catch(() => {});
+  timeoutPromise.catch(() => {});
+
   try {
-    await Promise.race([
-      fetch(url, {
-        method,
-        signal: controller.signal,
-        cache: 'no-store',
-        headers: { 'x-crm-probe': 'network-check' },
-      }),
-      timeoutPromise,
-    ]);
+    await Promise.race([fetchPromise, timeoutPromise]);
     return { ok: true, durationMs: Math.round(performance.now() - start) };
   } catch {
     return { ok: false };
   } finally {
+    // Abort any in-flight fetch and settle the timeout promise promptly.
     controller.abort();
   }
 }

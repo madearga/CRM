@@ -24,6 +24,8 @@ Run from the repo root with Turborepo (`pnpm dev` runs all `dev` tasks) or scope
 cd apps/mobile && pnpm dev
 ```
 
+> **Package manager:** `@crm/mobile` no longer pins its own `packageManager` field; it inherits the workspace root's package manager (currently `pnpm`). When the root workspace migrates to Bun, these commands switch to `bun run` automatically.
+
 ## Workspace imports
 
 Metro is configured (`metro.config.js`) to resolve the pnpm workspace so you can import shared packages directly:

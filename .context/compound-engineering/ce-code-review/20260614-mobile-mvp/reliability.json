@@ -1,0 +1,100 @@
+{
+  "reviewer": "reliability",
+  "findings": [
+    {
+      "title": "probeNetwork creates unhandled promise rejections",
+      "severity": "P0",
+      "file": "apps/mobile/src/lib/network.ts",
+      "line": 48,
+      "confidence": 100,
+      "autofix_class": "mechanical",
+      "owner": "mobile-network",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "An unhandled rejection from a network probe can crash the React Native process in strict environments or pollute error telemetry, turning a routine reachability check into an app restart.",
+      "evidence": "`probeNetwork` races `fetch(...)` against `timeoutPromise`. The `finally` block calls `controller.abort()`, which rejects the loser. That rejected promise is not caught (line 48), so it surfaces as an unhandled rejection regardless of which side wins.",
+      "suggested_fix": "Attach `.catch(() => {})` to both the `fetch` promise and `timeoutPromise`, or refactor to use `AbortSignal.timeout` with explicit cleanup, so the losing promise cannot become an unhandled rejection."
+    },
+    {
+      "title": "Convex token exchange has no timeout",
+      "severity": "P1",
+      "file": "apps/mobile/src/lib/auth-client.ts",
+      "line": 58,
+      "confidence": 75,
+      "autofix_class": "mechanical",
+      "owner": "mobile-auth",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "`exchangeConvexToken` is called by `ConvexReactClient.setAuth` on every auth handshake and token refresh. If the Better Auth endpoint hangs, the Convex connection cannot authenticate and the app stays stuck on the splash/spinner or in a retry loop.",
+      "evidence": "`exchangeConvexToken` awaits `authClient.convex.token()` with no explicit timeout or AbortSignal (line 58-62). The underlying fetch relies on default/browser timeouts, which may be very long or absent in React Native.",
+      "suggested_fix": "Race `authClient.convex.token()` against a 10-15 second timeout and return `null` on timeout or throw. Ensure the losing promise is caught so it does not create another unhandled rejection."
+    },
+    {
+      "title": "signOut can leave the auth machine stuck in signingOut",
+      "severity": "P1",
+      "file": "apps/mobile/src/providers/auth-provider.tsx",
+      "line": 134,
+      "confidence": 75,
+      "autofix_class": "mechanical",
+      "owner": "mobile-auth",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "If `convexClient.clearAuth()` throws, `SIGN_OUT_COMPLETE` is never dispatched and the UI remains on the spinner state (`signingOut`), blocking the user from signing back in without killing the app.",
+      "evidence": "In `signOut`, `await authSignOut()` is in a try/catch, but `convexClient.clearAuth()` in the `finally` block (line 134) is unprotected. Any exception there skips the final `dispatch({ type: 'SIGN_OUT_COMPLETE' })`.",
+      "suggested_fix": "Move `convexClient.clearAuth()` into its own nested try/catch inside the `finally` block, or dispatch `SIGN_OUT_COMPLETE` in a nested finally, so local cleanup failures cannot strand the state machine."
+    },
+    {
+      "title": "mobileOverview loads up to 5,500 documents in one query",
+      "severity": "P0",
+      "file": "convex/dashboard.ts",
+      "line": 326,
+      "confidence": 75,
+      "autofix_class": "requires-design",
+      "owner": "backend",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Convex queries have hard limits on documents read and data returned. A single dashboard call that loads thousands of deals, activities, and invoices will fail for any medium-to-large workspace, causing the mobile dashboard to crash or return an error for real customers.",
+      "evidence": "`mobileOverview` calls `.take(1000)` on deals (line 326), `.take(500)` on activities (line 333), `.take(2000)` on posted invoices (line 339), and `.take(2000)` on month invoices (line 345), all in one `Promise.all`.",
+      "suggested_fix": "Replace broad `.take(N)` loads with targeted aggregate queries (e.g. `aggregateDealsByOrg.count` with an archived/stage filter) or pagination. Compute overdue invoice totals and MTD revenue via aggregate helpers instead of loading thousands of documents into the function."
+    },
+    {
+      "title": "NetworkProvider does not guard against overlapping probes",
+      "severity": "P1",
+      "file": "apps/mobile/src/providers/network-provider.tsx",
+      "line": 78,
+      "confidence": 50,
+      "autofix_class": "mechanical",
+      "owner": "mobile-network",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Rapid app state changes or a user repeatedly tapping retry can launch multiple concurrent probes against the same endpoint. Under a flaky network this amplifies request volume and can mark the app offline based on stale/out-of-order responses.",
+      "evidence": "`checkNow` sets `isChecking` but does not return early when a probe is already in flight (line 78). The initial mount, interval, and app-state listeners can all trigger while a previous `probeNetwork` is still pending.",
+      "suggested_fix": "Add a guard at the top of `checkNow` that returns immediately if a probe is already running (e.g. using a ref or checking `isChecking`)."
+    },
+    {
+      "title": "NewActivityScreen leaves a setTimeout alive after unmount",
+      "severity": "P2",
+      "file": "apps/mobile/app/(app)/activities/new.tsx",
+      "line": 186,
+      "confidence": 50,
+      "autofix_class": "mechanical",
+      "owner": "mobile-ui",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "If the user navigates away before the 350ms success timeout fires, the callback runs on an unmounted/backgrounded screen, calling `router.back()` or `router.replace()` at the wrong time and potentially updating unmounted component state.",
+      "evidence": "`handleSubmit` calls `setTimeout(() => { ... router.back()/replace() }, 350)` (line 186-190) without storing or clearing the handle on cleanup.",
+      "suggested_fix": "Store the timeout handle in a `useRef`, clear it in a `useEffect` cleanup, and/or check component mount state before calling navigation/state setters."
+    }
+  ],
+  "residual_risks": [
+    "`better-auth/react`'s `useSession` polling behavior and timeout defaults are not visible in this diff; if it revalidates aggressively on every foreground event it could create a small retry storm on flaky networks.",
+    "`secureAuthStorage` silently swallows keystore write failures. This is an intentional graceful-degradation choice, but it means a full keystore can cause silent session loss on the next cold start.",
+    "`mobileOverview` computes invoice totals client-side from a capped page (`take(2000)`). For orgs with more than 2000 posted invoices the dashboard numbers will be silently incomplete rather than failing loudly."
+  ],
+  "testing_gaps": [
+    "No test exercises the `probeNetwork` race cancellation path; add a test that asserts no unhandled rejections when the timeout wins and when the fetch wins.",
+    "No test for `exchangeConvexToken` timeout or failure modes; add a test that mocks a hanging or errored `authClient.convex.token()` call.",
+    "No test for `signOut` when `convexClient.clearAuth()` throws; add a unit test that stubs the client and asserts the machine still reaches `unauthenticated`.",
+    "No load/scale test for `mobileOverview`; add a test with synthetic data near Convex's document-read limit to prove the query stays within function limits."
+  ]
+}

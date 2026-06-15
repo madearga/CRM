@@ -60,7 +60,6 @@ class DashboardErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // eslint-disable-next-line no-console
     console.error('[dashboard] mobileOverview query failed', error, info);
   }
 

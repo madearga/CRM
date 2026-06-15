@@ -76,27 +76,54 @@ export const secureAuthStorage: CrmAuthStorage = {
 };
 
 /**
+ * Result of scrubbing secure storage. `failedKeys` lists any key that could
+ * be neither deleted nor overwritten with an empty string — i.e. a key whose
+ * previous value may still be present. When `failedKeys` is empty, callers
+ * can trust that no usable Better Auth token remains on device.
+ */
+export interface ClearSecureStorageResult {
+  /** `true` when every key was scrubbed (deleted or blanked). */
+  cleared: boolean;
+  /** Keys that resisted both deletion and the empty-string fallback. */
+  failedKeys: string[];
+}
+
+/**
  * Wipe all Better Auth entries from the keystore. Called on explicit sign-out
  * (and on token revocation) so a restart does not silently restore the
  * previous session.
+ *
+ * Returns a {@link ClearSecureStorageResult} so the caller (e.g.
+ * `AuthProvider.signOut`) can decide whether to complete the machine.
+ *
+ * Failure handling: a plain `SecureStore.deleteItem` failure (locked
+ * keystore, keychain quirk) used to be silently swallowed, which could leave
+ * a live session cookie on device after sign-out. Now, on a delete failure we
+ * fall back to overwriting the key with an empty string, which neutralises
+ * the value even when the keychain refuses to drop it. Only if BOTH delete
+ * and overwrite fail is the key reported in `failedKeys`.
  */
-export function clearSecureAuthStorage(): void {
+export function clearSecureAuthStorage(): ClearSecureStorageResult {
+  const failedKeys: string[] = [];
   for (const key of Object.values(SECURE_KEYS)) {
+    let scrubbed = false;
     try {
       SecureStore.deleteItem(key, SECURE_OPTIONS);
+      scrubbed = true;
     } catch {
-      /* ignore — best-effort scrub */
+      // Delete failed (e.g. locked keystore). Defensive fallback: overwrite
+      // the value with an empty string so no usable token survives, even if
+      // the key itself can't be removed.
+      try {
+        SecureStore.setItem(key, '', SECURE_OPTIONS);
+        scrubbed = true;
+      } catch {
+        /* both paths failed — record and continue */
+      }
     }
+    if (!scrubbed) failedKeys.push(key);
   }
-}
-
-/** Read a single secure value (e.g. to inspect whether a token exists). */
-export function readSecureValue(key: keyof typeof SECURE_KEYS): string | null {
-  try {
-    return SecureStore.getItem(SECURE_KEYS[key], SECURE_OPTIONS);
-  } catch {
-    return null;
-  }
+  return { cleared: failedKeys.length === 0, failedKeys };
 }
 
 export { KEYCHAIN_ACCESSIBLE, SECURE_KEYS };

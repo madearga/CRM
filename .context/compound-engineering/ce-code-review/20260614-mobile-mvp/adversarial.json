@@ -1,0 +1,100 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "Rapid app foreground events can interleave network probes and flip online state to a stale result",
+      "severity": "P1",
+      "file": "apps/mobile/src/providers/network-provider.tsx",
+      "line": 78,
+      "confidence": 75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The network provider listens to AppState changes and runs a polling interval. A user switching apps rapidly, or the OS bouncing between active/inactive during a permission prompt, can trigger overlapping probeNetwork calls. Because checkNow does not serialize in-flight probes, a slow stale failure can overwrite a recent success and incorrectly show the user as offline.",
+      "evidence": [
+        "apps/mobile/src/providers/network-provider.tsx:78 checkNow is called by mount effect, interval, and AppState listener",
+        "apps/mobile/src/providers/network-provider.tsx:64 consecutiveFailuresRef and setState are read/written from asynchronous handlers without a generation guard"
+      ],
+      "suggested_fix": "Add an isProbingRef guard that returns early when a probe is in flight, or track a probe generation ID and ignore results from older probes."
+    },
+    {
+      "title": "Sign-out during an active Convex mutation can strand the mutation in flight while auth is cleared",
+      "severity": "P1",
+      "file": "apps/mobile/src/providers/auth-provider.tsx",
+      "line": 117,
+      "confidence": 75,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "A user can tap sign-out while a mutation (e.g., scheduling an activity) is pending. signOut clears Convex auth immediately, but the in-flight mutation may still hold a valid JWT and attempt to write data. After the mutation resolves, the UI may show a success toast and then redirect to login, leaving the user uncertain whether the action completed.",
+      "evidence": [
+        "apps/mobile/src/providers/auth-provider.tsx:117 signOut dispatches SIGN_OUT_REQUEST and proceeds to clearSecureAuthStorage + convexClient.clearAuth()",
+        "No global pending-mutation barrier or cancellation is visible in the provider or screens"
+      ],
+      "suggested_fix": "Queue sign-out behind pending mutations, cancel in-flight mutations before clearing auth, or at least surface a 'sign-out blocked while saving' message until pending work finishes."
+    },
+    {
+      "title": "Malformed or cross-table invoice id from deep link crashes before backend can reject it",
+      "severity": "P1",
+      "file": "apps/mobile/app/(app)/invoices/[id].tsx",
+      "line": 37,
+      "confidence": 75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "A universal link, push notification, or manually constructed URL can supply any string as the invoice id. The screen casts it to Id<'invoices'> and passes it to useQuery. If the string is not a valid Convex Id, the query may throw an unexpected error that the ErrorBoundary catches, but the cast itself bypasses TypeScript and any client-side guard.",
+      "evidence": [
+        "apps/mobile/app/(app)/invoices/[id].tsx:23 useLocalSearchParams returns a string",
+        "apps/mobile/app/(app)/invoices/[id].tsx:37 id is cast with `as Id<'invoices'>`"
+      ],
+      "suggested_fix": "Validate the id string against Convex's id format (or at least ensure it is non-empty and well-formed) before casting. Pass a validated typed id to the query."
+    },
+    {
+      "title": "Token revocation clears storage but not the active Convex WebSocket auth",
+      "severity": "P2",
+      "file": "apps/mobile/src/providers/auth-provider.tsx",
+      "line": 102,
+      "confidence": 75,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "When useSession returns an error, the provider scrubs secure storage and dispatches TOKEN_REVOKED. However, it does not call convexClient.clearAuth(). The existing WebSocket connection may remain authenticated with its current JWT until the token expires, allowing a small window where a revoked session can still read data.",
+      "evidence": [
+        "apps/mobile/src/providers/auth-provider.tsx:102 on error, clearSecureAuthStorage(); dispatch({ type: 'TOKEN_REVOKED' })",
+        "apps/mobile/src/providers/auth-provider.tsx:126 signOut does call convexClient.clearAuth()"
+      ],
+      "suggested_fix": "Also call convexClient.clearAuth() in the TOKEN_REVOKED path so the WebSocket connection re-authenticates (or becomes unauthenticated) immediately."
+    },
+    {
+      "title": "Concurrent sign-in button presses can dispatch multiple SIGN_IN_REQUEST events and submit multiple login calls",
+      "severity": "P2",
+      "file": "apps/mobile/app/(auth)/login.tsx",
+      "line": 47,
+      "confidence": 50,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "The login screen's submit handler does not appear to disable the button or guard against double-tap while the auth machine is in the 'signingIn' state. A user rapidly tapping the button, or assistive-tech repeat, can trigger multiple signIn.email calls. This creates unnecessary load and may produce confusing error states if the first call succeeds and the second fails with an invalid-credential message.",
+      "evidence": [
+        "apps/mobile/app/(auth)/login.tsx calls signInEmail on submit",
+        "Auth machine has isAuthBusy but no visible guard in the UI handler"
+      ],
+      "suggested_fix": "Disable the login submit button while status === 'signingIn', or add an early return in the submit handler when isAuthBusy(state.status) is true."
+    }
+  ],
+  "residual_risks": [
+    "A malicious or misconfigured deep link could pass an id belonging to another organization. If the backend query lacks an org-scoped filter, this becomes an IDOR vulnerability.",
+    "If the user backgrounds the app during sign-out, the finally block may run when the app is backgrounded and SecureStore operations could fail silently, leaving tokens on disk.",
+    "The network banner's 'Retry' path is a no-op in activities/index.tsx; users on a flaky connection have no way to force a refetch other than navigating away and back."
+  ],
+  "testing_gaps": [
+    "Adversarial test: rapidly toggle AppState and assert the final network state reflects the most recent probe, not an older stale one.",
+    "Adversarial test: invoke signOut while a mutation is pending and verify either the mutation completes and then logout happens, or the mutation is cancelled and the user is informed.",
+    "Adversarial test: pass malformed and cross-table ids to invoice detail and assert graceful handling."
+  ]
+}
