@@ -33,13 +33,12 @@ import { useMutation } from '@/hooks/use-convex';
 import { api } from '@/lib/api';
 import { formatDateTime } from '@/lib/format-date';
 import { colors } from '@/styles/theme';
-import { ACTIVITY_TYPES, ENTITY_TYPES } from '@crm/domain';
+import { USER_ACTIVITY_TYPES } from '@/components/activity-type-picker';
+import { ENTITY_TYPES, type ActivityType } from '@crm/domain';
 
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
-
-const USER_ACTIVITY_TYPES = ACTIVITY_TYPES.filter((t) => t !== 'status_change');
 
 const CreateActivitySchema = z.object({
   title: z
@@ -123,7 +122,7 @@ export default function NewActivityScreen() {
   const router = useRouter();
 
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<(typeof USER_ACTIVITY_TYPES)[number]>('call');
+  const [type, setType] = useState<ActivityType>('call');
   const [entity, setEntity] = useState<EntityOption | null>(null);
   const [dueKey, setDueKey] = useState<string>(DEFAULT_DUE_KEY);
   const [notes, setNotes] = useState('');

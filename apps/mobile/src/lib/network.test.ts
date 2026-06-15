@@ -55,7 +55,7 @@ describe('probeNetwork', () => {
 
   it('aborts the request after the timeout', async () => {
     globalThis.fetch = vi.fn(
-      () => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 60_000)),
+      () => new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('timeout')), 60_000)),
     );
 
     const result = await probeNetwork(convexUrl, 10);

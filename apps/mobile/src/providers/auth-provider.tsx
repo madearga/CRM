@@ -128,8 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // un-deletable key with an empty string, so `cleared` is true once no
       // usable token remains. Retry once on a catastrophic failure; we never
       // strand the user in `signingOut` — SIGN_OUT_COMPLETE always fires.
-      if (!clearSecureAuthStorage().cleared) {
-        clearSecureAuthStorage();
+      try {
+        const first = await clearSecureAuthStorage();
+        if (!first.cleared) {
+          await clearSecureAuthStorage();
+        }
+      } catch {
+        /* ignore — Convex auth reset below is the critical cleanup */
       }
       // Always reset Convex auth. Wrap in try/catch so a throw here can never
       // leave the machine stuck in `signingOut`.

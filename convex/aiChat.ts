@@ -309,7 +309,11 @@ async function handleAiChatBody(
     },
   });
 
-  return new Response(stream, {
+  // Convex's runtime accepts a Web ReadableStream response body. React Native's
+  // ambient fetch types leak into the mobile TypeScript program and model
+  // Response bodies as `_SourceUri`, so cast at this boundary without changing
+  // the backend runtime behavior.
+  return new Response(stream as unknown as ConstructorParameters<typeof Response>[0], {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',

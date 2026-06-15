@@ -19,6 +19,20 @@ function generateApiKey(): string {
   );
 }
 
+function timeoutSignal(ms: number): AbortSignal {
+  const AbortSignalWithTimeout = AbortSignal as typeof AbortSignal & {
+    timeout?: (ms: number) => AbortSignal;
+  };
+
+  if (typeof AbortSignalWithTimeout.timeout === 'function') {
+    return AbortSignalWithTimeout.timeout(ms);
+  }
+
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -248,7 +262,7 @@ export const verify = createOrgMutation({})({
 
       const response = await fetch(`${plugin.url}/api/plugin/manifest`, {
         headers: { Authorization: `Bearer ${plugin.apiKey}` },
-        signal: AbortSignal.timeout(10000),
+        signal: timeoutSignal(10000),
       });
 
       if (!response.ok) {
@@ -396,9 +410,11 @@ export const triggerSync = createOrgMutation({})({
       validateExternalUrl(`${plugin.url}/api/plugin/data?table=${args.table}&limit=100`);
 
       const response = await fetch(
+        `${plugin.url}/api/plugin/data?table=${args.table}&limit=100`,
+        {
           headers: { Authorization: `Bearer ${plugin.apiKey}` },
-          signal: AbortSignal.timeout(30000),
-        }
+          signal: timeoutSignal(30000),
+        },
       );
 
       if (!response.ok) {

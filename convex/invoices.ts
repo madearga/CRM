@@ -292,9 +292,9 @@ export const getById = createOrgQuery()({
     // guard is testable, reviewable, and consistent across read paths.
     const rawInv = await ctx.table('invoices').get(args.id);
     const inv = assertCanReadInvoice(
-      rawInv as unknown as { organizationId: string } | null,
+      rawInv as (NonNullable<typeof rawInv> & { organizationId: string }) | null,
       ctx.orgId
-    ) as typeof rawInv;
+    );
 
     const lines = await inv.edge('lines');
     const payments = await inv.edge('payments');

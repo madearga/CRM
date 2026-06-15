@@ -36,6 +36,24 @@ export const authClient = createAuthClient({
   plugins: crmAuthClientPlugins({ storage: secureAuthStorage }),
 });
 
+type ConvexTokenResult = {
+  data?: { token?: string | null } | null;
+  error?: unknown;
+};
+
+type ConvexTokenClient = typeof authClient & {
+  convex: {
+    token: () => Promise<ConvexTokenResult>;
+  };
+};
+
+// `convexClient()` is included by `crmAuthClientPlugins()` and adds this
+// runtime endpoint. The shared plugin factory intentionally returns a broad
+// BetterAuthClientPlugin[] so web/mobile can share one list, but
+// `better-auth/react` cannot infer the plugin-specific `convex` member from
+// that erased array type. Keep the cast local to the only endpoint we need.
+const convexAuthClient = authClient as ConvexTokenClient;
+
 /** Max wait for the Convex token handshake before we give up and treat the
  * session as unauthenticated. Keeps a stalled network from hanging the
  * Convex client's auth flow indefinitely. */
@@ -58,7 +76,7 @@ export const CONVEX_TOKEN_TIMEOUT_MS = 12_000;
  * from `@crm/auth` (which was never actually exported there).
  */
 export async function exchangeConvexToken(): Promise<string | null> {
-  const tokenPromise = authClient.convex.token();
+  const tokenPromise = convexAuthClient.convex.token();
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(
       () => reject(new Error('convex-token-timeout')),

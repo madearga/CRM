@@ -53,13 +53,13 @@ class DashboardErrorBoundary extends Component<
   DashboardErrorBoundaryProps,
   DashboardErrorBoundaryState
 > {
-  state: DashboardErrorBoundaryState = { error: null };
+  override state: DashboardErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): DashboardErrorBoundaryState {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[dashboard] mobileOverview query failed', error, info);
   }
 
@@ -70,7 +70,7 @@ class DashboardErrorBoundary extends Component<
     this.props.onRetry();
   };
 
-  render() {
+  override render() {
     const { error } = this.state;
     if (!error) return this.props.children;
 

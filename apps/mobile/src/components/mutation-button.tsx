@@ -100,7 +100,7 @@ export function MutationButton({
         loading={status === 'running'}
         disabled={isBusy || buttonProps.disabled}
         accessibilityLabel={accessibilityLabel ?? (typeof children === 'string' ? children : 'Submit')}
-        accessibilityState={{ busy: status === 'running', disabled: isBusy || buttonProps.disabled }}
+        accessibilityState={{ busy: status === 'running', disabled: !!(isBusy || buttonProps.disabled) }}
         right={status === 'success' ? successRight : isError ? errorRight : right}
       >
         {status === 'success' ? successLabel : children}

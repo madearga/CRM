@@ -42,8 +42,8 @@ export class InvoiceAccessDeniedError extends Error {
  * "wrong org" so an attacker cannot distinguish the two cases via the
  * response.
  */
-export function assertCanReadInvoice<T extends InvoiceOwner | null | undefined>(
-  invoice: T,
+export function assertCanReadInvoice<T extends InvoiceOwner>(
+  invoice: T | null | undefined,
   callerOrgId: string
 ): T {
   if (!invoice || invoice.organizationId !== callerOrgId) {

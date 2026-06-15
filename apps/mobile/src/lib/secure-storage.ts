@@ -24,7 +24,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import type { CrmAuthStorage } from '@crm/auth';
-import { AUTH_STORAGE_KEYS, DEFAULT_AUTH_STORAGE_PREFIX } from '@crm/config';
+import { AUTH_STORAGE_KEYS } from '@crm/config';
 
 /**
  * iOS keychain accessibility flag passed on every read/write/delete. Kept as a
@@ -43,15 +43,18 @@ const SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
 };
 
 /**
- * The two keys Better Auth persists under the configured prefix.
+ * The two keys Better Auth persists.
  * `crossDomainClient` writes the session cookie and session data here on
  * successful auth; reading them back on a cold start rehydrates the session
  * without a re-login.
+ *
+ * `AUTH_STORAGE_KEYS` already includes the `better-auth` prefix, so we use them
+ * verbatim rather than double-prefixing.
  */
 const SECURE_KEYS = {
-  COOKIE: `${DEFAULT_AUTH_STORAGE_PREFIX}_${AUTH_STORAGE_KEYS.COOKIE}`,
-  SESSION_DATA: `${DEFAULT_AUTH_STORAGE_PREFIX}_${AUTH_STORAGE_KEYS.SESSION_DATA}`,
-} satisfies typeof AUTH_STORAGE_KEYS;
+  COOKIE: AUTH_STORAGE_KEYS.COOKIE,
+  SESSION_DATA: AUTH_STORAGE_KEYS.SESSION_DATA,
+} as const;
 
 /**
  * Synchronous key/value adapter handed to `crossDomainClient({ storage })`.
@@ -96,19 +99,18 @@ export interface ClearSecureStorageResult {
  * Returns a {@link ClearSecureStorageResult} so the caller (e.g.
  * `AuthProvider.signOut`) can decide whether to complete the machine.
  *
- * Failure handling: a plain `SecureStore.deleteItem` failure (locked
- * keystore, keychain quirk) used to be silently swallowed, which could leave
- * a live session cookie on device after sign-out. Now, on a delete failure we
- * fall back to overwriting the key with an empty string, which neutralises
- * the value even when the keychain refuses to drop it. Only if BOTH delete
- * and overwrite fail is the key reported in `failedKeys`.
+ * Failure handling: `expo-secure-store` only exposes an asynchronous delete
+ * API (`deleteItemAsync`). If deletion rejects (locked keystore, keychain quirk)
+ * we fall back to overwriting the value with an empty string, which neutralises
+ * the value even when the keychain refuses to drop the key. Only if BOTH
+ * delete and overwrite fail is the key reported in `failedKeys`.
  */
-export function clearSecureAuthStorage(): ClearSecureStorageResult {
+export async function clearSecureAuthStorage(): Promise<ClearSecureStorageResult> {
   const failedKeys: string[] = [];
   for (const key of Object.values(SECURE_KEYS)) {
     let scrubbed = false;
     try {
-      SecureStore.deleteItem(key, SECURE_OPTIONS);
+      await SecureStore.deleteItemAsync(key, SECURE_OPTIONS);
       scrubbed = true;
     } catch {
       // Delete failed (e.g. locked keystore). Defensive fallback: overwrite

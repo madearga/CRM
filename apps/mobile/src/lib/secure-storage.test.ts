@@ -15,7 +15,7 @@ const secureStoreMock = {
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 0,
   getItem: vi.fn(),
   setItem: vi.fn(),
-  deleteItem: vi.fn(),
+  deleteItemAsync: vi.fn(),
 };
 vi.mock('expo-secure-store', () => ({
   default: secureStoreMock,
@@ -29,29 +29,29 @@ const allKeys = Object.values(SECURE_KEYS);
 
 describe('clearSecureAuthStorage', () => {
   beforeEach(() => {
-    secureStoreMock.deleteItem.mockReset();
+    secureStoreMock.deleteItemAsync.mockReset();
     secureStoreMock.setItem.mockReset();
   });
 
-  it('deletes every key and reports cleared:true with no failures', () => {
-    secureStoreMock.deleteItem.mockReturnValue(true);
+  it('deletes every key and reports cleared:true with no failures', async () => {
+    secureStoreMock.deleteItemAsync.mockResolvedValue(undefined);
 
-    const result = clearSecureAuthStorage();
+    const result = await clearSecureAuthStorage();
 
     expect(result.cleared).toBe(true);
     expect(result.failedKeys).toEqual([]);
-    expect(secureStoreMock.deleteItem).toHaveBeenCalledTimes(allKeys.length);
+    expect(secureStoreMock.deleteItemAsync).toHaveBeenCalledTimes(allKeys.length);
     // No fallback overwrite needed when delete succeeds.
     expect(secureStoreMock.setItem).not.toHaveBeenCalled();
   });
 
-  it('falls back to overwriting with an empty string when delete throws', () => {
-    secureStoreMock.deleteItem.mockImplementation(() => {
+  it('falls back to overwriting with an empty string when delete throws', async () => {
+    secureStoreMock.deleteItemAsync.mockImplementation(() => {
       throw new Error('keychain locked');
     });
     secureStoreMock.setItem.mockReturnValue(undefined);
 
-    const result = clearSecureAuthStorage();
+    const result = await clearSecureAuthStorage();
 
     // Empty-string overwrite neutralises the token, so the key is still
     // considered scrubbed.
@@ -64,15 +64,15 @@ describe('clearSecureAuthStorage', () => {
     }
   });
 
-  it('reports failedKeys when BOTH delete and overwrite throw', () => {
-    secureStoreMock.deleteItem.mockImplementation(() => {
+  it('reports failedKeys when BOTH delete and overwrite throw', async () => {
+    secureStoreMock.deleteItemAsync.mockImplementation(() => {
       throw new Error('delete failed');
     });
     secureStoreMock.setItem.mockImplementation(() => {
       throw new Error('write failed');
     });
 
-    const result = clearSecureAuthStorage();
+    const result = await clearSecureAuthStorage();
 
     expect(result.cleared).toBe(false);
     expect(result.failedKeys).toEqual(expect.arrayContaining(allKeys));

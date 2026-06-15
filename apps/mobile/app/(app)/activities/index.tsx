@@ -96,12 +96,7 @@ export default function ActivitiesScreen() {
           <EmptyState
             icon={<Ionicons name="cloud-offline-outline" size={24} color={colors.mutedForeground} />}
             title="Couldn’t load activities"
-            description="Something went wrong fetching your activities. Pull to try again."
-            action={
-              <Button variant="outline" onPress={() => setTab(tab)}>
-                Retry
-              </Button>
-            }
+            description="Something went wrong fetching your activities. We’ll retry automatically when the connection recovers."
           />
         ) : data && data.length === 0 ? (
           <EmptyState

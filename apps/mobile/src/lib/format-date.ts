@@ -91,3 +91,8 @@ function patternToOptions(pattern: string): Intl.DateTimeFormatOptions {
 
   return opts;
 }
+
+/** Format a date and time together, e.g. "15 Jan 2026, 14:30". */
+export function formatDateTime(date: Date | number): string {
+  return format(date, 'dd MMM yyyy, HH:mm');
+}

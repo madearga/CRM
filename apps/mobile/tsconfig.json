@@ -35,6 +35,9 @@
       ],
       "@crm/config": [
         "../../packages/config/src/index.ts"
+      ],
+      "@convex/*": [
+        "../../convex/*"
       ]
     },
     "types": [
