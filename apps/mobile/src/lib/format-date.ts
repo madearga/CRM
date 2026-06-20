@@ -43,6 +43,8 @@ export function formatDistanceToNow(
   date: Date | number,
   _opts?: { addSuffix?: boolean }
 ): string {
+  // ponytail: shared util — degrade bad inputs to '—' instead of throwing before the NaN guard.
+  if (date === undefined || date === null || (typeof date !== 'number' && !(date instanceof Date))) return '—';
   const timestamp = typeof date === 'number' ? date : date.getTime();
   if (!Number.isFinite(timestamp)) return '—';
   const now = Date.now();
@@ -108,6 +110,8 @@ const dateTimeFormatter = createDateTimeFormatter({
  *  Other patterns are not supported — add a formatter when one is needed.
  */
 export function format(date: Date | number, pattern: string): string {
+  // ponytail: shared util — degrade bad inputs to '—' instead of throwing before the NaN guard.
+  if (date === undefined || date === null || (typeof date !== 'number' && !(date instanceof Date))) return '—';
   const d = typeof date === 'number' ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return '—';
 
