@@ -154,7 +154,7 @@ export function SyncLogsDialog({
         <div className="flex-1 overflow-auto">
           {logs.isLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 size-4 animate-spin" />
               Memuat log...
             </div>
           ) : pageEntries.length === 0 ? (

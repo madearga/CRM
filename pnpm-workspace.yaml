@@ -1,3 +1,20 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Hoist every package to the workspace root so Metro can resolve transitive
+# dependencies (e.g. `invariant`, `fbjs`, `whatwg-fetch`, `expo-modules-core`,
+# `react-native-css-interop`, `react-native-worklets`, ...) without each
+# React Native / Expo package having to declare every peer individually.
+#
+# Why ["*"] instead of a narrow pattern list:
+#   React Native's build graph references ~hundreds of transitive deps via
+#   `require()` calls (e.g. `react-native/index.js` → `invariant`,
+#   `react-native/Libraries/.../fbjs`). Listing them one-by-one is
+#   impossible to maintain — every SDK / minor bump adds new ones. Hoisting
+#   everything is the configuration recommended by the Expo team for monorepos
+#   (`https://docs.expo.dev/guides/monorepos/`). The web app is unaffected:
+#   Next.js resolves through its own node_modules tree and the hoisted
+#   packages are simply an extra `node_modules/.pnpm/...` symlink target.
+publicHoistPattern:
+  - "*"

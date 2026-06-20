@@ -38,7 +38,7 @@ export function ConversationSelector({
           <Button variant="ghost" size="sm" className="h-7 flex-1 justify-start gap-2 px-2 text-xs">
             <MessageSquare className="h-3 w-3 shrink-0" />
             <span className="truncate">{current?.title ?? 'New Chat'}</span>
-            <ChevronDown className="ml-auto h-3 w-3 shrink-0" />
+            <ChevronDown className="ml-auto size-3 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 p-1">

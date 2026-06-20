@@ -506,6 +506,20 @@ export const update = createOrgMutation()({
       throw new ConvexError({ code: 'NOT_FOUND', message: 'Subscription not found' });
     }
 
+    // Validate foreign key IDs belong to this organization
+    if (updates.companyId) {
+      const company = await ctx.table('companies').get(updates.companyId);
+      if (!company || company.organizationId !== ctx.orgId) {
+        throw new ConvexError({ code: 'FORBIDDEN', message: 'Company does not belong to your organization' });
+      }
+    }
+    if (updates.contactId) {
+      const contact = await ctx.table('contacts').get(updates.contactId);
+      if (!contact || contact.organizationId !== ctx.orgId) {
+        throw new ConvexError({ code: 'FORBIDDEN', message: 'Contact does not belong to your organization' });
+      }
+    }
+
     if (sub.state === 'cancelled') {
       throw new ConvexError({
         code: 'VALIDATION_ERROR',
@@ -516,6 +530,30 @@ export const update = createOrgMutation()({
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
+
+    // Recalculate nextBillingDate when billing schedule fields change
+    const scheduleChanged =
+      updates.interval !== undefined ||
+      updates.intervalCount !== undefined ||
+      updates.billingDay !== undefined ||
+      updates.startDate !== undefined;
+
+    if (scheduleChanged && sub.state === 'active') {
+      const effectiveStartDate = updates.startDate ?? sub.startDate;
+      const effectiveInterval = updates.interval ?? sub.interval;
+      const effectiveIntervalCount = updates.intervalCount ?? sub.intervalCount ?? 1;
+      const effectiveBillingDay = updates.billingDay ?? sub.billingDay ?? 1;
+
+      const now = Date.now();
+      // Calculate next billing date from now (not from last billing date)
+      // since the schedule has changed
+      cleanUpdates.nextBillingDate = getNextBillingDate(
+        now,
+        effectiveInterval,
+        effectiveIntervalCount,
+        effectiveBillingDay,
+      );
+    }
 
     // Replace lines if provided
     if (newLines) {

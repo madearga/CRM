@@ -1,0 +1,125 @@
+name: Deploy Mobile
+
+# Triggers on changes that affect the mobile app or the shared workspace
+# packages it consumes. See plan U9.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/auth/**'
+      - 'packages/config/**'
+      - 'packages/domain/**'
+      - '.github/workflows/deploy-mobile.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/auth/**'
+      - 'packages/config/**'
+      - 'packages/domain/**'
+      - '.github/workflows/deploy-mobile.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build (ios, android, or all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      profile:
+        description: 'EAS build profile'
+        required: false
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck (mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (@crm/mobile)
+        run: pnpm --filter @crm/mobile typecheck
+
+  build:
+    name: EAS Build
+    # Only run paid EAS builds on main or manual dispatch — never on PRs.
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
+    needs: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Resolve build inputs
+        id: inputs
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "profile=${{ inputs.profile }}" >> "$GITHUB_OUTPUT"
+            echo "platform=${{ inputs.platform }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "profile=preview" >> "$GITHUB_OUTPUT"
+            echo "platform=all" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: EAS Build (no submit)
+        working-directory: apps/mobile
+        run: eas build --non-interactive --no-wait --profile ${{ steps.inputs.outputs.profile }} --platform ${{ steps.inputs.outputs.platform }}

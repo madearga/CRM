@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Package } from 'lucide-react';
 
 import { api } from '@convex/_generated/api';
@@ -14,25 +14,27 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OrderDetailPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const { slug, id: orderNumber } = useParams<{ slug: string; id: string }>();
+  const searchParams = useSearchParams();
+  const orderAccessToken = searchParams.get('token') ?? undefined;
   const isAuth = useIsAuth();
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
 
   const { data: order, isLoading } = usePublicQuery(
     api.commerce.orders.getOrderDetail,
-    orderNumber && orgSlug ? { orderNumber, organizationSlug: orgSlug } : 'skip',
+    orderNumber && slug ? { orderNumber, organizationSlug: slug, orderAccessToken } : 'skip',
   );
 
   const cancelOrder = usePublicMutation(api.commerce.checkout.cancelOrder as any);
 
-  if (!isAuth) {
+  if (!isAuth && !orderAccessToken) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
         <Package className="mx-auto size-12 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">Sign in to view this order</h2>
-        <Button className="mt-4" onClick={() => router.push(`/${slug}`)}>
+        <Button className="mt-4" onClick={() => push(`/${slug}`)}>
           Go to Shop
         </Button>
       </div>
@@ -59,7 +61,7 @@ export default function OrderDetailPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push(`/${slug}/orders`)}>
+        <Button variant="ghost" size="icon" onClick={() => push(`/${slug}/orders`)}>
           <ArrowLeft className="size-5" />
         </Button>
         <div>
@@ -118,8 +120,8 @@ export default function OrderDetailPage() {
             disabled={cancelOrder.isPending}
             onClick={async () => {
               try {
-                await cancelOrder.mutateAsync({ orderId: order.id } as any);
-                router.push(`/${slug}/orders`);
+                await cancelOrder.mutateAsync({ orderId: order.id, orderAccessToken } as any);
+                push(`/${slug}/orders`);
               } catch {
                 /* handled by mutation */
               }

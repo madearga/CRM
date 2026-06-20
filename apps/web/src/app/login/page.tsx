@@ -40,7 +40,7 @@ export default function LoginPage() {
           <SignForm />
 
           <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-            &copy; {new Date().getFullYear()} CRM. All rights reserved.
+            <span suppressHydrationWarning>&copy; {new Date().getFullYear()} CRM</span>. All rights reserved.
           </p>
         </div>
       </div>

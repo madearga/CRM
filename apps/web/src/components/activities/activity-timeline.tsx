@@ -22,7 +22,7 @@ interface ActivityTimelineProps {
 }
 
 const PRIORITY_BADGE: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  low: 'bg-muted text-muted-foreground dark:bg-slate-800 dark:text-slate-400',
   medium: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
   high: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400',
 };
@@ -158,7 +158,7 @@ export function ActivityTimeline({ entityType, entityId }: ActivityTimelineProps
                           </Badge>
                         )}
                         {isCancelled && (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-[10px] h-5">
+                          <Badge variant="secondary" className="bg-muted text-muted-foreground dark:bg-gray-800 dark:text-muted-foreground text-[10px] h-5">
                             <XCircle className="mr-0.5 h-3 w-3" />cancelled
                           </Badge>
                         )}

@@ -24,7 +24,7 @@ export type SaleOrderRow = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
+  draft: "bg-muted text-foreground dark:bg-gray-800/50 dark:text-muted-foreground",
   sent: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   confirmed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   invoiced: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
@@ -51,7 +51,7 @@ const StateBadge = memo(({ state, archivedAt }: { state: string; archivedAt?: nu
       {state}
     </Badge>
     {archivedAt && (
-      <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">
+      <Badge variant="secondary" className="ml-1 bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">
         archived
       </Badge>
     )}

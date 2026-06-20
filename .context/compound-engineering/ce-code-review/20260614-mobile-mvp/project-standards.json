@@ -1,0 +1,103 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "title": "Mobile package uses pnpm instead of Bun",
+      "severity": "P1",
+      "file": "apps/mobile/package.json",
+      "line": 47,
+      "confidence": 100,
+      "autofix_class": "manual",
+      "owner": "mobile",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Project Preferences explicitly states 'Use Bun for package management and running scripts'. Adding a new workspace package that pins pnpm perpetuates a tool mismatch against the documented standard.",
+      "evidence": "AGENTS.md: 'Use Bun for package management and running scripts'; apps/mobile/package.json line 47 '"packageManager": "pnpm@10.14.0"'; README.md instructs `pnpm dev`; deploy-mobile.yml uses pnpm/action-setup and `pnpm install --frozen-lockfile`.",
+      "suggested_fix": "Migrate apps/mobile to Bun: remove the packageManager field, update README commands to `bun install`/`bun run`, and switch deploy-mobile.yml to the Bun action/setup. Ensure bun.lockb is committed and workspace resolution still works."
+    },
+    {
+      "title": "New Convex dashboard endpoint lacks integration tests",
+      "severity": "P1",
+      "file": "convex/dashboard.ts",
+      "line": 271,
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "backend",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Testing says 'Use integration tests for API endpoints'. mobileOverview is a new critical endpoint consumed by the dashboard; untested business logic (open-deal counting, overdue classification, revenue MTD) can regress silently.",
+      "evidence": "AGENTS.md Testing: 'Use integration tests for API endpoints'; convex/dashboard.ts line 271 introduces `export const mobileOverview = createAuthQuery()({...})` with no corresponding test file in the diff.",
+      "suggested_fix": "Add a Convex test (e.g. convex/dashboard.test.ts) using the repo's test harness that seeds an org, deals, activities, and invoices, calls api.dashboard.mobileOverview, and asserts the returned counts, totals, and recentActivities shape."
+    },
+    {
+      "title": "Critical money formatter has no unit tests",
+      "severity": "P2",
+      "file": "apps/mobile/src/lib/format-money.ts",
+      "line": 23,
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "mobile",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Testing says 'Prefer unit tests for business logic'. formatMoney drives invoice and dashboard currency display; regressions directly affect financial data shown to users.",
+      "evidence": "AGENTS.md Testing: 'Prefer unit tests for business logic'; apps/mobile/src/lib/format-money.ts line 23 `export function formatMoney(...)` has no accompanying test file.",
+      "suggested_fix": "Add apps/mobile/src/lib/format-money.test.ts covering IDR grouping, negative amounts, null/NaN fallback, and non-IDR currency fallback formatting."
+    },
+    {
+      "title": "Currency compact formatter has no unit tests",
+      "severity": "P2",
+      "file": "apps/mobile/src/lib/format.ts",
+      "line": 27,
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "mobile",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Testing says 'Prefer unit tests for business logic'. formatCurrencyCompact is used for dashboard KPIs; incorrect thresholds or suffixes misrepresent pipeline value.",
+      "evidence": "AGENTS.md Testing: 'Prefer unit tests for business logic'; apps/mobile/src/lib/format.ts line 27 `export function formatCurrencyCompact(...)` has no test file.",
+      "suggested_fix": "Add apps/mobile/src/lib/format.test.ts covering compact thresholds (rb, jt, M), negative values, non-finite fallback, and default IDR formatting."
+    },
+    {
+      "title": "Invoice overdue classifier has no unit tests",
+      "severity": "P2",
+      "file": "apps/mobile/src/components/invoice-row.tsx",
+      "line": 41,
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "mobile",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Testing says 'Prefer unit tests for business logic'. isInvoiceOverdue determines attention status and overdue styling in the invoices list; logic errors mislead reps about collectables.",
+      "evidence": "AGENTS.md Testing: 'Prefer unit tests for business logic'; apps/mobile/src/components/invoice-row.tsx line 41 `export function isInvoiceOverdue(...)` is exported for testability but has no test file.",
+      "suggested_fix": "Add apps/mobile/src/components/invoice-row.test.ts testing posted+unpaid+pastDue=true, paid=false, draft=false, cancelled=false, missing dueDate=false, and zero amountDue=false."
+    },
+    {
+      "title": "Mobile lint script is a placeholder; no ESLint/Prettier configured",
+      "severity": "P2",
+      "file": "apps/mobile/package.json",
+      "line": 12,
+      "confidence": 75,
+      "autofix_class": "manual",
+      "owner": "mobile",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "AGENTS.md Code Style says 'Follow ESLint and Prettier configurations'. The mobile package ships with a TODO lint script that always exits 0, so formatting/linting is not enforced for the new code.",
+      "evidence": "AGENTS.md Code Style: 'Follow ESLint and Prettier configurations'; apps/mobile/package.json line 12 '"lint": "echo \"TODO: eslint config for mobile (U-later)\" && exit 0"'.",
+      "suggested_fix": "Add an ESLint/Prettier config for the mobile package and replace the placeholder script with a real lint command (e.g. `eslint . --ext .ts,.tsx`). Reuse root repo configs if they exist."
+    }
+  ],
+  "residual_risks": [
+    "apps/mobile/README.md and the CI workflow continue to reference pnpm, so changing packageManager alone will leave docs/workflow out of sync with a Bun migration.",
+    "Placeholder assets and the EAS project ID (REPLACE_AFTER_EAS_INIT) block real distribution builds; these are documented prerequisites rather than standards violations.",
+    "The dashboard query pulls up to 1000 deals and 4000 invoices into memory; without integration tests, pagination or performance regressions are not caught.",
+    "No tests exist for the secure-storage adapter or Convex token exchange, leaving part of the auth critical path unverified."
+  ],
+  "testing_gaps": [
+    "Integration tests for convex/dashboard.ts mobileOverview.",
+    "Unit tests for apps/mobile/src/lib/format-money.ts.",
+    "Unit tests for apps/mobile/src/lib/format.ts formatCurrencyCompact.",
+    "Unit tests for apps/mobile/src/components/invoice-row.tsx isInvoiceOverdue.",
+    "Unit/integration tests for apps/mobile/src/lib/auth-client.ts exchangeConvexToken and token refresh behavior.",
+    "Unit tests for apps/mobile/src/lib/secure-storage.ts adapter behavior and clear semantics."
+  ]
+}

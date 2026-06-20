@@ -1,0 +1,110 @@
+{
+  "reviewer": "adversarial",
+  "depth": "Deep",
+  "size_estimate": 511,
+  "risk_signals": ["data presentation", "client routing", "external query dependencies"],
+  "findings": [
+    {
+      "title": "Invalid activity timestamp crashes entire dashboard render",
+      "confidence": 100,
+      "technique": "assumption_violation",
+      "severity": "high",
+      "evidence": [
+        "Backend returns an activity with createdAt = null, undefined, or an unparseable string.",
+        "Page renders the Recent Activities list and executes `new Date(activity.createdAt)` (line ~626), producing an Invalid Date object.",
+        "`formatDistanceToNow` receives the Invalid Date and calls `date.getTime()` (format-date.ts), returning NaN.",
+        "The function falls through all divisions with NaN and calls `relativeTimeFormatter.format(Math.round(NaN), 'years')`.",
+        "`Intl.RelativeTimeFormat.format` throws a RangeError because NaN is not a finite number, causing a full white-screen React error boundary crash on the dashboard.",
+        "Same path exists for upcoming activities via `format(new Date(activity.dueAt), 'MMM d, yyyy')` (line ~645), where `Intl.DateTimeFormat.format` on an Invalid Date also throws."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "fix_hint": "Validate or coerce activity timestamps at the API/query boundary, or make the formatters return a safe fallback for Invalid Date instead of throwing."
+    },
+    {
+      "title": "Hardcoded route strings create a silent 404 cascade if any route is renamed",
+      "confidence": 75,
+      "technique": "assumption_violation",
+      "severity": "medium",
+      "evidence": [
+        "KPI cards, empty states, activity links, and the imported InsightsWidget all use literal href strings: `/invoices`, `/deals`, `/products/new`, `/activities`.",
+        "Next.js does not type-check string literals in a standard app router setup, so renaming a directory from `deals` to `sales` compiles cleanly while leaving every card pointing to a dead route.",
+        "Users clicking the polished KPI cards land on a 404 page instead of the expected surface, breaking the primary navigation affordance of the dashboard.",
+        "Because the strings are scattered across the page component and child components (EmptyState, InsightsWidget), a refactor is likely to miss one or more occurrences."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "title": "Whole-card Link wraps create a nested-interactive trap for any future action",
+      "confidence": 75,
+      "technique": "composition_failure",
+      "severity": "medium",
+      "evidence": [
+        "Each KPI card is currently rendered as `<Link href='...' className='group block'><Card>...</Card></Link>` (lines ~311, ~329, ~347, ~365, ~383, ~406).",
+        "The Card currently contains only static content, so there is no immediate nested-anchor violation.",
+        "A later feature request adds an inline action inside a card—e.g., a 'Copy value', 'Refresh', or 'Filter' button, or a second mini-link.",
+        "That new interactive element is now a descendant of an `<a>` tag, which violates HTML content models and causes: split click targets, Next.js hydration warnings, screen-reader confusion, and unpredictable event routing.",
+        "The page design creates a fragile contract: any future enhancement inside a KPI card must remember not to add buttons or links."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "title": "Activity rows link to the generic list instead of the specific record",
+      "confidence": 75,
+      "technique": "abuse_case",
+      "severity": "medium",
+      "evidence": [
+        "Recent and Upcoming Activities render each activity as a clickable row containing the activity title and timestamp.",
+        "Every row is wrapped in `<Link href='/activities'>`, so clicking 'Call with Acme Corp' navigates to `/activities`, not the detail view of that activity.",
+        "The visual affordance (a full-width, hover-highlighted row with a title) trains users to expect record-level navigation, but the behavior is list-level navigation.",
+        "Users repeatedly lose context: they click an activity, arrive at the list, then must scroll/search to re-find the item they just clicked.",
+        "This is normal, legitimate use that produces emergent friction rather than an error."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "title": "Rapid date-range switching causes a thundering herd of concurrent refetches",
+      "confidence": 50,
+      "technique": "abuse_case",
+      "severity": "low",
+      "evidence": [
+        "The date-range Select uses `onValueChange={(v) => setRange(v as DateRange)}` (line ~270) with no debounce.",
+        "The page subscribes to eight separate `useAuthQuery` hooks; changing range triggers refetches across all of them.",
+        "A user rapidly cycles through ranges (e.g., this month → last month → this quarter → this year), issuing up to 32 concurrent requests in a short window.",
+        "If in-flight Convex subscriptions are not cancelled or deduplicated, older responses can overwrite newer selection state or cause UI jank on slow networks.",
+        "No loading skeleton or request cancellation feedback is shown during the transition, so the dashboard feels unresponsive."
+      ],
+      "autofix_class": "advisory",
+      "owner": "human"
+    },
+    {
+      "title": "InsightsWidget silently drops due-soon activities when dueAt is an ISO string",
+      "confidence": 75,
+      "technique": "composition_failure",
+      "severity": "medium",
+      "evidence": [
+        "The page imports and renders `<InsightsWidget overview={overview} />` (line ~424).",
+        "Inside InsightsWidget, the due-soon filter computes `const diff = a.dueAt - now` and checks `diff > 0 && diff < 24 * 60 * 60 * 1000`.",
+        "If the API returns `dueAt` as an ISO string (a common shape), subtracting a number from a string yields `NaN`.",
+        "`NaN > 0 && NaN < 86400000` is always false, so urgent activities due within 24 hours are filtered out silently.",
+        "The same activities render correctly in the Upcoming Activities list because that code wraps `dueAt` in `new Date(activity.dueAt)`, creating a composition mismatch where one component understands the type and another does not.",
+        "Result: users miss high-priority items in the insights banner even though the data exists."
+      ],
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "fix_hint": "Normalize timestamps in the dashboard query hook or inside InsightsWidget so both consumers operate on Date objects or numeric timestamps consistently."
+    }
+  ],
+  "residual_risks": [
+    "The `forecastData?.map((s: any) => ({ ... }))` path uses `any`, so malformed backend responses for stage/dealCount/totalValue can propagate into PipelineChart as undefined or NaN."
+  ],
+  "testing_gaps": [
+    "No test asserts that malformed activity timestamps do not crash the dashboard render.",
+    "No test verifies that all dashboard hrefs resolve to real application routes.",
+    "No test simulates rapid date-range changes to confirm no stale-state overwrite or request thrashing.",
+    "No a11y test checks that Link-wrapped cards contain no nested interactive elements."
+  ]
+}

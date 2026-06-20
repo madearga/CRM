@@ -259,24 +259,32 @@ export const deleteTemplate = createOrgMutation({
       .take(1);
     const memberTemplate = memberTemplates[0];
 
-    // Reassign members using this template to the default Member template
-    const members = await ctx
-      .table('member', 'organizationId_role', (q: any) =>
-        q.eq('organizationId', ctx.orgId),
-      )
-      .take(500);
+    // Reassign members using this template to the default Member template.
+    // Paginate to handle more than .take(500) members.
+    let cursor: string | null = null;
+    let hasMore = true;
+    while (hasMore) {
+      const result = await ctx
+        .table('member', 'organizationId_role', (q: any) =>
+          q.eq('organizationId', ctx.orgId),
+        )
+        .paginate({ cursor, numItems: 500 });
 
-    for (const member of members) {
-      if (member.permissionTemplateId === args.templateId) {
-        await ctx
-          .table('member')
-          .getX(member._id)
-          .patch({
-            permissionTemplateId: memberTemplate
-              ? (memberTemplate._id as Id<'permissionTemplates'>)
-              : undefined,
-          });
+      for (const member of result.page) {
+        if (member.permissionTemplateId === args.templateId) {
+          await ctx
+            .table('member')
+            .getX(member._id)
+            .patch({
+              permissionTemplateId: memberTemplate
+                ? (memberTemplate._id as Id<'permissionTemplates'>)
+                : undefined,
+            });
+        }
       }
+
+      hasMore = !result.isDone;
+      cursor = result.continueCursor;
     }
 
     // Delete entries first

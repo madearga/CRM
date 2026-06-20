@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function AuthCallbackPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
+  const { push } = useRouter();
   const searchParams = useSearchParams();
   const isAuth = useIsAuth();
   const user = useCurrentUser();
@@ -54,7 +54,7 @@ export default function AuthCallbackPage() {
         }
 
         if (!cancelled) {
-          router.push(redirectTo);
+          push(redirectTo);
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -78,7 +78,7 @@ export default function AuthCallbackPage() {
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <button
               className="mt-4 text-sm text-blue-600 underline"
-              onClick={() => router.push(`/${slug}`)}
+              onClick={() => push(`/${slug}`)}
             >
               Return to Shop
             </button>

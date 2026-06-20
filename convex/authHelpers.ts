@@ -103,10 +103,15 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
         .first(),
     ]);
 
+    // Only return active organization if user is actually a member
+    if (!currentMember) {
+      return null;
+    }
+
     return {
       ...activeOrg.doc(),
       id: activeOrg._id as Id<'organization'>,
-      role: currentMember?.role || 'member',
+      role: currentMember.role,
     };
   })();
 

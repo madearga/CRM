@@ -24,8 +24,12 @@ const DIVISIONS: { amount: number; name: Intl.RelativeTimeFormatUnit }[] = [
  *  The `addSuffix` option is accepted for date-fns API compatibility but is a no-op
  *  — suffix is always included (built into Intl.RelativeTimeFormat with numeric: 'auto').
  */
-export function formatDistanceToNow(date: Date | number, _opts?: { addSuffix?: boolean }): string {
+export function formatDistanceToNow(
+  date: Date | number,
+  _opts?: { addSuffix?: boolean }
+): string {
   const timestamp = typeof date === 'number' ? date : date.getTime();
+  if (!Number.isFinite(timestamp)) return '—';
   const now = Date.now();
   let diff = (timestamp - now) / 1000;
 
@@ -50,6 +54,7 @@ const dateFormatters = new Map<string, Intl.DateTimeFormat>();
  */
 export function format(date: Date | number, pattern: string): string {
   const d = typeof date === 'number' ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return '—';
 
   if (!dateFormatters.has(pattern)) {
     const options = patternToOptions(pattern);

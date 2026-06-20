@@ -1,4 +1,5 @@
 'use client';
+import { useClientDateString } from '@/hooks/use-client-date-string';
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,7 +22,8 @@ import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function SalesPage() {
-  const router = useRouter();
+  const exportDate = useClientDateString();
+  const { push } = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useSalesParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.sales ?? new Set(), [selections.sales]);
@@ -101,16 +103,16 @@ export default function SalesPage() {
             { key: 'contactName', label: 'Contact' },
             { key: 'invoiceStatus', label: 'Invoice' },
           ]}
-          filename={`sales-${new Date().toISOString().split('T')[0]}`}
+          filename={`sales-${exportDate}`}
         />
-        <Button size="sm" onClick={() => router.push('/sales/new')}>
+        <Button size="sm" onClick={() => push('/sales/new')}>
           <Plus className="mr-1 h-4 w-4" />New Quotation
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search orders..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={stateFilter ?? "__all__"} onValueChange={(v) => setStateFilter(v === "__all__" ? undefined : v)}>
@@ -146,13 +148,13 @@ export default function SalesPage() {
         <EmptyState
           icon={<ShoppingCart className="size-7" />} title="No sale orders yet"
           description="Create your first quotation to start selling."
-          action={<Button variant="outline" size="sm" onClick={() => router.push('/sales/new')}><Plus className="mr-1 h-4 w-4" />Create Quotation</Button>}
+          action={<Button variant="outline" size="sm" onClick={() => push('/sales/new')}><Plus className="mr-1 h-4 w-4" />Create Quotation</Button>}
         />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/sales/${row.id}`)}
+          onRowClick={(row) => push(`/sales/${row.id}`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}

@@ -24,7 +24,7 @@ function getOrCreateSessionId(): string {
 }
 
 export default function CheckoutPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, isLoading: authLoading } = useAuthStatus();
   const [sessionId, setSessionId] = useState('');
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
         <p className="text-muted-foreground">
           Add some products before checking out.
         </p>
-        <Button variant="outline" onClick={() => router.push(productsUrl)}>
+        <Button variant="outline" onClick={() => push(productsUrl)}>
           Browse Products
         </Button>
       </div>
@@ -141,26 +141,27 @@ export default function CheckoutPage() {
         notes: values.notes,
       } as any);
 
-      const { orderNumber, paymentData } = result as any;
+      const { orderNumber, orderAccessToken, paymentData } = result as any;
+      const orderTokenParam = orderAccessToken ? `&token=${encodeURIComponent(orderAccessToken)}` : "";
 
       if (!paymentData?.snapToken) {
         toast.error('Payment initiation failed. Please try again.');
-        router.push(`/${slug}/checkout/failed?order=${orderNumber}`);
+        push(`/${slug}/checkout/failed?order=${orderNumber}${orderTokenParam}`);
         return;
       }
 
       await payWithSnap(paymentData.snapToken as string, {
         onSuccess: () => {
-          router.push(`/${slug}/checkout/success?order=${orderNumber}`);
+          push(`/${slug}/checkout/success?order=${orderNumber}${orderTokenParam}`);
         },
         onPending: () => {
-          router.push(`/${slug}/checkout/pending?order=${orderNumber}`);
+          push(`/${slug}/checkout/pending?order=${orderNumber}${orderTokenParam}`);
         },
         onClose: () => {
-          router.push(`/${slug}/checkout/pending?order=${orderNumber}`);
+          push(`/${slug}/checkout/pending?order=${orderNumber}${orderTokenParam}`);
         },
         onError: () => {
-          router.push(`/${slug}/checkout/failed?order=${orderNumber}`);
+          push(`/${slug}/checkout/failed?order=${orderNumber}${orderTokenParam}`);
         },
       });
     } catch (err: any) {

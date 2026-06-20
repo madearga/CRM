@@ -100,6 +100,17 @@ export const create = createOrgMutation()({
   }),
   returns: zid('payments'),
   handler: async (ctx, args) => {
+    // Validate companyId belongs to active organization
+    if (args.companyId) {
+      const company = await ctx.table('companies').getX(args.companyId);
+      if (company.organizationId !== ctx.orgId) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message: 'Company does not belong to your organization',
+        });
+      }
+    }
+
     const paymentId = await ctx.table('payments').insert({
       ...args,
       state: 'confirmed',

@@ -403,7 +403,7 @@ export function OrganizationMembers({
                 type="email"
                 value={inviteData.email}
                 onChange={(e) =>
-                  setInviteData({ ...inviteData, email: e.target.value })
+                  setInviteData(prev => ({ ...prev, email: e.target.value }))
                 }
                 placeholder="member@example.com"
               />
@@ -413,7 +413,7 @@ export function OrganizationMembers({
               <Select
                 value={inviteData.role}
                 onValueChange={(value) =>
-                  setInviteData({ ...inviteData, role: value })
+                  setInviteData(prev => ({ ...prev, role: value }))
                 }
               >
                 <SelectTrigger>

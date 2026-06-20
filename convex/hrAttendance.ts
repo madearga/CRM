@@ -136,13 +136,20 @@ export const clockInFromWhatsApp = createPublicMutation()({
 
 export const clockOutFromWhatsApp = createPublicMutation()({
   args: {
-    organizationId: zid('organization'),
     whatsappNumber: z.string().min(6),
     location: locationSchema.optional(),
   },
   returns: attendanceOutputSchema,
   handler: async (ctx, args) => {
-    const employee = await findEmployeeByWhatsApp({ ...ctx, orgId: args.organizationId }, args.whatsappNumber);
+    // Find employee globally by WhatsApp number (do not trust client orgId)
+    const employees = await ctx
+      .table('employees')
+      .filter((q: any) => q.and(q.eq(q.field('whatsappNumber'), args.whatsappNumber), q.eq(q.field('status'), 'active')))
+      .take(1);
+    const employee = employees[0];
+    if (!employee) {
+      throw new ConvexError({ code: 'NOT_FOUND', message: 'Active employee not found for WhatsApp number' });
+    }
     const now = Date.now();
     const date = getDateKey(now);
     const records = await ctx
@@ -236,29 +243,32 @@ export const autoCloseOpenRecords = createInternalMutation()({
   args: {},
   handler: async (ctx) => {
     const today = getDateKey(Date.now());
-    const rows = await ctx.table('attendanceRecords').take(1000);
+    // Batch process records (cron runs every minute, so 100 per batch covers all orgs over time)
+    const rows = await ctx.table('attendanceRecords').take(100);
     let closed = 0;
     for (const record of rows) {
       if (!record.clockIn || record.clockOut || record.date >= today) continue;
-      let clockOut = record.clockIn;
-      if (record.shiftAssignmentId) {
-        const assignment = await ctx.table('shiftAssignments').get(record.shiftAssignmentId);
-        const shift = assignment ? await ctx.table('shifts').get(assignment.shiftId) : null;
-        if (shift) {
-          const [hours, minutes] = shift.endTime.split(':').map(Number);
-          const date = new Date(record.clockIn);
-          date.setHours(hours, minutes, 0, 0);
-          clockOut = date.getTime();
+      if (!record.organizationId) continue; // Skip records without org scope
+
+        let clockOut = record.clockIn;
+        if (record.shiftAssignmentId) {
+          const assignment = await ctx.table('shiftAssignments').get(record.shiftAssignmentId);
+          const shift = assignment ? await ctx.table('shifts').get(assignment.shiftId) : null;
+          if (shift) {
+            const [hours, minutes] = shift.endTime.split(':').map(Number);
+            const date = new Date(record.clockIn);
+            date.setHours(hours, minutes, 0, 0);
+            clockOut = date.getTime();
+          }
         }
-      }
-      const writer = await ctx.table('attendanceRecords').get(record._id);
-      await writer!.patch({
-        clockOut,
-        label: 'forgot_clockout',
-        totalWorkHours: calculateWorkHours(record.clockIn, clockOut),
-        updatedAt: Date.now(),
-      });
-      closed += 1;
+        const writer = await ctx.table('attendanceRecords').get(record._id);
+        await writer!.patch({
+          clockOut,
+          label: 'forgot_clockout',
+          totalWorkHours: calculateWorkHours(record.clockIn, clockOut),
+          updatedAt: Date.now(),
+        });
+        closed += 1;
     }
     return { closed };
   },

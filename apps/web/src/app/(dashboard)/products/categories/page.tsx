@@ -163,7 +163,7 @@ export default function CategoriesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name *</label>
+              <label id="label-name" className="text-sm font-medium">Name *</label>
               <Input
                 placeholder="e.g. Electronics"
                 value={form.name}
@@ -171,7 +171,7 @@ export default function CategoriesPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label id="label-description" className="text-sm font-medium">Description</label>
               <Input
                 placeholder="Optional description"
                 value={form.description}
@@ -179,7 +179,7 @@ export default function CategoriesPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Parent Category</label>
+              <label id="label-parent-category" className="text-sm font-medium">Parent Category</label>
               <Select
                 value={form.parentId ?? '__root__'}
                 onValueChange={(v) => setForm((prev) => ({ ...prev, parentId: v === '__root__' ? undefined : v }))}

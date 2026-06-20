@@ -23,7 +23,7 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   call: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
   email: 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400',
   meeting: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400',
-  note: 'bg-slate-100 text-slate-600 dark:bg-slate-800/40 dark:text-slate-400',
+  note: 'bg-muted text-muted-foreground dark:bg-slate-800/40 dark:text-slate-400',
   status_change: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
   task: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
 };
@@ -43,7 +43,7 @@ export function ActivityIconBadge({ type }: { type: string }) {
   return (
     <div
       className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
-        ACTIVITY_COLORS[type] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800/40 dark:text-gray-400'
+        ACTIVITY_COLORS[type] ?? 'bg-muted text-muted-foreground dark:bg-gray-800/40 dark:text-muted-foreground'
       }`}
     >
       <Icon className="h-3.5 w-3.5" />

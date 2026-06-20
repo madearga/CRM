@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fulfillment API Comparison — Indonesia Shipping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'Inter', system-ui, sans-serif;
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --surface-alt: #f1f5f9;
+    --border: #e2e8f0;
+    --border-bright: #cbd5e1;
+    --text: #0f172a;
+    --text-dim: #64748b;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --accent-dim: rgba(99, 102, 241, 0.08);
+    --green: #10b981;
+    --green-bg: rgba(16, 185, 129, 0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.1);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.1);
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139, 92, 246, 0.1);
+    --teal: #14b8a6;
+    --teal-bg: rgba(20, 184, 166, 0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-alt: #1e293b;
+      --border: #334155;
+      --border-bright: #475569;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #818cf8;
+      --accent-dim: rgba(129, 140, 248, 0.12);
+      --green: #34d399;
+      --green-bg: rgba(52, 211, 153, 0.12);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.12);
+      --red: #f87171;
+      --red-bg: rgba(248, 113, 113, 0.12);
+      --blue: #60a5fa;
+      --blue-bg: rgba(96, 165, 250, 0.12);
+      --purple: #a78bfa;
+      --purple-bg: rgba(167, 139, 250, 0.12);
+      --teal: #2dd4bf;
+      --teal-bg: rgba(45, 212, 191, 0.12);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 32px; }
+
+  /* Comparison Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--surface-alt); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+  }
+  td { padding: 14px 16px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--accent-dim); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  .badge-free { background: var(--green-bg); color: var(--green); }
+  .badge-paid { background: var(--amber-bg); color: var(--amber); }
+  .badge-freemium { background: var(--blue-bg); color: var(--blue); }
+  .badge-yes { background: var(--green-bg); color: var(--green); }
+  .badge-no { background: var(--red-bg); color: var(--red); }
+  .badge-partial { background: var(--amber-bg); color: var(--amber); }
+  .badge-recommended { background: var(--accent-dim); color: var(--accent); font-weight: 700; }
+
+  .courier-logos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .courier-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    background: var(--surface-alt); color: var(--text-dim); border: 1px solid var(--border);
+  }
+
+  .price { font-weight: 600; font-size: 14px; }
+  .price-sub { font-size: 11px; color: var(--text-muted); }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px;
+  }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 14px; font-weight: 700; }
+  .card-body { padding: 20px; }
+
+  /* Recommendation */
+  .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .rec-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px;
+    position: relative;
+  }
+  .rec-card.winner { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+  .rec-rank {
+    position: absolute; top: -10px; left: 16px;
+    background: var(--accent); color: white;
+    font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 10px;
+  }
+  .rec-rank.silver { background: #94a3b8; }
+  .rec-rank.bronze { background: #b45309; }
+  .rec-name { font-size: 16px; font-weight: 700; margin: 8px 0 4px; }
+  .rec-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 12px; }
+  .rec-pros { font-size: 12px; color: var(--text); }
+  .rec-pros li { margin-bottom: 4px; list-style: none; }
+  .rec-pros li::before { content: "✅ "; }
+  .rec-cons { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+  .rec-cons li { margin-bottom: 4px; list-style: none; }
+  .rec-cons li::before { content: "⚠️ "; }
+
+  /* Integration diagram */
+  .integration-flow {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px; background: var(--surface-alt);
+    border-radius: var(--radius-lg); margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .flow-step {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    min-width: 100px;
+  }
+  .flow-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .flow-label { font-size: 11px; font-weight: 600; text-align: center; color: var(--text-dim); }
+  .flow-arrow { font-size: 20px; color: var(--text-muted); }
+
+  /* Code block */
+  .code-block {
+    background: #1e293b; color: #e2e8f0;
+    border-radius: var(--radius); padding: 16px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; line-height: 1.7;
+    overflow-x: auto; margin-top: 12px;
+  }
+  .code-block .comment { color: #64748b; }
+  .code-block .keyword { color: #c084fc; }
+  .code-block .string { color: #34d399; }
+  .code-block .func { color: #60a5fa; }
+  .code-block .prop { color: #fbbf24; }
+
+  h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; margin-top: 8px; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h1>🚚 API Pengiriman Indonesia — Perbandingan</h1>
+<p class="subtitle">Opsi integrasi untuk Fulfillment Module CRM kamu</p>
+
+<!-- Recommendation -->
+<div class="rec-grid">
+  <div class="rec-card winner">
+    <div class="rec-rank">🏆 #1</div>
+    <div class="rec-name">Biteship</div>
+    <div class="rec-desc">Aggregator multi-courier terbaik. Satu API untuk semua kurir.</div>
+    <ul class="rec-pros">
+      <li>15+ kurir dalam satu API</li>
+      <li>Webhook tracking real-time</li>
+      <li>Generate shipping label</li>
+      <li>Hitung ongkir otomatis</li>
+      <li>Free tier 500 request/bulan</li>
+      <li>SDK Node.js resmi</li>
+    </ul>
+    <ul class="rec-cons">
+      <li>Tracking update ada delay 1-5 menit</li>
+    </ul>
+  </div>
+  <div class="rec-card">
+    <div class="rec-rank silver">🥈 #2</div>
+    <div class="rec-name">Rajaongkir</div>
+    <div class="rec-desc">Yang paling populer. Fokus ongkir & lacak.</div>
+    <ul class="rec-pros">
+      <li>Paling banyak dipakai di Indonesia</li>
+      <li>Data kota/kecamatan lengkap</li>
+      <li>Starter plan gratis</li>
+      <li>Komunitas besar</li>
+    </ul>
+    <ul class="rec-cons">
+      <li>Tidak bisa create shipment</li>
+      <li>Tracking terbatas (Pro plan)</li>
+      <li>Perlu integrasi terpisah per kurir untuk label</li>
+    </ul>
+  </div>
+  <div class="rec-card">
+    <div class="rec-rank bronze">🥉 #3</div>
+    <div class="rec-name">KirimAja</div>
+    <div class="rec-desc">By SiCepat. Enterprise-grade.</div>
+    <ul class="rec-pros">
+      <li>By SiCepat (kurir terbesar)</li>
+      <li>API stabil & cepat</li>
+      <li>Multi-courier</li>
+      <li>Insurance & COD support</li>
+    </ul>
+    <ul class="rec-cons">
+      <li>Perlu kontrak bisnis</li>
+      <li>Tidak ada free tier</li>
+      <li>Dokumentasi kurang lengkap</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Comparison Table -->
+<h2>📊 Detail Perbandingan</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Harga</th>
+        <th>Kurir</th>
+        <th>Ongkir</th>
+        <th>Tracking</th>
+        <th>Label</th>
+        <th>Webhook</th>
+        <th>Free Tier</th>
+        <th>Best For</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Biteship</strong><br><span class="badge badge-recommended">Recommended</span></td>
+        <td><span class="price">Freemium</span><br><span class="price-sub">Mulai Rp 0</span></td>
+        <td><span class="courier-logos">
+          <span class="courier-tag">JNE</span>
+          <span class="courier-tag">J&T</span>
+          <span class="courier-tag">SiCepat</span>
+          <span class="courier-tag">AnterAja</span>
+          <span class="courier-tag">Grab</span>
+          <span class="courier-tag">Gosend</span>
+          <span class="courier-tag">+ 9 lagi</span>
+        </span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-free">500 req/bln</span></td>
+        <td>All-in-one solution</td>
+      </tr>
+      <tr>
+        <td><strong>Rajaongkir</strong></td>
+        <td><span class="price">Freemium</span><br><span class="price-sub">Starter: Rp 0</span></td>
+        <td><span class="courier-logos">
+          <span class="courier-tag">JNE</span>
+          <span class="courier-tag">J&T</span>
+          <span class="courier-tag">SiCepat</span>
+          <span class="courier-tag">POS</span>
+          <span class="courier-tag">TIKI</span>
+          <span class="courier-tag">+ 5 lagi</span>
+        </span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-partial">⚠️ Pro only</span></td>
+        <td><span class="badge badge-no">❌ No</span></td>
+        <td><span class="badge badge-no">❌ No</span></td>
+        <td><span class="badge badge-free">Starter gratis</span></td>
+        <td>Cek ongkir saja</td>
+      </tr>
+      <tr>
+        <td><strong>KirimAja</strong></td>
+        <td><span class="price">Paid</span><br><span class="price-sub">Kontrak bisnis</span></td>
+        <td><span class="courier-logos">
+          <span class="courier-tag">SiCepat</span>
+          <span class="courier-tag">JNE</span>
+          <span class="courier-tag">J&T</span>
+          <span class="courier-tag">AnterAja</span>
+          <span class="courier-tag">+ 6 lagi</span>
+        </span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-no">❌ Tidak ada</span></td>
+        <td>Enterprise / high volume</td>
+      </tr>
+      <tr>
+        <td><strong>Shipper</strong></td>
+        <td><span class="price">Freemium</span><br><span class="price-sub">Mulai Rp 0</span></td>
+        <td><span class="courier-logos">
+          <span class="courier-tag">JNE</span>
+          <span class="courier-tag">J&T</span>
+          <span class="courier-tag">SiCepat</span>
+          <span class="courier-tag">AnterAja</span>
+          <span class="courier-tag">+ 4 lagi</span>
+        </span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-yes">✅ Yes</span></td>
+        <td><span class="badge badge-free">Terbatas</span></td>
+        <td>Startup & UMKM</td>
+      </tr>
+      <tr>
+        <td><strong>Direct API</strong><br><span style="font-size:11px;color:var(--text-muted)">JNE, J&T, dll</span></td>
+        <td><span class="price">Paid</span><br><span class="price-sub">Per-kurir</span></td>
+        <td><span class="courier-logos">
+          <span class="courier-tag">Per kurir</span>
+        </span></td>
+        <td><span class="badge badge-partial">⚠️ Terbatas</span></td>
+        <td><span class="badge badge-partial">⚠️ Terbatas</span></td>
+        <td><span class="badge badge-partial">⚠️ Terbatas</span></td>
+        <td><span class="badge badge-no">❌ Jarang</span></td>
+        <td><span class="badge badge-no">❌ Tidak ada</span></td>
+        <td>Legacy / spesifik</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Integration Architecture -->
+<h2>🏗️ Arsitektur Integasi</h2>
+<div class="integration-flow">
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--accent-dim);color:var(--accent)">📋</div>
+    <div class="flow-label">CRM<br>Sale Order</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--blue-bg);color:var(--blue)">📦</div>
+    <div class="flow-label">Fulfillment<br>Module</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--green-bg);color:var(--green)">🔌</div>
+    <div class="flow-label">API<br>Aggregator</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--purple-bg);color:var(--purple)">🚚</div>
+    <div class="flow-label">JNE/J&T/<br>SiCepat/dll</div>
+  </div>
+  <div class="flow-arrow">↩️</div>
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--amber-bg);color:var(--amber)">📡</div>
+    <div class="flow-label">Webhook<br>Tracking</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon" style="background:var(--teal-bg);color:var(--teal)">📧</div>
+    <div class="flow-label">Customer<br>Notification</div>
+  </div>
+</div>
+
+<!-- Code Example -->
+<h2>💻 Contoh Integrasi (Biteship)</h2>
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">convex/fulfillment/biteship.ts</span>
+    <span style="font-size:12px;color:var(--text-muted)">Contoh implementasi</span>
+  </div>
+  <div class="card-body">
+    <div class="code-block">
+<span class="comment">// Biteship API integration untuk Fulfillment Module</span>
+<span class="comment">// Docs: https://docs.biteship.com</span>
+
+<span class="keyword">const</span> BITESHIP_API_KEY = <span class="func">process</span>.env.BITESHIP_API_KEY;
+<span class="keyword">const</span> BITESHIP_BASE_URL = <span class="string">'https://api.biteship.com/v1'</span>;
+
+<span class="comment">// 1. Cek ongkir dari semua kurir</span>
+<span class="keyword">export async function</span> <span class="func">getShippingRates</span>({
+  origin, destination, weight, items
+}) {
+  <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="func">fetch</span>(<span class="string">`${BITESHIP_BASE_URL}/rates/couriers`</span>, {
+    <span class="prop">method</span>: <span class="string">'POST'</span>,
+    <span class="prop">headers</span>: {
+      <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>,
+      <span class="string">'Authorization'</span>: <span class="string">`Bearer ${BITESHIP_API_KEY}`</span>,
+    },
+    <span class="prop">body</span>: <span class="func">JSON.stringify</span>({
+      <span class="prop">origin_area_id</span>: origin,
+      <span class="prop">destination_area_id</span>: destination,
+      <span class="prop">couriers</span>: <span class="string">'jne,jnt,sicepat,anteraja,grab,gosend'</span>,
+      <span class="prop">items</span>: items.map(i => ({
+        <span class="prop">name</span>: i.name, <span class="prop">value</span>: i.price,
+        <span class="prop">weight</span>: i.weight, <span class="prop">quantity</span>: i.qty,
+      })),
+    }),
+  });
+  <span class="keyword">return</span> res.<span class="func">json</span>();
+}
+
+<span class="comment">// 2. Create shipment & generate label</span>
+<span class="keyword">export async function</span> <span class="func">createShipment</span>({
+  courier, origin, destination, items, sender, recipient
+}) {
+  <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="func">fetch</span>(<span class="string">`${BITESHIP_BASE_URL}/orders`</span>, {
+    <span class="prop">method</span>: <span class="string">'POST'</span>,
+    <span class="prop">headers</span>: {
+      <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>,
+      <span class="string">'Authorization'</span>: <span class="string">`Bearer ${BITESHIP_API_KEY}`</span>,
+    },
+    <span class="prop">body</span>: <span class="func">JSON.stringify</span>({
+      <span class="prop">shipper</span>: sender,
+      <span class="prop">origin</span>: origin,
+      <span class="prop">destination</span>: recipient,
+      <span class="prop">courier</span>: courier,
+      <span class="prop">delivery</span>: { <span class="prop">type</span>: <span class="string">'now'</span> },
+      <span class="prop">items</span>: items,
+    }),
+  });
+  <span class="keyword">return</span> res.<span class="func">json</span>();
+}
+
+<span class="comment">// 3. Webhook handler untuk tracking updates</span>
+<span class="keyword">export async function</span> <span class="func">handleTrackingWebhook</span>(payload) {
+  <span class="comment">// Biteship webhook: status_changed</span>
+  <span class="keyword">const</span> { <span class="prop">order_id</span>, <span class="prop">status</span>, <span class="prop">courier</span>, <span class="prop">history</span> } = payload;
+
+  <span class="comment">// Map Biteship status → internal status</span>
+  <span class="keyword">const</span> statusMap = {
+    <span class="string">'picking_up'</span>: <span class="string">'picking'</span>,
+    <span class="string">'picked'</span>: <span class="string">'packed'</span>,
+    <span class="string">'dropping_off'</span>: <span class="string">'shipped'</span>,
+    <span class="string">'in_transit'</span>: <span class="string">'in_transit'</span>,
+    <span class="string">'delivered'</span>: <span class="string">'delivered'</span>,
+    <span class="string">'cancelled'</span>: <span class="string">'cancelled'</span>,
+    <span class="string">'returned'</span>: <span class="string">'returned'</span>,
+    <span class="string">'failed'</span>: <span class="string">'exception'</span>,
+  };
+
+  <span class="keyword">return</span> {
+    <span class="prop">trackingId</span>: order_id,
+    <span class="prop">status</span>: statusMap[status] || status,
+    <span class="prop">courier</span>: courier,
+    <span class="prop">history</span>: history,
+  };
+}
+    </div>
+  </div>
+</div>
+
+<!-- Implementation Plan -->
+<h2>📋 Rekomendasi Implementasi</h2>
+<div class="card">
+  <div class="card-header"><span class="card-title">Fase Implementasi</span></div>
+  <div class="card-body">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">1</div>
+        <div>
+          <h3>Fase 1: Manual Tracking (Tanpa API)</h3>
+          <p style="font-size:13px;color:var(--text-dim)">Input tracking number manual, update status manual. Tidak perlu API key. Langsung usable.</p>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">⏱️ Effort: 1-2 hari · 💰 Cost: Rp 0</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-bg);color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">2</div>
+        <div>
+          <h3>Fase 2: Rajaongkir (Cek Ongkir)</h3>
+          <p style="font-size:13px;color:var(--text-dim)">Integrasi Rajaongkir Starter (gratis) untuk cek ongkir multi-kurir. Customer bisa pilih kurir saat checkout.</p>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">⏱️ Effort: 1 hari · 💰 Cost: Rp 0 (Starter)</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--purple-bg);color:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">3</div>
+        <div>
+          <h3>Fase 3: Biteship (Full Integration)</h3>
+          <p style="font-size:13px;color:var(--text-dim)">Create shipment otomatis, generate label, webhook tracking real-time, notifikasi customer.</p>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">⏱️ Effort: 3-5 hari · 💰 Cost: Rp 0-500rb/bln (tergantung volume)</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">4</div>
+        <div>
+          <h3>Fase 4: KirimAja (Enterprise)</h3>
+          <p style="font-size:13px;color:var(--text-dim)">Kalau volume tinggi (>1000 paket/bln), negosiasi rate khusus via KirimAja/SiCepat.</p>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">⏱️ Effort: 1-2 minggu · 💰 Cost: Custom</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

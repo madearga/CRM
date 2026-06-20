@@ -14,6 +14,8 @@ export default function CheckoutPendingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderNumber = searchParams.get('order') ?? '';
+  const token = searchParams.get('token') ?? '';
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
   const [checking, setChecking] = useState(false);
 
   // Note: checkPaymentStatus needs an orderId (not orderNumber).
@@ -30,7 +32,7 @@ export default function CheckoutPendingPage() {
       await new Promise((r) => setTimeout(r, 1500));
       toast.info('Please check your order details for the latest status.');
       if (orderNumber) {
-        router.push(`/${slug}/orders/${orderNumber}`);
+        router.push(`/${slug}/orders/${orderNumber}${tokenParam}`);
       }
     } finally {
       setChecking(false);
@@ -83,7 +85,7 @@ export default function CheckoutPendingPage() {
 
         {orderNumber && (
           <Button variant="outline" asChild>
-            <Link href={`/${slug}/orders/${orderNumber}`}>
+            <Link href={`/${slug}/orders/${orderNumber}${tokenParam}`}>
               View Order Details
             </Link>
           </Button>

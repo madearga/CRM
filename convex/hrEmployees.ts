@@ -127,9 +127,26 @@ export const create = createOrgMutation({
     }
     const now = Date.now();
     const { userId, ...insertArgs } = args;
+
+    // Validate that userId belongs to this organization
+    if (userId) {
+      const user = await ctx.table('user').getX(userId);
+      const membership = await ctx
+        .table('member', 'organizationId_userId', (q: any) =>
+          q.eq('organizationId', ctx.orgId).eq('userId', userId)
+        )
+        .first();
+      if (!membership) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message: 'User does not belong to this organization',
+        });
+      }
+    }
+
     return ctx.table('employees').insert({
       ...insertArgs,
-      ...(userId ?? undefined),
+      ...(userId ? { userId } : {}),
       status: 'active',
       hireDate: args.hireDate ?? now,
       organizationId: ctx.orgId,

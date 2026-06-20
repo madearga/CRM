@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import Link from "next/link";
-import { Lightbulb, AlertTriangle, Clock, ArrowRight } from "lucide-react";
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { Lightbulb, AlertTriangle, Clock, ArrowRight } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
-import { formatDistanceToNow } from "@/lib/format-date";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/format';
+import { formatDistanceToNow } from '@/lib/format-date';
 
 function InsightSkeleton() {
   return (
@@ -20,13 +20,19 @@ function InsightSkeleton() {
   );
 }
 
-export function InsightsWidget({ overview, isLoading }: { overview: any | undefined; isLoading: boolean }) {
+export function InsightsWidget({
+  overview,
+  isLoading,
+}: {
+  overview: any | undefined;
+  isLoading: boolean;
+}) {
   const insights = useMemo(() => {
     if (!overview) return [];
 
     const items: {
       id: string;
-      severity: "high" | "medium";
+      severity: 'high' | 'medium';
       icon: React.ReactNode;
       title: string;
       description: React.ReactNode;
@@ -37,46 +43,54 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
     const aging = overview.agingDeals ?? [];
     if (aging.length > 0) {
       const totalValue = aging.reduce((s, d) => s + (d.value ?? 0), 0);
-      const longest = aging.reduce((a, b) => (a.daysInStage > b.daysInStage ? a : b), aging[0]);
+      const longest = aging.reduce(
+        (a, b) => (a.daysInStage > b.daysInStage ? a : b),
+        aging[0]
+      );
       items.push({
-        id: "aging-deals",
-        severity: "high",
+        id: 'aging-deals',
+        severity: 'high',
         icon: <AlertTriangle className="h-5 w-5" />,
-        title: `${aging.length} deal${aging.length > 1 ? "s" : ""} stuck in stage`,
+        title: `${aging.length} deal${aging.length > 1 ? 's' : ''} stuck in stage`,
         description: (
           <span className="text-sm text-muted-foreground">
-            Total value {formatCurrency(totalValue)}. Longest stuck:{" "}
-            <span className="font-medium text-foreground">{longest.title}</span>{" "}
+            Total value {formatCurrency(totalValue)}. Longest stuck:{' '}
+            <span className="font-medium text-foreground">{longest.title}</span>{' '}
             ({longest.daysInStage}d in {longest.stage})
           </span>
         ),
-        cta: { label: "View deals", href: "/deals" },
+        cta: { label: 'View deals', href: '/deals' },
       });
     }
 
     // Due soon activities (< 24h)
     const now = Date.now();
     const dueSoon = (overview.upcomingActivities ?? []).filter((a) => {
-      const diff = a.dueAt - now;
+      const due = typeof a.dueAt === 'string' ? Date.parse(a.dueAt) : a.dueAt;
+      if (due == null || Number.isNaN(due)) return false;
+      const diff = due - now;
       return diff > 0 && diff < 24 * 60 * 60 * 1000;
     });
     if (dueSoon.length > 0) {
-      const next = dueSoon.reduce((a, b) =>
-        a.dueAt < b.dueAt ? a : b
-      );
+      const next = dueSoon.reduce((a, b) => (a.dueAt < b.dueAt ? a : b));
+      const nextDue =
+        typeof next.dueAt === 'string' ? Date.parse(next.dueAt) : next.dueAt;
       items.push({
-        id: "due-soon",
-        severity: "medium",
+        id: 'due-soon',
+        severity: 'medium',
         icon: <Clock className="h-5 w-5" />,
-        title: `${dueSoon.length} activity${dueSoon.length > 1 ? "ies" : "y"} due within 24h`,
+        title: `${dueSoon.length} activity${dueSoon.length > 1 ? 'ies' : 'y'} due within 24h`,
         description: (
           <span className="text-sm text-muted-foreground">
-            Next up: <span className="font-medium text-foreground">{next.title}</span>{" "}
-            <Badge variant="outline" className="ml-1 text-xs capitalize">{next.type}</Badge>{" "}
-            — {formatDistanceToNow(new Date(next.dueAt))}
+            Next up:{' '}
+            <span className="font-medium text-foreground">{next.title}</span>{' '}
+            <Badge variant="outline" className="ml-1 text-xs capitalize">
+              {next.type}
+            </Badge>{' '}
+            — {formatDistanceToNow(nextDue)}
           </span>
         ),
-        cta: { label: "View activities", href: "/activities" },
+        cta: { label: 'View activities', href: '/activities' },
       });
     }
 
@@ -93,7 +107,9 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
             <Lightbulb className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <p className="font-medium text-green-700 dark:text-green-300">All clear</p>
+            <p className="font-medium text-green-700 dark:text-green-300">
+              All clear
+            </p>
             <p className="text-sm text-muted-foreground">
               No aging deals or urgent activities right now. Great job!
             </p>
@@ -107,19 +123,21 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {insights.map((insight) => {
         const borderColor =
-          insight.severity === "high"
-            ? "border-red-300 dark:border-red-700"
-            : "border-amber-300 dark:border-amber-700";
+          insight.severity === 'high'
+            ? 'border-red-300 dark:border-red-700'
+            : 'border-amber-300 dark:border-amber-700';
         const iconBg =
-          insight.severity === "high"
-            ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
-            : "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400";
+          insight.severity === 'high'
+            ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
+            : 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400';
 
         return (
           <Card key={insight.id} className={`border-l-4 ${borderColor}`}>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                <span className={`rounded-full p-1.5 ${iconBg}`}>{insight.icon}</span>
+                <span className={`rounded-full p-1.5 ${iconBg}`}>
+                  {insight.icon}
+                </span>
                 {insight.title}
               </CardTitle>
             </CardHeader>

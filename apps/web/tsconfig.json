@@ -56,20 +56,11 @@
       "@crm/domain/*": [
         "./../../packages/domain/src/*"
       ],
-      "@crm/ui": [
-        "./../../packages/ui/src/index.ts"
-      ],
-      "@crm/ui/*": [
-        "./../../packages/ui/src/*"
-      ],
       "@crm/auth": [
         "./../../packages/auth/src/index.ts"
       ],
       "@crm/config": [
         "./../../packages/config/src/index.ts"
-      ],
-      "@crm/utils": [
-        "./../../packages/utils/src/index.ts"
       ]
     }
   },

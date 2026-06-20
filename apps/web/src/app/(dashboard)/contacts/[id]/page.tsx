@@ -15,7 +15,7 @@ import { LIFECYCLE_COLORS } from '@/lib/constants';
 
 export default function ContactDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { push } = useRouter();
   const id = params.id as string;
 
   const { data: contact, isLoading } = useAuthQuery(api.contacts.getById, { id: id as any });
@@ -49,7 +49,7 @@ export default function ContactDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <Users className="h-12 w-12 text-muted-foreground/50" />
         <p className="mt-3 text-muted-foreground">Contact not found</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/contacts')}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => push('/contacts')}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back to Contacts
         </Button>
       </div>
@@ -60,12 +60,12 @@ export default function ContactDetailPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/contacts')}>
+          <Button variant="ghost" size="sm" onClick={() => push('/contacts')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h2 className="text-lg font-semibold">{contact.fullName}</h2>
-            {contact.archivedAt && <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400">Archived</Badge>}
+            {contact.archivedAt && <Badge variant="secondary" className="bg-muted text-muted-foreground dark:bg-gray-800/50 dark:text-muted-foreground">Archived</Badge>}
           </div>
         </div>
         {contact.archivedAt ? (
@@ -82,7 +82,7 @@ export default function ContactDetailPage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <div className="flex items-start gap-2">
-              <Mail className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <Mail className="mt-0.5 size-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Email</p>
                 <a href={`mailto:${contact.email}`} className="text-sm text-blue-600 hover:underline">{contact.email}</a>
@@ -90,7 +90,7 @@ export default function ContactDetailPage() {
             </div>
             {contact.phone && (
               <div className="flex items-start gap-2">
-                <Phone className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <Phone className="mt-0.5 size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Phone</p>
                   <p className="text-sm">{contact.phone}</p>
@@ -99,7 +99,7 @@ export default function ContactDetailPage() {
             )}
             {contact.companyName && (
               <div className="flex items-start gap-2">
-                <Building2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <Building2 className="mt-0.5 size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Company</p>
                   {contact.companyId ? (
@@ -127,7 +127,7 @@ export default function ContactDetailPage() {
               </div>
             )}
             <div className="flex items-start gap-2">
-              <Handshake className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <Handshake className="mt-0.5 size-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Deals</p>
                 <p className="text-sm font-mono">{contact.dealCount}</p>

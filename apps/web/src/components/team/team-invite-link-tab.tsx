@@ -134,9 +134,9 @@ export function TeamInviteLinkTab() {
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium">Role for new members</label>
+              <label id="invite-role-label" className="text-sm font-medium">Role for new members</label>
               <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger>
+                <SelectTrigger aria-labelledby="invite-role-label">
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,9 +149,9 @@ export function TeamInviteLinkTab() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Expires in</label>
+              <label id="invite-expiry-label" className="text-sm font-medium">Expires in</label>
               <Select value={selectedExpiry} onValueChange={setSelectedExpiry}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger aria-labelledby="invite-expiry-label" className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

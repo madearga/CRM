@@ -1,0 +1,68 @@
+{
+  "reviewer": "feasibility",
+  "doc_path": "docs/plans/2026-06-14-001-feat-mobile-crm-react-native-plan.md",
+  "review_date": "2026-06-14",
+  "summary": "The plan is directionally sound but cannot be implemented as written because it proposes reusing two web-only integration layers directly in React Native: the `@convex-dev/better-auth/react` provider and the `@convex-dev/react-query` hooks used by the web app. Both import browser-only modules (`convex/browser`, `window.location`, `window.history`, `localStorage`) that will crash in a React Native bundle. The plan also underestimates the work to extract shared `@crm/auth`/`@crm/config` from a Next.js-specific env setup and does not address that the existing HR clock-in backend is WhatsApp/QR-only. An implementer would need to make major architectural decisions before writing the first mobile screen.",
+  "findings": [
+    {
+      "severity": "P0",
+      "confidence": 100,
+      "title": "`ConvexBetterAuthProvider` from `@convex-dev/better-auth/react` is browser-only and will crash in React Native",
+      "evidence": "`apps/web/node_modules/@convex-dev/better-auth/src/react/index.tsx` imports `AuthTokenFetcher` from `convex/browser` and contains `new URL(window.location?.href)`, `url.searchParams.get(\"ott\")`, and `window.history.replaceState({}, \"\", url)`. None of these APIs exist in React Native. U3's Approach says: \"Wrap app with `ConvexProvider`, `ConvexBetterAuthProvider`, and a local `QueryClientProvider`\", which would import this component directly into the mobile bundle.",
+      "suggested_fix": "Do not use `@convex-dev/better-auth/react` in the mobile app. Build a mobile-specific auth provider that (a) creates a `BetterAuthClient` with the `crossDomainClient` plugin configured to use `expo-secure-store` (not `localStorage`), (b) calls `authClient.convex.token()` to fetch a Convex auth token, and (c) calls `convexClient.setAuth(() => token)` from `convex/react`. Document this as the canonical mobile auth integration in U3 before any screens are built."
+    },
+    {
+      "severity": "P0",
+      "confidence": 100,
+      "title": "Shared web `convex-hooks.ts` imports `@convex-dev/react-query`, which is not React Native compatible",
+      "evidence": "`apps/web/node_modules/@convex-dev/react-query/dist/esm/index.js` imports `ConvexHttpClient` from `convex/browser` and checks `const isServer = typeof window === \"undefined\"`. In React Native `window` is undefined, so the library will treat the runtime as SSR and instantiate `ConvexHttpClient` from `convex/browser`, which will fail. The web hooks file (`apps/web/src/lib/convex/hooks/convex-hooks.ts`) also imports `sonner` for toast notifications, another web-only dependency. The plan's KTD and U5 state that mobile should \"Reuse dashboard query hooks from web\" and \"Share Convex query hooks\".",
+      "suggested_fix": "Create a separate mobile Convex hooks layer in `apps/mobile/src/lib/convex-hooks.ts` that wraps `useQuery`/`useMutation` from `convex/react` (or a thin React Query adapter that does not import `convex/browser`). Do not attempt to share `apps/web/src/lib/convex/hooks/convex-hooks.ts` as-is. If sharing is required, first refactor the web hooks into a platform-agnostic core plus a web-specific toast/error adapter."
+    },
+    {
+      "severity": "P1",
+      "confidence": 100,
+      "title": "Expo SDK 52 is incompatible with React 19; the plan must pin SDK 53+",
+      "evidence": "Root `package.json` pins `react: 19.1.1`. Expo SDK 52 requires React 18.3.1 and will fail to resolve peer dependencies with React 19. The plan says \"Use Expo SDK latest stable (52/53)\", which would let an implementer accidentally choose SDK 52 and hit install-time peer-dependency errors.",
+      "suggested_fix": "Explicitly require Expo SDK 53 or later in U1 and add it as a decision in the Key Technical Decisions table. Verify that `expo`, `react-native`, `react`, and `react-dom` versions are mutually compatible in `apps/mobile/package.json` before the first `pnpm install`."
+    },
+    {
+      "severity": "P1",
+      "confidence": 75,
+      "title": "Shared `@crm/auth` and `@crm/config` packages are empty; web env uses Next.js-specific validator",
+      "evidence": "`packages/auth/src/index.ts` and `packages/config/src/index.ts` currently export `{}`. `apps/web/src/env.ts` uses `@t3-oss/env-nextjs` (`createEnv` with `experimental__runtimeEnv` and Next.js client/server splitting), which is not importable by React Native. U2 proposes extracting env schema and auth client into these packages but does not note the need to replace the Next.js env library with a platform-agnostic validator such as plain Zod.",
+      "suggested_fix": "In U2, before moving any code, choose a platform-agnostic env schema (plain Zod) for `@crm/config` and confirm `apps/web/src/env.ts` re-exports or aligns with it. Move `createAuthClient` configuration (without `next/headers`/Next.js imports) into `@crm/auth`. Add a typecheck gate in `apps/mobile` that imports both packages before U2 is considered complete."
+    },
+    {
+      "severity": "P1",
+      "confidence": 75,
+      "title": "No strategy for handling web-only transitive dependencies in the React Native Metro bundle",
+      "evidence": "The web app depends on many browser-only libraries (e.g., `sonner`, `next`, `lucide-react` for some uses, `recharts`, `@radix-ui/*`, `tailwindcss`, `vaul`). The plan says mobile UI will be native, but it does not specify how Metro should exclude or alias these modules if they are pulled in transitively through shared packages or `@crm/domain`/`@crm/auth`.",
+      "suggested_fix": "Add a Metro resolution strategy to U1/U2: configure `metro.config.js` with `extraNodeModules` or `blockList` to prevent browser-only packages from entering the mobile bundle, and run a mobile bundle analysis (`npx react-native-bundle-visualizer` or EAS build) as a U1 verification step."
+    },
+    {
+      "severity": "P2",
+      "confidence": 75,
+      "title": "Mobile dashboard mirrors 8+ web queries instead of using a consolidated endpoint",
+      "evidence": "`apps/web/src/app/(dashboard)/page.tsx` fires `api.dashboard.overview`, `api.analytics.revenueByMonth`, `api.analytics.salesPerformance`, `api.analytics.pipelineForecast`, `api.analytics.invoiceAging`, `api.analytics.topProducts`, `api.analytics.monthlyComparison`, and `api.analytics.getOverview`. The origin brainstorm (`docs/brainstorms/2026-06-14-mobile-crm-react-native.md`, section 8) explicitly flags the performance risk: \"8+ dashboard queries firing on mobile could feel slower than web; may need a single consolidated mobile dashboard query\". U5's Approach ignores this and says to create a hook that \"mirrors the web `DashboardPage` query set\".",
+      "suggested_fix": "Either add a new `api.dashboard.mobileOverview` (or `api.dashboard.overview` v2) Convex query that returns all Phase 1 mobile KPIs in one round trip, or limit the mobile dashboard to a strict subset of KPIs and defer the full web dashboard. Document the chosen approach and a latency budget in U5."
+    },
+    {
+      "severity": "P2",
+      "confidence": 100,
+      "title": "Existing HR attendance backend only supports WhatsApp/QR clock-in, not authenticated mobile clock-in",
+      "evidence": "`convex/hrAttendance.ts` exports `clockInFromWhatsApp` and `clockOutFromWhatsApp` as `createPublicMutation()` functions requiring `whatsappNumber` and `qrCode`. There is no authenticated `clockIn`/`clockOut` mutation that accepts a logged-in user and optional GPS location. U10's Approach says \"If mutation exists, add a 'Clock In/Out' button\", but the required mutation does not exist for the authenticated mobile flow assumed by the rest of the app.",
+      "suggested_fix": "Scope U10 to read-only attendance/employee list for Phase 1, or add a backend task before U10 to create authenticated `clockIn`/`clockOut` mutations that accept `location` and tie the record to the current user's linked employee. Do not assume the existing public WhatsApp mutations can be reused."
+    },
+    {
+      "severity": "P2",
+      "confidence": 75,
+      "title": "Internal distribution plan lacks EAS project, secrets, and CI specifics",
+      "evidence": "U11 lists creating `eas.json`, `.easignore`, and a workflow file, but there is no EAS project ID, no Apple Developer account, no Play Console account, and no EAS secrets strategy in the plan. The existing `.github/workflows/deploy-vercel.yml` is Vercel-only and there is no `deploy-mobile.yml`. The plan says \"Use environment variables from `@crm/config` via EAS secrets\" without specifying which env vars must be secret vs build-time or how they map to EAS profiles.",
+      "suggested_fix": "Extend U11 with concrete prerequisites: create an EAS project (`eas init`), configure `APPLE_ID`, `ASC_APP_ID`, and/or Google Play service account secrets, map `NEXT_PUBLIC_CONVEX_URL`/`NEXT_PUBLIC_CONVEX_SITE_URL`/`BETTER_AUTH_SECRET` (or equivalents) into `eas.json` build-time environment, and add a CI workflow that only runs on changes to `apps/mobile/**`."
+    }
+  ],
+  "suppressed_notes": [
+    "Deferred navigation library choice (React Navigation vs Expo Router) and styling library choice (NativeWind/Tamagui/StyleSheet) are explicitly out of scope per plan instructions.",
+    "Better Auth mobile token exchange mechanism is listed under 'Deferred to Implementation' in the plan; it is a critical first task for U3 but is not treated as an unacknowledged gap here."
+  ]
+}

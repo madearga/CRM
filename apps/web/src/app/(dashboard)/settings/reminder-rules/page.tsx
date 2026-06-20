@@ -230,7 +230,9 @@ export default function ReminderRulesPage() {
               <Input
                 placeholder="e.g. First Reminder"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+
+
               />
             </div>
             <div>
@@ -239,7 +241,9 @@ export default function ReminderRulesPage() {
                 type="number"
                 min={0}
                 value={form.daysOverdue}
-                onChange={(e) => setForm({ ...form, daysOverdue: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setForm(prev => ({ ...prev, daysOverdue: parseInt(e.target.value) || 0 }))}
+
+
               />
             </div>
             <div>
@@ -247,7 +251,9 @@ export default function ReminderRulesPage() {
               <Input
                 placeholder="e.g. Reminder: Invoice {invoice_number}"
                 value={form.subject}
-                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, subject: e.target.value }))}
+
+
               />
             </div>
             <div>
@@ -255,7 +261,9 @@ export default function ReminderRulesPage() {
               <Textarea
                 placeholder="Dear {customer_name}, ..."
                 value={form.body}
-                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, body: e.target.value }))}
+
+
                 rows={6}
               />
               <p className="mt-1 text-xs text-muted-foreground">
@@ -266,7 +274,9 @@ export default function ReminderRulesPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.includeInvoicePdf}
-                  onCheckedChange={(v) => setForm({ ...form, includeInvoicePdf: v })}
+                  onCheckedChange={(v) => setForm(prev => ({ ...prev, includeInvoicePdf: v }))}
+
+
                   id="include-pdf"
                 />
                 <Label htmlFor="include-pdf" className="text-sm">Attach PDF</Label>
@@ -274,7 +284,9 @@ export default function ReminderRulesPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.isActive}
-                  onCheckedChange={(v) => setForm({ ...form, isActive: v })}
+                  onCheckedChange={(v) => setForm(prev => ({ ...prev, isActive: v }))}
+
+
                   id="is-active"
                 />
                 <Label htmlFor="is-active" className="text-sm">Active</Label>

@@ -112,3 +112,15 @@ export function isValidTransition(
 
 /** Flag deals that have been in the same stage longer than this (ms) */
 export const DEAL_AGING_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// ============================================================
+// Mobile Dashboard Classifiers (pure logic)
+// Used by convex/dashboard.ts `mobileOverview`. See packages/domain/src/dashboard.ts
+// ============================================================
+export * from "./dashboard";
+
+// ============================================================
+// Invoice IDOR access guard
+// Used by convex/invoices.ts `getById`. See packages/domain/src/invoiceAccess.ts
+// ============================================================
+export * from "./invoiceAccess";

@@ -109,7 +109,9 @@ export default function GeneralSettingsPage() {
                   <label className="mb-1 block text-sm font-medium">Name</label>
                   <Input
                     value={profileForm.name}
-                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+
+
                     placeholder="Your name"
                   />
                 </div>
@@ -185,7 +187,9 @@ export default function GeneralSettingsPage() {
                   <label className="mb-1 block text-sm font-medium">Organization Name</label>
                   <Input
                     value={orgForm.name}
-                    onChange={(e) => setOrgForm({ ...orgForm, name: e.target.value })}
+                    onChange={(e) => setOrgForm(prev => ({ ...prev, name: e.target.value }))}
+
+
                     placeholder="Organization name"
                   />
                 </div>
@@ -193,7 +197,9 @@ export default function GeneralSettingsPage() {
                   <label className="mb-1 block text-sm font-medium">Slug</label>
                   <Input
                     value={orgForm.slug}
-                    onChange={(e) => setOrgForm({ ...orgForm, slug: e.target.value })}
+                    onChange={(e) => setOrgForm(prev => ({ ...prev, slug: e.target.value }))}
+
+
                     placeholder="org-slug"
                   />
                 </div>

@@ -6,7 +6,8 @@ import {
   createOrgPaginatedQuery,
   createPublicQuery,
 } from '../functions';
-import { getOrgId, resolveCustomerId, timelineEntry } from './helpers';
+import { getOrgId, resolveCustomerId } from './helpers';
+import { transitionOrderStatus, verifyOrderAccessToken } from './security';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,13 +23,12 @@ async function getOrg(ctx: any, slug: string) {
 }
 
 /** Verify caller owns the order. */
-async function verifyOrderOwnership(ctx: any, order: any) {
+async function verifyOrderOwnership(ctx: any, order: any, orderAccessToken?: string) {
   const customerId = ctx.userId
     ? await resolveCustomerId(ctx, order.organizationId, ctx.userId)
     : null;
-  if (!customerId || order.customerId !== customerId) {
-    throw new ConvexError({ code: 'FORBIDDEN', message: 'Not your order' });
-  }
+  if (customerId && order.customerId === customerId) return;
+  await verifyOrderAccessToken(order, orderAccessToken);
 }
 
 // ---------------------------------------------------------------------------
@@ -39,6 +39,7 @@ export const getOrderDetail = createPublicQuery()({
   args: {
     orderNumber: z.string(),
     organizationSlug: z.string(),
+    orderAccessToken: z.string().optional(),
   },
   returns: z.any(),
   handler: async (ctx, args) => {
@@ -54,7 +55,7 @@ export const getOrderDetail = createPublicQuery()({
     if (!order) throw new ConvexError({ code: 'NOT_FOUND', message: 'Order not found' });
 
     // Verify ownership
-    await verifyOrderOwnership(ctx, order);
+    await verifyOrderOwnership(ctx, order, args.orderAccessToken);
 
     // Load items
     const items = await ctx
@@ -179,23 +180,26 @@ export const updateOrderStatus = createOrgMutation()({
       throw new ConvexError({ code: 'FORBIDDEN', message: 'Order does not belong to this organization' });
     }
 
-    const currentTimeline = order.orderTimeline ?? [];
-    await order.patch({
-      status: args.status,
-      orderTimeline: [...currentTimeline, timelineEntry(args.status, 'Status updated by admin')],
-    });
-
-    // If cancelled/expired: restore stock
-    if (args.status === 'cancelled' || args.status === 'expired') {
-      const orderItems = await ctx
-        .table('shopOrderItems', 'shopOrderId', (q: any) => q.eq('shopOrderId', args.orderId));
-      for (const item of orderItems) {
-        const product = await ctx.table('products').get(item.productId);
-        if (product && product.stock != null) {
-          await product.patch({ stock: product.stock + item.quantity });
-        }
-      }
+    // Permission check: only admin/owner can change order status
+    const membership = await ctx
+      .table('member', 'organizationId_userId', (q: any) =>
+        q.eq('organizationId', ctx.orgId).eq('userId', ctx.user._id)
+      )
+      .first();
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+      throw new ConvexError({ code: 'FORBIDDEN', message: 'Only admin/owner can update order status' });
     }
+
+    // Idempotency check: prevent repeated cancel/expire that could inflate stock
+    if (['cancelled', 'expired'].includes(args.status) && ['cancelled', 'expired'].includes(order.status)) {
+      throw new ConvexError({ code: 'CONFLICT', message: `Order is already ${order.status}` });
+    }
+
+    await transitionOrderStatus(ctx, order, args.status, {
+      type: 'admin',
+      userId: String(ctx.user._id),
+      note: 'Status updated by admin',
+    });
 
     return { success: true };
   },

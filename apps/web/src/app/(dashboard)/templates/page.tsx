@@ -16,7 +16,7 @@ import { useTableStore } from '@/store/table-store';
 import { toast } from 'sonner';
 
 export default function TemplatesPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
@@ -74,14 +74,14 @@ export default function TemplatesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
-        <Button size="sm" onClick={() => router.push('/templates/new')}>
+        <Button size="sm" onClick={() => push('/templates/new')}>
           <Plus className="mr-1 h-4 w-4" />New Template
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search templates..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Button variant={showArchived ? 'default' : 'outline'} size="sm" onClick={() => setShowArchived(!showArchived)}>
@@ -101,13 +101,13 @@ export default function TemplatesPage() {
         <EmptyState
           icon={<FileText className="size-7" />} title="No templates yet"
           description="Create a quotation template to pre-fill line items and pricing."
-          action={<Button variant="outline" size="sm" onClick={() => router.push('/templates/new')}><Plus className="mr-1 h-4 w-4" />Create Template</Button>}
+          action={<Button variant="outline" size="sm" onClick={() => push('/templates/new')}><Plus className="mr-1 h-4 w-4" />Create Template</Button>}
         />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/templates/${row.id}/edit`)}
+          onRowClick={(row) => push(`/templates/${row.id}/edit`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}

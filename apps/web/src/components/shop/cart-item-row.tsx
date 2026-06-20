@@ -102,7 +102,7 @@ export function CartItemRow({ item, sessionId, onUpdated }: CartItemRowProps) {
   return (
     <div className="flex flex-col gap-4 border-b py-4 sm:flex-row sm:items-center sm:gap-6">
       {/* Image */}
-      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:h-28 sm:w-28">
+      <div className="relative size-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:h-28 sm:w-28">
         {item.product?.imageUrl ? (
           <Image
             src={item.product.imageUrl}

@@ -1,0 +1,76 @@
+{
+  "reviewer": "product-lens",
+  "findings": [
+    {
+      "severity": "P1",
+      "title": "No alternative to a native app is evaluated; responsive web/PWA is a credible cheaper path",
+      "evidence": "Plan states 'React Native + Expo' as decided in both Key Technical Decisions ('Matches team’s React knowledge; fastest path to iOS + Android') and Requirements Trace R8. There is no comparison to a mobile-optimized responsive web experience or PWA, even though the stated user needs—'quick access to pipeline status, recent activities, overdue invoices, and clock-in records'—are primarily read/update workflows that mobile web can serve.",
+      "suggested_fix": "Add an explicit 'build vs. mobile web' decision record. Run a 1-week spike on a mobile-optimized dashboard/deals/activities view in the existing Next.js app before committing to a parallel React Native codebase. If mobile web reaches the 'under 30 seconds' success criteria, defer native app until push/offline requirements force it.",
+      "confidence": 75
+    },
+    {
+      "severity": "P1",
+      "title": "User pain is asserted, not evidenced",
+      "evidence": "Problem Frame says 'Sales reps, field staff, and managers need on-the-go access' and brainstorm section 1 says 'Users need quick access to CRM data while away from desktop.' Neither cites complaints, incident tickets, analytics on mobile web usage, or field observations. The Out-of-Scope list even excludes push notifications and offline sync—the two features that usually justify a native app over mobile web.",
+      "suggested_fix": "Before implementation, validate the pain: interview 3-5 reps/managers, check current mobile browser usage of the web app, or run a lightweight survey. If the pain is real but infrequent, a mobile web MVP is sufficient. If it is not evidenced, do not build.",
+      "confidence": 75
+    },
+    {
+      "severity": "P1",
+      "title": "'Web parity lite' covers nearly all web modules, contradicting the lite framing",
+      "evidence": "Requirements R2-R7 plus settings cover dashboard, deals, contacts, companies, activities, invoices, and HR. Implementation Units U4-U10 rebuild the dashboard, deals board, contacts/companies, activities, invoices, and HR. The README originally lists mobile as 'Phase 4,' implying it was intentionally deferred until core web work matured.",
+      "suggested_fix": "Cut Phase 1 to two or three modules that uniquely benefit from mobile context: dashboard + quick activity logging + deals pipeline. Move contacts/companies search, invoices, and HR to Phase 2. Update success criteria to match the reduced scope.",
+      "confidence": 100
+    },
+    {
+      "severity": "P1",
+      "title": "No priority tiers across 11 implementation units",
+      "evidence": "Implementation Units U1 through U11 are presented as a flat checklist with identical formatting and no P0/P1/P2 labels. The Risks table flags 'Scope creep trying to port all web features' as Likelihood=High / Impact=High, yet the plan itself does not tier the units, so there is no guardrail against that exact risk.",
+      "suggested_fix": "Assign tiers: P0 = auth + dashboard + deals + quick log (MVP); P1 = contacts/companies + activities; P2 = invoices + HR + distribution polish. Stop after P0 ships to internal testers and gather feedback before proceeding.",
+      "confidence": 100
+    },
+    {
+      "severity": "P1",
+      "title": "Auth/session sharing is deferred despite being a hard dependency for every screen",
+      "evidence": "Open Questions / Deferred to Implementation lists 'Exact Better Auth token exchange mechanism for mobile vs web session sharing.' Risks table rates 'Better Auth mobile session sharing is non-trivial' as Likelihood=Medium / Impact=High. Yet U3 'Set up mobile auth and Convex provider' proceeds immediately after U1/U2 and gates all user-facing work.",
+      "suggested_fix": "Promote the auth spike to a pre-commit gate (a separate spike task before U1). If a clean token/session path cannot be proven within a few days, fall back to mobile web or a webview-based login and reassess native build ROI.",
+      "confidence": 100
+    },
+    {
+      "severity": "P1",
+      "title": "Maintenance surface doubles with no ownership or drift policy",
+      "evidence": "Plan creates 40+ new files in apps/mobile plus modifications to shared packages, while the existing web dashboard alone is 672 lines and the dashboard/deals/activities/invoices modules total over 1,500 lines. The plan states 'UI components native-first' and 'Shared domain logic, types, and auth helpers are reused,' but any web UI change will still require a parallel mobile change to avoid divergence.",
+      "suggested_fix": "Document a maintenance owner for mobile and a drift policy: e.g., 'web is source of truth; mobile lags by one sprint unless the change is mobile-critical.' Estimate ongoing cost (e.g., percentage of each web feature that needs mobile re-implementation).",
+      "confidence": 75
+    },
+    {
+      "severity": "P2",
+      "title": "HR and invoices modules serve thinly evidenced user stories",
+      "evidence": "Brainstorm user stories include only one HR story ('As an HR admin, I want to see who has clocked in today') and one invoice story ('As a finance user, I want to see overdue invoices'). By contrast, sales reps get three stories (deals, log call, manager KPIs). The plan treats these as equal Phase 1 requirements despite weaker mobile-context justification.",
+      "suggested_fix": "Move HR attendance/employee list and invoice reminder flows to Phase 2 unless interviews/analytics confirm they are frequent mobile tasks. Dashboard can already surface overdue invoices and today's attendance as KPI cards.",
+      "confidence": 75
+    },
+    {
+      "severity": "P2",
+      "title": "Desktop interaction patterns are being ported without a mobile-first redesign commitment",
+      "evidence": "The web deals board uses drag-and-drop (hello-pangea/dnd) with a horizontal scroll of 280px-wide columns. The plan says mobile will 'support horizontal swipe between stage columns or a list with stage filter' but does not decide. Activities, contacts tables, and invoice tables are similarly web-table shaped and must become 'filterable lists with detail screens.'",
+      "suggested_fix": "Make mobile-first UX design a gate before U5-U9. Produce wireframes or a prototype that picks one deals interaction (e.g., vertical stage list with swipe actions, not kanban). Do not allow 1:1 visual parity with the web app.",
+      "confidence": 75
+    },
+    {
+      "severity": "P2",
+      "title": "Internal distribution infrastructure is assumed but not confirmed",
+      "evidence": "Requirements Trace R8 says 'App supports internal iOS and Android distribution,' and U11 targets TestFlight + APK. The brainstorm open question #5 asks: 'Is there budget for TestFlight + Play Console accounts, or should we start with Expo Go/internal build only?' The plan does not answer this.",
+      "suggested_fix": "Confirm Apple Developer Program / Google Play Console accounts and EAS subscription budget before U11. If unavailable, scope Phase 1 distribution to Expo Go/internal builds and update R8 accordingly.",
+      "confidence": 100
+    },
+    {
+      "severity": "P2",
+      "title": "Success criteria from brainstorm are not traced to requirements or verification",
+      "evidence": "Brainstorm section 2 lists outcome goals such as 'under 3 taps' and 'update a deal stage or log an activity in under 30 seconds.' These do not appear in Requirements Trace R1-R9 or in test scenarios, and there is no telemetry or user-test plan to verify them.",
+      "suggested_fix": "For each success criterion, add a measurable requirement and a verification method. Example: add R10 'Dashboard KPIs and quick-log action reachable in ≤3 taps' with a UX walkthrough test, and R11 'Deal stage update from home screen completes in ≤30 seconds' measured via screen-flow timing or task-based user testing.",
+      "confidence": 100
+    }
+  ],
+  "summary": "The plan frames a native mobile build as the obvious next step, but the product case is thin: pain is asserted without evidence, cheaper alternatives (mobile web/PWA) are not considered, and the 'lite' Phase 1 still ports almost every web module. The most material risks are unsequenced scope (no priority tiers), an unresolved auth dependency that gates every screen, and a doubling of maintenance surface without ownership or drift policy. The plan needs a smaller MVP definition, a pre-commit auth spike, and explicit prioritization before implementation should start."
+}

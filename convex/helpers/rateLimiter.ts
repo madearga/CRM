@@ -5,6 +5,7 @@ import type { ActionCtx, MutationCtx } from '../_generated/server';
 import type { SessionUser } from '../authHelpers';
 
 import { components } from '../_generated/api';
+import type { Doc } from '../_generated/dataModel';
 
 // Define rate limits matching the existing Upstash configuration
 export const rateLimiter = new RateLimiter(components.rateLimiter as any, {
@@ -120,6 +121,10 @@ export const rateLimiter = new RateLimiter(components.rateLimiter as any, {
   premium: { kind: 'token bucket', period: 10 * SECOND, rate: 100 },
   public: { kind: 'token bucket', period: 10 * SECOND, rate: 20 },
   vercel: { kind: 'token bucket', period: 10 * SECOND, rate: 3 },
+
+  // Guest commerce rate limits (keyed by orgId + sessionId)
+  'cart/mutate:public': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'checkout/initiate:public': { kind: 'fixed window', period: MINUTE, rate: 5 },
 });
 
 // Helper function to get rate limit key based on user tier
@@ -136,7 +141,27 @@ export function getRateLimitKey(
   return `${baseKey}:${tier}`;
 }
 
-// Helper to get user tier based on session user
+/**
+ * Rate-limit guard for unauthenticated (guest) commerce operations.
+ * Keys the rate limit by organization + session rather than user identity.
+ */
+export async function guestRateLimitGuard(
+  ctx: MutationCtx,
+  limitKey: string,
+  orgId: string,
+  sessionId: string,
+) {
+  const status = await rateLimiter.limit(ctx, limitKey as any, {
+    key: `${orgId}:${sessionId}`,
+  });
+  if (!status.ok) {
+    throw new ConvexError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Rate limit exceeded. Please try again later.',
+      retryAfter: status.retryAfter,
+    });
+  }
+}
 export function getUserTier(
   user: { isAdmin?: boolean; plan?: SessionUser['plan'] } | null
 ): 'free' | 'premium' | 'public' {

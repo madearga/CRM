@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.expo.dev/eas-json.schema.json",
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "REPLACE_WITH_DEV_CONVEX_URL",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "REPLACE_WITH_DEV_CONVEX_SITE_URL",
+        "EXPO_PUBLIC_SITE_URL": "REPLACE_WITH_DEV_BETTER_AUTH_URL"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "REPLACE_WITH_PREVIEW_CONVEX_URL",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "REPLACE_WITH_PREVIEW_CONVEX_SITE_URL",
+        "EXPO_PUBLIC_SITE_URL": "REPLACE_WITH_PREVIEW_BETTER_AUTH_URL"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "REPLACE_WITH_PROD_CONVEX_URL",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "REPLACE_WITH_PROD_CONVEX_SITE_URL",
+        "EXPO_PUBLIC_SITE_URL": "REPLACE_WITH_PROD_BETTER_AUTH_URL"
+      }
+    }
+  }
+}

@@ -25,6 +25,7 @@ import { AttendanceReportPDF, type AttendanceReportPDFData } from "@/pdf/attenda
 import { PdfDownloadButton } from "@/components/pdf-download-button";
 import { toast } from 'sonner';
 import { usePermission } from '@/lib/permissions/use-permission';
+import { EmptyState } from '@/components/empty-state';
 
 function getMonthRange(month: string) {
   return {

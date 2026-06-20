@@ -26,6 +26,12 @@ export const sendOrganizationInviteEmail = action({
   },
   returns: v.string(), // Return email ID as string
   handler: async (ctx, args) => {
+    // Require authentication to send emails
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required to send emails");
+    }
+
     const html = await render(
       <OrganizationInviteEmail
         acceptUrl={args.acceptUrl}

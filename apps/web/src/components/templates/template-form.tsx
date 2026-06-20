@@ -61,7 +61,7 @@ function calculateSubtotal(line: TemplateLineItem): number {
 }
 
 export function TemplateForm({ templateId, initialData }: TemplateFormProps) {
-  const router = useRouter();
+  const { back, push } = useRouter();
   const isEdit = !!templateId;
   const isDirty = useRef(false);
 
@@ -121,7 +121,7 @@ export function TemplateForm({ templateId, initialData }: TemplateFormProps) {
 
   const handleCancel = () => {
     if (isDirty.current && !confirm('You have unsaved changes. Discard?')) return;
-    router.back();
+    back();
   };
 
   const addLine = () => {
@@ -186,11 +186,11 @@ export function TemplateForm({ templateId, initialData }: TemplateFormProps) {
       if (isEdit) {
         await updateTmpl.mutateAsync({ id: templateId as any, ...payload });
         toast.success('Template updated');
-        router.push('/templates');
+        push('/templates');
       } else {
         await createTmpl.mutateAsync(payload);
         toast.success('Template created');
-        router.push('/templates');
+        push('/templates');
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : `Failed to ${isEdit ? 'update' : 'create'} template`;

@@ -11,7 +11,7 @@ if (typeof MessageChannel === 'undefined') {
       return false;
     }
 
-    postMessage(_message: unknown, _transfer: Transferable[] = []) {}
+    postMessage(_message: unknown, _transfer: unknown[] = []) {}
     removeEventListener() {}
     start() {}
   }

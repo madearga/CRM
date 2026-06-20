@@ -9,6 +9,7 @@ import {
 import { createAuditLog } from './auditLogs';
 import { nextSequence } from './shared/sequenceGenerator';
 import type { AuthMutationCtx } from './functions';
+import { assertCanReadInvoice } from '@crm/domain';
 
 // ---------------------------------------------------------------------------
 // Enums & Types
@@ -280,10 +281,20 @@ export const getById = createOrgQuery()({
     })),
   }),
   handler: async (ctx, args) => {
-    const inv = await ctx.table('invoices').get(args.id);
-    if (!inv || inv.organizationId !== ctx.orgId) {
-      throw new ConvexError({ code: 'NOT_FOUND', message: 'Invoice not found' });
-    }
+    // SECURITY: IDOR guard.
+    // `ctx.orgId` is injected by `createOrgQuery` from the authenticated
+    // session's `user.activeOrganization.id` (server-trusted, NOT a client
+    // input). We MUST compare the fetched invoice's `organizationId`
+    // against it and throw NOT_FOUND on mismatch — otherwise a user in org A
+    // could pass any invoice id leaked from org B and read it. The
+    // comparison and throw are routed through the shared
+    // `assertCanReadInvoice` helper (see @crm/domain/invoiceAccess) so the
+    // guard is testable, reviewable, and consistent across read paths.
+    const rawInv = await ctx.table('invoices').get(args.id);
+    const inv = assertCanReadInvoice(
+      rawInv as (NonNullable<typeof rawInv> & { organizationId: string }) | null,
+      ctx.orgId
+    );
 
     const lines = await inv.edge('lines');
     const payments = await inv.edge('payments');
@@ -587,7 +598,20 @@ export const createFromSaleOrder = createOrgMutation()({
       });
     }
 
-    const number = await nextSequence(ctx, ctx.orgId, 'invoice');
+    // Prevent duplicate invoices for the same sale order
+    const existingInvoices = await ctx
+      .table('invoices', 'organizationId_saleOrderId', (q: any) =>
+        q.eq('organizationId', ctx.orgId).eq('field_saleOrderId', args.saleOrderId)
+      )
+      .take(1);
+    if (existingInvoices.length > 0) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: 'An invoice already exists for this sale order',
+      });
+    }
+
+    const number = await nextSequence(ctx, ctx.orgId, 'invoice', undefined);
     const now = Date.now();
     const dueDate = now + 30 * 24 * 60 * 60 * 1000; // Default 30 days
 

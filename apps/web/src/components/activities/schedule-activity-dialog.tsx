@@ -68,6 +68,7 @@ export function ScheduleActivityDialog({
         scheduledAt: new Date(scheduledAt).getTime(),
         priority: priority as any,
         nextActivityType: autoSchedule ? type : undefined,
+        nextActivityDelay: autoSchedule ? parseInt(nextDelay) || 7 : undefined,
       });
       toast.success('Activity scheduled');
       resetForm();

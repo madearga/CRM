@@ -1,0 +1,46 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "id": "test-001",
+      "severity": "P2",
+      "confidence": 75,
+      "title": "New DashboardEmptyState wrapper has no unit tests",
+      "detail": "The polish introduces a local DashboardEmptyState helper that composes the shared EmptyState with a Link-backed Button. All six call sites pass through it, but there are no tests verifying it renders the icon, title, and correct href.",
+      "fix_suggestion": "Add a small test file next to the dashboard or in __tests__ that renders DashboardEmptyState and asserts the CTA link href."
+    },
+    {
+      "id": "test-002",
+      "severity": "P2",
+      "confidence": 75,
+      "title": "No tests assert Link-wrapped KPI cards route to the right pages",
+      "detail": "KPI cards are now wrapped in next/link with hardcoded routes (/deals, /invoices). There is no component or e2e test verifying those hrefs, so a future refactor could break navigation silently.",
+      "fix_suggestion": "Add a minimal component test (with Convex queries mocked) that checks each KPI card contains a link with the expected href."
+    },
+    {
+      "id": "test-003",
+      "severity": "P2",
+      "confidence": 75,
+      "title": "No regression test for invalid activity timestamps",
+      "detail": "The adversarial review identified that malformed createdAt/dueAt values can crash the dashboard via Intl formatters. A test should exercise the safe fallback now added to format-date.ts.",
+      "fix_suggestion": "Add a unit test in src/__tests__/format-date.test.ts that asserts formatDistanceToNow(NaN) and format(NaN, 'MMM d, yyyy') return '—' rather than throwing."
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "test-risk-001",
+      "severity": "low",
+      "summary": "Existing convex/__tests__/dashboardStructure.test.ts still references agingDeals shape even though the dashboard page no longer renders it. If the field is later removed from the backend query, the frontend and backend tests could drift."
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "test-gap-001",
+      "summary": "No component or e2e test covers the polished dashboard layout (KPI grid, charts, tables, activities)."
+    },
+    {
+      "id": "test-gap-002",
+      "summary": "No test verifies the loading skeleton is shown until all dependent queries (including comparisonLoading, analyticsOverview, agingLoading, productsLoading) have resolved."
+    }
+  ]
+}

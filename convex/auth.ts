@@ -1,6 +1,7 @@
 import { convex } from '@convex-dev/better-auth/plugins';
 import { betterAuth } from 'better-auth';
 import { organization } from 'better-auth/plugins';
+import { expo } from '@better-auth/expo';
 import { ac, roles } from './authPermissions';
 import {
   type AuthFunctions,
@@ -76,7 +77,7 @@ export const authClient = createClient<DataModel>(
 
           // Check admin role
           const adminEmails = getEnv().ADMIN;
-          if (adminEmails?.includes(user.email) && mainUser.role !== 'admin') {
+          if (adminEmails?.some(adminEmail => adminEmail.toLowerCase() === user.email.toLowerCase()) && mainUser.role !== 'admin') {
             await table('user').getX(mainUser._id).patch({ role: 'admin' });
           }
 
@@ -158,8 +159,15 @@ export const authClient = createClient<DataModel>(
   } as any
 );
 
-export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
-  const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+export const createAuth = (
+  ctx: GenericCtx,
+  { optionsOnly = false, baseURL: baseURLOverride }: { optionsOnly?: boolean; baseURL?: string } = {},
+) => {
+  const baseURL =
+    baseURLOverride ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL ||
+    'http://localhost:3000';
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const socialProviders: Record<string, any> = {};
@@ -172,6 +180,10 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
   }
 
   const trustedProviders = Object.keys(socialProviders);
+  const mobileTrustedOrigins = (process.env.MOBILE_AUTH_TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   return betterAuth({
     account: {
@@ -185,11 +197,22 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
     logger: { disabled: optionsOnly },
     trustedOrigins: [
       baseURL,
+      process.env.NEXT_PUBLIC_SITE_URL || '',
       process.env.NEXT_PUBLIC_CONVEX_SITE_URL || '',
-      'http://localhost:3000',
-      'http://localhost:3005',
+      ...mobileTrustedOrigins,
+      // Expo Go dev URLs used by the mobile app. These are origins, not full
+      // callback paths; Better Auth validates callbackURL by origin. The LAN
+      // IP changes per network — set MOBILE_AUTH_TRUSTED_ORIGINS on the Convex
+      // deployment for the current IP (e.g. "exp://192.168.18.19:8081").
+      // Mobile app custom scheme deep link (origin = scheme). expo() plugin
+      // redirects to <scheme>://... after OAuth; trust the scheme origin.
+      'crmmobile://',
+      ...(process.env.NODE_ENV !== 'production'
+        ? ['http://localhost:3000', 'http://localhost:3005', 'exp://100.108.222.46:8081']
+        : []),
     ].filter(Boolean),
     plugins: [
+      expo(),
       organization({
         ac,
         roles,

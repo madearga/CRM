@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { productsToCSV, downloadCSV, parseCSV } from '@/components/products/csv-utils';
 
 export default function ProductsPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const { q: search, archived: showArchived, setSearch, toggleArchived } = useProductsParams();
   const { selections, toggleOne, toggleAll, clearSelection } = useTableStore();
   const selectedIds = useMemo(() => selections.products ?? new Set(), [selections.products]);
@@ -186,7 +186,7 @@ export default function ProductsPage() {
         <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
           <Upload className="mr-1 h-4 w-4" />{importing ? 'Importing...' : 'Import'}
         </Button>
-        <Button size="sm" onClick={() => router.push('/products/new')}>
+        <Button size="sm" onClick={() => push('/products/new')}>
           <Plus className="mr-1 h-4 w-4" />Add Product
         </Button>
       </div>
@@ -194,7 +194,7 @@ export default function ProductsPage() {
       {/* Search & Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input placeholder="Search products..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={typeFilter ?? "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? undefined : v)}>
@@ -227,13 +227,13 @@ export default function ProductsPage() {
         <EmptyState
           icon={<Package className="size-7" />} title="No products yet"
           description="Add your first product to start building your product catalog."
-          action={<Button variant="outline" size="sm" onClick={() => router.push('/products/new')}><Plus className="mr-1 h-4 w-4" />Add your first product</Button>}
+          action={<Button variant="outline" size="sm" onClick={() => push('/products/new')}><Plus className="mr-1 h-4 w-4" />Add your first product</Button>}
         />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          onRowClick={(row) => router.push(`/products/${row.id}`)}
+          onRowClick={(row) => push(`/products/${row.id}`)}
           rowClassName={(row) => `${row.archivedAt ? 'opacity-60' : ''} ${selectedIds.has(row.id) ? 'bg-muted/30' : ''}`}
         />
       )}
