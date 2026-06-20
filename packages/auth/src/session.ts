@@ -37,51 +37,6 @@ export interface Session {
 }
 
 /**
- * Normalized result of a session lookup. `null` data means "no active
- * session". Mobile providers drive their navigation off this value.
- */
-export interface SessionState {
-  data: { session: Session; user: SessionUser } | null;
-  isPending: boolean;
-  error: { message?: string; status: number; statusText: string } | null;
-}
-
-/**
- * Input shape for email sign-in. Better Auth accepts more options
- * (callbackURL, newPassword, etc.); callers that need them can pass
- * additional fields through the loose index signature.
- */
-export interface EmailSignInInput {
-  email: string;
-  password: string;
-  callbackURL?: string;
-  rememberMe?: boolean;
-  [key: string]: unknown;
-}
-
-export interface EmailSignUpInput {
-  email: string;
-  password: string;
-  name?: string;
-  image?: string;
-  callbackURL?: string;
-  [key: string]: unknown;
-}
-
-export interface SignOutInput {
-  callbackURL?: string;
-  [key: string]: unknown;
-}
-
-/**
- * The result of a Convex token exchange. `token` is a short-lived JWT that
- * must be passed to `ConvexReactClient.setAuth(() => token)`.
- */
-export interface ConvexTokenResult {
-  token: string;
-}
-
-/**
  * Normalize a session-user object coming back from Better Auth into the
  * shared {@link SessionUser} shape. Returns `null` when the input is missing.
  * Used by both web and mobile providers to coalesce server variance.

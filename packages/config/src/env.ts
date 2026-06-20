@@ -142,13 +142,6 @@ export function parseClientEnv(input: EnvInput): ClientEnv {
 }
 
 /**
- * Non-throwing variant of {@link parseClientEnv}.
- */
-export function safeParseClientEnv(input: EnvInput) {
-  return clientEnvSchema.safeParse(input);
-}
-
-/**
  * Parse and validate a full (server) environment-variable record. Throws with
  * a clear, human-readable error message listing each invalid field on
  * failure — this is the "missing required env var throws clear error at
@@ -162,12 +155,4 @@ export function parseEnv(input: EnvInput): Env {
     throw new Error(`Invalid environment variables:\n${formatErrors(result.error)}`);
   }
   return result.data;
-}
-
-/**
- * Non-throwing variant of {@link parseEnv}. Returns a `safeParse` result so
- * callers can decide how to surface validation issues.
- */
-export function safeParseEnv(input: EnvInput) {
-  return envSchema.safeParse(input);
 }

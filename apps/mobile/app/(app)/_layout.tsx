@@ -12,12 +12,13 @@
  * active label so it reads as part of the CRM design system rather than the
  * default iOS/Android chrome.
  */
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { NetworkBanner } from '@/components/network-banner';
 import { useNetwork } from '@/hooks/use-network';
+import { useAuth } from '@/hooks/use-auth';
 import { colors } from '@/styles/theme';
 
 type TabKey = 'dashboard' | 'activities' | 'invoices' | 'more';
@@ -33,6 +34,12 @@ const TAB_CONFIG: Record<
 };
 
 export default function AppLayout() {
+  const { status } = useAuth();
+
+  if (status === 'unauthenticated') {
+    return <Redirect href="/(auth)/login" />;
+  }
+
   return (
     <View className="flex-1">
       <TabNetworkBanner />

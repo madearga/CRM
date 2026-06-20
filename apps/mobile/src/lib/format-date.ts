@@ -2,17 +2,30 @@
  * Lightweight date formatting using native Intl API.
  * Replaces date-fns format() and formatDistanceToNow().
  *
- * Copied verbatim from `apps/web/src/lib/format-date.ts` (DO NOT modify the web
- * file). Kept in sync so mobile and web render identical date strings.
+ * Adapted from `apps/web/src/lib/format-date.ts` with React Native/Hermes
+ * fallbacks. Hermes in Expo Go does not always provide the full Intl surface
+ * (notably `Intl.RelativeTimeFormat`), so avoid constructing Intl formatters at
+ * module scope and degrade gracefully when a formatter is missing.
  */
 const LOCALE = 'id-ID';
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat(LOCALE, {
-  numeric: 'auto',
-  style: 'long',
-});
+type RelativeUnit = Intl.RelativeTimeFormatUnit;
 
-const DIVISIONS: { amount: number; name: Intl.RelativeTimeFormatUnit }[] = [
+const relativeTimeFormatter = createRelativeTimeFormatter();
+
+function createRelativeTimeFormatter(): Intl.RelativeTimeFormat | null {
+  try {
+    if (typeof Intl?.RelativeTimeFormat !== 'function') return null;
+    return new Intl.RelativeTimeFormat(LOCALE, {
+      numeric: 'auto',
+      style: 'long',
+    });
+  } catch {
+    return null;
+  }
+}
+
+const DIVISIONS: { amount: number; name: RelativeUnit }[] = [
   { amount: 60, name: 'seconds' },
   { amount: 60, name: 'minutes' },
   { amount: 24, name: 'hours' },
@@ -37,59 +50,80 @@ export function formatDistanceToNow(
 
   for (const division of DIVISIONS) {
     if (Math.abs(diff) < division.amount) {
-      return relativeTimeFormatter.format(Math.round(diff), division.name);
+      return formatRelativeTime(Math.round(diff), division.name);
     }
     diff /= division.amount;
   }
-  return relativeTimeFormatter.format(Math.round(diff), 'years');
+  return formatRelativeTime(Math.round(diff), 'years');
 }
 
-const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+function formatRelativeTime(value: number, unit: RelativeUnit): string {
+  if (relativeTimeFormatter) {
+    return relativeTimeFormatter.format(value, unit);
+  }
+
+  // Hermes fallback. Keep wording simple and Indonesian-friendly rather than
+  // pulling a large Intl polyfill into the mobile bundle.
+  if (value === 0) return 'baru saja';
+
+  const amount = Math.abs(value);
+  const unitLabel = relativeUnitLabels[unit] ?? unit;
+  return value < 0 ? `${amount} ${unitLabel} lalu` : `dalam ${amount} ${unitLabel}`;
+}
+
+const relativeUnitLabels: Partial<Record<RelativeUnit, string>> = {
+  seconds: 'detik',
+  second: 'detik',
+  minutes: 'menit',
+  minute: 'menit',
+  hours: 'jam',
+  hour: 'jam',
+  days: 'hari',
+  day: 'hari',
+  weeks: 'minggu',
+  week: 'minggu',
+  months: 'bulan',
+  month: 'bulan',
+  years: 'tahun',
+  year: 'tahun',
+};
+
+const dateFormatter = createDateTimeFormatter({
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+const dateTimeFormatter = createDateTimeFormatter({
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 /** Format a date with a pattern.
  *  Supported patterns (subset of date-fns):
- *    'MMM d, yyyy' → "Jan 15, 2026"
- *    'MMMM d, yyyy' → "January 15, 2026"
- *    'MM/dd/yyyy'   → "01/15/2026"
- *    'yyyy-MM-dd'   → "2026-01-15"
- *  Time tokens and timezone are NOT supported — use date-fns for those if needed.
+ *    'MMM d, yyyy'   → "Jan 15, 2026"
+ *    'dd MMM yyyy, HH:mm' → "15 Jan 2026, 14:30"
+ *  Other patterns are not supported — add a formatter when one is needed.
  */
 export function format(date: Date | number, pattern: string): string {
   const d = typeof date === 'number' ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return '—';
 
-  if (!dateFormatters.has(pattern)) {
-    const options = patternToOptions(pattern);
-    dateFormatters.set(pattern, new Intl.DateTimeFormat(LOCALE, options));
-  }
-
-  return dateFormatters.get(pattern)!.format(d);
+  // ponytail: only two patterns are used in the app; expand when a third shows up.
+  if (pattern === 'dd MMM yyyy, HH:mm') return dateTimeFormatter.format(d);
+  return dateFormatter.format(d);
 }
 
-function patternToOptions(pattern: string): Intl.DateTimeFormatOptions {
-  const opts: Intl.DateTimeFormatOptions = {};
-
-  if (pattern.includes('MMM') || pattern.includes('MMMM')) {
-    opts.month = pattern.includes('MMMM') ? 'long' : 'short';
-  } else if (pattern.includes('MM')) {
-    opts.month = '2-digit';
-  } else if (pattern.includes('M')) {
-    opts.month = 'numeric';
+function createDateTimeFormatter(
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  try {
+    return new Intl.DateTimeFormat(LOCALE, options);
+  } catch {
+    return new Intl.DateTimeFormat(undefined, options);
   }
-
-  if (pattern.includes('yyyy') || pattern.includes('YYYY')) {
-    opts.year = 'numeric';
-  } else if (pattern.includes('yy')) {
-    opts.year = '2-digit';
-  }
-
-  if (pattern.includes('dd') || pattern.includes('DD')) {
-    opts.day = '2-digit';
-  } else if (pattern.includes('d') && !pattern.includes('do')) {
-    opts.day = 'numeric';
-  }
-
-  return opts;
 }
 
 /** Format a date and time together, e.g. "15 Jan 2026, 14:30". */

@@ -20,9 +20,31 @@ const path = require("path");
  */
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../../");
+const mobileEntry = path.resolve(projectRoot, "index.js");
+const earlyPolyfills = path.resolve(projectRoot, "early-polyfills.js");
 const localSlotStub = path.resolve(projectRoot, "mocks/react-slot.tsx");
+const webidlConversionsShim = path.resolve(projectRoot, "mocks/webidl-conversions.js");
 
 const config = getDefaultConfig(projectRoot);
+
+// --- Hermes before-main polyfills ---------------------------------------------
+// Expo SDK 54 initializes URL/manifest helpers before the app entry runs. Some
+// transitive URL polyfill code (`webidl-conversions`) dereferences
+// `SharedArrayBuffer` at module scope, but Expo Go's Hermes runtime does not
+// provide it. Inject a tiny no-dependency shim before Expo's runtime modules.
+const defaultGetBeforeMainModules = config.serializer.getModulesRunBeforeMainModule;
+config.serializer.getModulesRunBeforeMainModule = (...args) => {
+  const modules = defaultGetBeforeMainModules ? defaultGetBeforeMainModules(...args) : [];
+  if (modules.includes(earlyPolyfills)) {
+    return modules;
+  }
+
+  // Keep React Native InitializeCore first (Expo's default marks it as MUST be
+  // first), then install our globals before Expo URL/manifest helpers.
+  return modules.length > 0
+    ? [modules[0], earlyPolyfills, ...modules.slice(1)]
+    : [earlyPolyfills];
+};
 
 // --- Monorepo / pnpm resolution -------------------------------------------------
 config.watchFolders = [monorepoRoot];
@@ -66,6 +88,21 @@ config.resolver.blockList = [...existingBlockList, ...browserOnlyBlocklist];
 // stub before the default resolver runs.
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Expo dev server requests `/index.bundle` and Metro resolves that as
+  // `./index` from the monorepo root (`/Users/.../crm/.`) when `watchFolders`
+  // includes the workspace root. Keep package.json `main: "index.js"` valid
+  // for Expo's manifest resolver (relative to apps/mobile), but redirect this
+  // root-origin Metro lookup back to the mobile app entry so our Hermes
+  // polyfills load before `expo-router/entry`.
+  const originIsMonorepoRoot = path.resolve(context.originModulePath) === monorepoRoot;
+  if (originIsMonorepoRoot && (moduleName === "./index" || moduleName === "index")) {
+    return { type: "sourceFile", filePath: mobileEntry };
+  }
+
+  if (moduleName === "webidl-conversions") {
+    return { type: "sourceFile", filePath: webidlConversionsShim };
+  }
+
   if (moduleName === "@radix-ui/react-slot") {
     return { type: "sourceFile", filePath: localSlotStub };
   }
@@ -77,4 +114,20 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // --- NativeWind v4 --------------------------------------------------------------
 // Processes ./global.css (Tailwind) into the RN-compatible stylesheet injected
 // by nativewind/babel. Must be the last transform applied.
-module.exports = withNativeWind(config, { input: "./global.css" });
+const nativeWindConfig = withNativeWind(config, { input: "./global.css" });
+
+// Re-apply after NativeWind wraps the config. NativeWind may replace serializer
+// hooks, so the before-main polyfill injection must be installed on the final
+// exported config, not just on Expo's default config above.
+const nativeWindGetBeforeMainModules = nativeWindConfig.serializer.getModulesRunBeforeMainModule;
+nativeWindConfig.serializer.getModulesRunBeforeMainModule = (...args) => {
+  const modules = nativeWindGetBeforeMainModules ? nativeWindGetBeforeMainModules(...args) : [];
+  if (modules.includes(earlyPolyfills)) {
+    return modules;
+  }
+  return modules.length > 0
+    ? [modules[0], earlyPolyfills, ...modules.slice(1)]
+    : [earlyPolyfills];
+};
+
+module.exports = nativeWindConfig;

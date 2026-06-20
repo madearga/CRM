@@ -408,7 +408,7 @@ export const mobileOverview = createAuthQuery()({
 
     // Recent: top 5 open user activities by dueAt ascending (overdue first).
     const recentActivities = recentActivityRows
-      .filter((a) => isOpenActivity(a))
+      .filter((a) => isOpenActivity(a) && typeof a.dueAt === 'number')
       .sort((a, b) => (a.dueAt ?? 0) - (b.dueAt ?? 0))
       .slice(0, 5)
       .map((a) => ({
@@ -417,7 +417,7 @@ export const mobileOverview = createAuthQuery()({
         type: a.type,
         entityType: a.entityType,
         entityId: a.entityId,
-        dueAt: a.dueAt!,
+        dueAt: a.dueAt as number,
       }));
 
     // --- Overdue invoices ---

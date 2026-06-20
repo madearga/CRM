@@ -6,11 +6,10 @@ export interface SkeletonProps extends ViewProps {
 }
 
 /**
- * Pulse placeholder that mirrors the shape of the content being loaded.
+ * Placeholder that mirrors the shape of the content being loaded.
  *
- * NativeWind v4 resolves `animate-pulse` to a React Native-compatible opacity
- * animation. If NativeWind is ever disabled, replace with a StyleSheet opacity
- * loop driven by `react-native-reanimated` or `Animated`.
+ * Keep this static: NativeWind's `animate-pulse` path depends on Reanimated
+ * internals that Expo Go can expose differently, causing `makeMutable` crashes.
  */
 export function Skeleton({
   className,
@@ -20,7 +19,7 @@ export function Skeleton({
   return (
     <View
       className={cn(
-        "animate-pulse rounded-md bg-muted",
+        "rounded-md bg-muted",
         circle && "rounded-full",
         className,
       )}

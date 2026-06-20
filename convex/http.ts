@@ -2,7 +2,6 @@ import './helpers/polyfills';
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { internal } from './_generated/api';
-import { authClient } from './auth';
 import { createAuth } from './auth';
 import { handlePaymentWebhook } from './commerce/checkout';
 import { handleAiChat } from './aiChat';
@@ -10,7 +9,40 @@ import { verifyWebhookSignature } from './helpers/validateWebhook';
 
 const http = httpRouter();
 
-authClient.registerRoutes(http, createAuth);
+function authBaseURLForRequest(request: Request): string {
+  const forwardedWebOrigin = request.headers.get('x-crm-auth-base-url');
+  if (forwardedWebOrigin) return forwardedWebOrigin;
+
+  const convexSiteUrl =
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL || process.env.CONVEX_SITE_URL;
+  const origin = request.headers.get('origin');
+  const requestUrl = new URL(request.url);
+
+  if (request.headers.has('expo-origin') || requestUrl.hostname.endsWith('.convex.site')) {
+    return convexSiteUrl || requestUrl.origin;
+  }
+
+  return origin || process.env.NEXT_PUBLIC_SITE_URL || convexSiteUrl || requestUrl.origin;
+}
+
+const authRequestHandler = httpAction(async (ctx, request) => {
+  const auth = createAuth(ctx as any, {
+    baseURL: authBaseURLForRequest(request),
+  });
+  return auth.handler(request);
+});
+
+http.route({ pathPrefix: '/api/auth/', method: 'GET', handler: authRequestHandler });
+http.route({ pathPrefix: '/api/auth/', method: 'POST', handler: authRequestHandler });
+
+http.route({
+  path: '/.well-known/openid-configuration',
+  method: 'GET',
+  handler: httpAction(async () => {
+    const siteUrl = process.env.CONVEX_SITE_URL || process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
+    return Response.redirect(`${siteUrl}/api/auth/convex/.well-known/openid-configuration`);
+  }),
+});
 
 // AI Chat Assistant (owner-only)
 http.route({

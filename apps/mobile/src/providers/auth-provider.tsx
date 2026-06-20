@@ -30,6 +30,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
+import * as Linking from 'expo-linking';
 
 import { isSessionPayload, toSessionUser, type SessionUser } from '@crm/auth';
 
@@ -59,6 +60,8 @@ export interface AuthContextValue {
   isInitializing: boolean;
   /** Sign in with email + password. Returns a normalized result. */
   signInEmail: (email: string, password: string) => Promise<SignInResult>;
+  /** Sign in through Google OAuth (native expoClient flow). */
+  signInGoogle: () => Promise<SignInResult>;
   /** Server sign-out → clear storage → reset Convex auth. */
   signOut: () => Promise<void>;
   /** Dismiss the inline login error. */
@@ -66,6 +69,11 @@ export interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Environment-aware deep link: exp://... in Expo Go, crmmobile:// in a dev/standalone build.
+function oauthCallbackURL(): string {
+  return Linking.createURL('auth/callback');
+}
 
 function toAuthSession(data: unknown): AuthSession | null {
   // Delegate structural validation + user normalisation to the shared
@@ -115,6 +123,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const signInGoogle = useCallback(async () => {
+    dispatch({ type: 'SIGN_IN_REQUEST' });
+    try {
+      // Native expoClient flow: signIn.social opens the system browser,
+      // Google redirects back to the crmmobile:// deep link, expoClient
+      // captures the session cookie from the deep link, and useSession then
+      // resolves the session. No manual WebBrowser / OTT exchange.
+      const result = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: oauthCallbackURL(),
+      });
+
+      if (result.error) {
+        const message = result.error.message ?? 'Google sign-in failed';
+        dispatch({ type: 'SIGN_IN_FAILURE', error: message });
+        return { ok: false, error: message };
+      }
+
+      // Success: useSession subscription drives SESSION_RESOLVED.
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google sign-in failed';
+      dispatch({ type: 'SIGN_IN_FAILURE', error: message });
+      return { ok: false, error: message };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     dispatch({ type: 'SIGN_OUT_REQUEST' });
     try {
@@ -124,15 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore — local cleanup is mandatory regardless */
     } finally {
-      // Scrub secure storage first. clearSecureAuthStorage overwrites any
-      // un-deletable key with an empty string, so `cleared` is true once no
-      // usable token remains. Retry once on a catastrophic failure; we never
-      // strand the user in `signingOut` — SIGN_OUT_COMPLETE always fires.
+      // Scrub secure storage. clearSecureAuthStorage already overwrites any
+      // un-deletable key with an empty string, so no usable token survives.
       try {
-        const first = await clearSecureAuthStorage();
-        if (!first.cleared) {
-          await clearSecureAuthStorage();
-        }
+        await clearSecureAuthStorage();
       } catch {
         /* ignore — Convex auth reset below is the critical cleanup */
       }
@@ -160,10 +190,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       isInitializing: state.status === 'initializing',
       signInEmail,
+      signInGoogle,
       signOut,
       clearError,
     };
-  }, [state.status, state.error, data, signInEmail, signOut, clearError]);
+  }, [state.status, state.error, data, signInEmail, signInGoogle, signOut, clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

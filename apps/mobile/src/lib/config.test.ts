@@ -13,8 +13,6 @@ import {
   envSchema,
   parseClientEnv,
   parseEnv,
-  safeParseClientEnv,
-  safeParseEnv,
 } from '@crm/config';
 
 const validClient = {
@@ -47,15 +45,15 @@ describe('clientEnvSchema (client-safe)', () => {
     );
   });
 
-  it('safeParseClientEnv returns success:false without throwing', () => {
-    const result = safeParseClientEnv({ CONVEX_URL: undefined });
+  it('clientEnvSchema.safeParse returns success:false without throwing', () => {
+    const result = clientEnvSchema.safeParse({ CONVEX_URL: undefined });
     expect(result.success).toBe(false);
   });
 });
 
 describe('envSchema (full / server)', () => {
   it('requires BETTER_AUTH_SECRET', () => {
-    const result = safeParseEnv(validClient);
+    const result = envSchema.safeParse(validClient);
     expect(result.success).toBe(false);
   });
 
