@@ -40,4 +40,16 @@ None. All 12 MVP smoke items pass on device via Expo Go.
 
 ## Deep-link decision note (T6)
 
-> (To be filled in Task 6.)
+**Decision: distribution builds MUST use the native `crmmobile://` scheme; Expo Go `exp://` is dev-only.**
+
+Rationale & verified facts:
+- `apps/mobile/app.json` declares `"scheme": "crmmobile"`. In Expo Go this is overridden by the `exp://` host, which is why dev today returns to `exp://100.108.222.46:8081/--/auth/callback`. In a standalone EAS build (development/preview/production profile), `Linking.createURL('auth/callback')` resolves to `crmmobile://auth/callback` automatically.
+- `convex/auth.ts` trusted origins already include both schemes:
+  - `crmmobile://` (line 209)
+  - `exp://100.108.222.46:8081` + `http://localhost:3000/3005` (line 211)
+- No code change is required for the scheme switch — it activates once the app is a standalone build. `Linking.createURL('auth/callback')` is environment-aware.
+- Google Cloud OAuth authorized redirect URI stays on the Convex site callback for both modes: `https://knowing-capybara-968.convex.site/api/auth/callback/google`. (Google redirects to the server; the server sets the session cookie / token and the app returns via the client scheme.)
+
+Consequence for downstream tasks:
+- T9 (first distribution build) will exercise `crmmobile://` for the first time on a real device. If return-to-app fails in a standalone build, the debugging surface is the trusted-origin match in `convex/auth.ts`, not the client scheme.
+- Expo Go continues to work for development via `exp://`; it is not a distribution channel and must not be relied on for testers.
