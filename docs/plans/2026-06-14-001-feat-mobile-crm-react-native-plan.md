@@ -47,6 +47,8 @@ Origin: `docs/brainstorms/2026-06-14-mobile-crm-react-native.md`
 - **Out of scope for MVP:** Deal updates, contact/company browse, invoice reminders, HR attendance, push notifications, offline sync, deep linking to per-record web views, customer storefront, admin/permission management UI, public app store submission.
 - **Deferred to follow-up work:** Deals, contacts/companies, invoice reminders, HR, push notifications, offline-first sync, biometric login, native payment collection.
 
+> **Phase status (updated 2026-06-20):** U0–U8 are **complete and validated end-to-end** in Expo Go. A hardening + internal-distribution follow-up phase lives in [`docs/plans/2026-06-20-mobile-mvp-hardening-and-distribution.md`](./2026-06-20-mobile-mvp-hardening-and-distribution.md) (validation gate passed, security hardened, regression tests added). **U9 is partially done** (EAS profiles/CI/`app.json` configured) but the **first real build is deferred** pending an Expo account (`eas init`) and, for iOS device installs, an Apple Developer Program account. A standalone Android APK can be built with no paid account. See that phase doc for the current blocker list.
+
 ---
 
 ## Context & Research

@@ -2,7 +2,7 @@
 
 React Native + Expo companion app for the CRM, built inside the Turborepo.
 
-- **Expo SDK 53** (React Native 0.79.x) — chosen because the root repo pins **React 19.1.1**, and SDK 53 is the first Expo release compatible with React 19.
+- **Expo SDK 54** (React Native 0.81.x) — chosen because the root repo pins **React 19.1.1**; SDK 53+ is the first Expo line compatible with React 19.
 - **NativeWind v4** (Tailwind) as the primary styling system; plain `StyleSheet` + `src/styles/theme.ts` tokens are the documented fallback.
 - **Expo Router** (file-based routes under `app/`).
 - Shares `@crm/domain`, `@crm/auth`, `@crm/config` from the workspace.
@@ -66,7 +66,7 @@ This protects the mobile bundle from accidentally pulling in web-only code via s
 
 - `global.css` is processed by `nativewind/metro` (`withNativeWind`) and imported once in `app/_layout.tsx`.
 - `babel.config.js` sets `jsxImportSource: "nativewind"`.
-- `babel.nativewind.js` is a **local preset** that replaces the upstream `nativewind/babel` preset. The upstream preset hardcodes `"react-native-worklets/plugin"` (Reanimated **4+**), but SDK 53 ships Reanimated 3.x. Our local preset uses `"react-native-reanimated/plugin"` instead and resolves the css-interop babel plugin through the `nativewind` package path. When the app upgrades to Reanimated 4+, delete `babel.nativewind.js` and switch back to `"nativewind/babel"` in `babel.config.js`.
+- `babel.nativewind.js` is a **local preset** that replaces the upstream `nativewind/babel` preset. It was introduced when the app shipped Reanimated 3.x; SDK 54 now bundles Reanimated 4.x, so the rationale is stale. The app **runs and is validated end-to-end** with this preset in place (see Status), but a future cleanup should re-evaluate whether the upstream `nativewind/babel` preset can be used directly.
 - `tailwind.config.js` uses the `nativewind/preset` and mobile-only `content` globs.
 - Design tokens mirror `../../DESIGN.md` and `src/styles/theme.ts`.
 
@@ -161,4 +161,13 @@ The blocklist is exercised by temporarily adding e.g. `import 'next/image';` to 
 
 ## Status
 
-**U1 — scaffold complete.** Only a hello-world screen (`app/index.tsx`) is shipped. Auth providers, navigation tabs, and feature screens arrive in later units (U3+). **U9 — EAS internal distribution configured** (profiles, CI workflow, app.json, placeholder assets). First real build blocked on `eas init` (project ID) — see prerequisites above.
+**MVP validated end-to-end; hardening complete; distribution deferred pending accounts.**
+
+- **U0–U8 complete & verified.** The app runs in Expo Go on iPhone via Metro over Tailscale, and passed all 12 smoke-test screens (login → dashboard → activities create/list → invoices list/detail read-only → settings/sign-out → offline banner → empty states). See `docs/plans/mobile-mvp-smoke-results.md`.
+- **Hardening phase (2026-06-20):** `format-date` guarded against bad inputs + regression tests; `isInvoiceOverdue` classifier regression tests; security posture verified (SecureStore `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, no unencrypted PII cache, screenshot/app-switcher protection on the invoice detail screen via `expo-screen-capture`). See `docs/plans/2026-06-20-mobile-mvp-hardening-and-distribution.md`.
+- **U9 — EAS distribution configured** (profiles in `eas.json`, CI workflow `.github/workflows/deploy-mobile.yml`, `app.json`, placeholder assets), **but NOT yet built.** The first real build is blocked on:
+  - `eas login` + `eas init` (writes a real `projectId`; replace the `REPLACE_AFTER_EAS_INIT` placeholder).
+  - Replacing the `REPLACE_WITH_*` env placeholders in `eas.json` (or moving them to EAS secrets).
+  - For **iOS device / TestFlight** installs: an **Apple Developer Program** account ($99/yr) for code signing. *(iOS Simulator builds are free and need no Apple account.)*
+  - For **Play Store** publishing: a **Google Play Console** account ($25). *(A standalone **Android APK** can be built and sideloaded with no account at all — this is the cheapest path to a shareable binary today.)*
+- **Deep-link scheme:** `crmmobile://` is declared in `app.json` and listed in Convex trusted origins for standalone builds; Expo Go dev uses `exp://`. See the T6 decision note in the smoke-results doc.
