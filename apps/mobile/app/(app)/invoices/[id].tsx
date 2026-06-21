@@ -7,7 +7,6 @@
  */
 import { ScrollView, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { usePreventScreenCapture } from 'expo-screen-capture';
 
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Badge } from '@/components/ui/badge';
@@ -39,9 +38,10 @@ export default function InvoiceDetailScreen() {
 }
 
 function InvoiceDetail({ id }: { id: Id<'invoices'> }) {
-  // Financial PII (customer, line items, totals): block screenshots + the
-  // app-switcher preview while this screen is mounted.
-  usePreventScreenCapture();
+  // ponytail: screenshot-protect (expo-screen-capture) deferred — Metro could
+  // not resolve the pnpm-symlinked package, blocking invoice detail. Re-add
+  // once the install/Metro resolution is fixed or in the EAS build phase
+  // (where screenshot-protect matters most, not Expo Go dev).
   const inv = useQuery(api.invoices.getById, { id });
 
   if (!inv) return <DetailSkeleton />;
