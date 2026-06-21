@@ -28,9 +28,12 @@ const TAB_CONFIG: Record<
   TabKey,
   { title: string; icon: { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap } }
 > = {
+  // Each silhouette is intentionally distinct so no two tabs look alike at a
+  // glance: grid (overview) / people (customers) / calendar (schedule) /
+  // receipt (billing) / gear (config).
   dashboard: { title: 'Dashboard', icon: { active: 'grid', inactive: 'grid-outline' } },
-  crm: { title: 'CRM', icon: { active: 'briefcase', inactive: 'briefcase-outline' } },
-  activities: { title: 'Activities', icon: { active: 'checkbox', inactive: 'checkbox-outline' } },
+  crm: { title: 'CRM', icon: { active: 'people', inactive: 'people-outline' } },
+  activities: { title: 'Activities', icon: { active: 'calendar', inactive: 'calendar-outline' } },
   invoices: { title: 'Invoices', icon: { active: 'receipt', inactive: 'receipt-outline' } },
   settings: { title: 'Settings', icon: { active: 'settings', inactive: 'settings-outline' } },
 };
