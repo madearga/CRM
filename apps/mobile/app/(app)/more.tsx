@@ -20,6 +20,8 @@ interface MenuRowProps {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** Accent color for the icon chip so each row has its own visual identity. */
+  chipTint?: string;
   /** Small pill on the trailing side for disabled rows, e.g. "Coming soon". */
   badge?: string;
 }
@@ -30,10 +32,10 @@ interface MenuRowProps {
  * feedback (no animated/active-scale classes — Reanimated makeMutable crashes
  * Expo Go).
  */
-function MenuRow({ icon, label, onPress, disabled, badge }: MenuRowProps) {
+function MenuRow({ icon, label, onPress, disabled, badge, chipTint }: MenuRowProps) {
   const enabled = !disabled && !!onPress;
   const iconColor = enabled ? colors.foreground : colors.mutedForeground;
-  const chipBg = colors.muted;
+  const chipBg = chipTint ?? colors.muted;
   const textColor = enabled ? 'text-foreground' : 'text-muted-foreground';
   const chevronColor = enabled ? colors.foreground : colors.mutedForeground;
 
@@ -104,14 +106,16 @@ export default function CrmHubScreen() {
       <SectionHeader title="Directory" />
       <Card className="overflow-hidden">
         <MenuRow
-          icon="people-outline"
+          icon="person-circle-outline"
           label="Contacts"
+          chipTint="rgba(59,130,246,0.15)"
           onPress={() => router.push('/(app)/contacts')}
         />
         <Divider />
         <MenuRow
           icon="business-outline"
           label="Companies"
+          chipTint="rgba(34,197,94,0.15)"
           onPress={() => router.push('/(app)/companies')}
         />
       </Card>
@@ -119,7 +123,7 @@ export default function CrmHubScreen() {
       {/** Pipeline — revenue in motion */}
       <SectionHeader title="Pipeline" />
       <Card className="overflow-hidden">
-        <MenuRow icon="briefcase-outline" label="Deals" disabled badge="Coming soon" />
+        <MenuRow icon="trending-up-outline" label="Deals" disabled badge="Coming soon" chipTint="rgba(249,115,22,0.15)" />
       </Card>
     </ScrollView>
   );
