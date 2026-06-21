@@ -10,4 +10,4 @@
  * NOTE: we deliberately do NOT re-export from `@convex-dev/react-query` (web
  * dependency, pulls `convex/browser`). `convex/react` is RN-safe.
  */
-export { useQuery, useMutation, useAction, useConvex } from 'convex/react';
+export { useQuery, useMutation, useAction, useConvex, usePaginatedQuery } from 'convex/react';
