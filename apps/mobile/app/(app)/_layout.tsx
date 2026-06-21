@@ -12,7 +12,7 @@
  * active label so it reads as part of the CRM design system rather than the
  * default iOS/Android chrome.
  */
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -97,6 +97,10 @@ export default function AppLayout() {
         name="more"
         options={{
           title: TAB_CONFIG.more.title,
+          // Settings as a gear icon on the far right of the header (not a list
+          // row) so the More list stays focused on feature navigation and
+          // scales cleanly as Phase 2 adds more rows.
+          headerRight: () => <SettingsGearAction />,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name={TAB_CONFIG.more.icon} size={size} color={color} />
           ),
@@ -104,6 +108,25 @@ export default function AppLayout() {
       />
     </Tabs>
     </View>
+  );
+}
+
+/**
+ * Header settings gear (far-right). Big hit target via hitSlop; aria-label so
+ * the icon-only button is announced. Pushes the settings stack.
+ */
+function SettingsGearAction() {
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() => router.push('/(app)/settings')}
+      accessibilityRole="button"
+      accessibilityLabel="Settings"
+      hitSlop={{ top: 10, bottom: 10, left: 12, right: 8 }}
+      className="px-3"
+    >
+      <Ionicons name="settings-outline" size={22} color={colors.foreground} />
+    </Pressable>
   );
 }
 
