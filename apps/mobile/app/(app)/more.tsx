@@ -100,8 +100,13 @@ export default function MoreScreen() {
         <MenuRow
           icon="people-outline"
           label="Contacts"
-          disabled
-          detail="Phase 2"
+          onPress={() => router.push('/(app)/contacts')}
+        />
+        <View className="h-px bg-border mx-4" />
+        <MenuRow
+          icon="business-outline"
+          label="Companies"
+          onPress={() => router.push('/(app)/companies')}
         />
       </Card>
     </View>
