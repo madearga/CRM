@@ -22,6 +22,7 @@ export default function ContactsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Contacts' }} />
+      <Stack.Screen name="[id]" options={{ title: 'Contact' }} />
     </Stack>
   );
 }
