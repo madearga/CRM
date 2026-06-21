@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/styles/theme';
 
@@ -88,10 +88,6 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function Divider() {
-  return <View className="h-px bg-border mx-4" />;
-}
-
 export default function CrmHubScreen() {
   const router = useRouter();
 
@@ -111,7 +107,7 @@ export default function CrmHubScreen() {
           chipTint="rgba(59,130,246,0.15)"
           onPress={() => router.push('/(app)/contacts')}
         />
-        <Divider />
+        <View className="h-px bg-border mx-4" />
         <MenuRow
           icon="business-outline"
           label="Companies"

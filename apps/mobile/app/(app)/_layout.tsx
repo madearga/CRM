@@ -24,21 +24,27 @@ import { colors } from '@/styles/theme';
 
 type TabKey = 'dashboard' | 'crm' | 'activities' | 'invoices' | 'settings';
 
-const TAB_CONFIG: Record<
-  TabKey,
-  { title: string; icon: { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap } }
-> = {
-  // Each silhouette is intentionally distinct so no two tabs look alike at a
-  // glance: grid (overview) / briefcase (customers module) / calendar (schedule)
-  // / receipt (billing) / gear (config). Note: the Contacts *row* inside the
-  // CRM hub uses person-circle, so the tab stays as briefcase to avoid two
-  // "people" icons on screen at once.
-  dashboard: { title: 'Dashboard', icon: { active: 'grid', inactive: 'grid-outline' } },
-  crm: { title: 'CRM', icon: { active: 'briefcase', inactive: 'briefcase-outline' } },
-  activities: { title: 'Activities', icon: { active: 'calendar', inactive: 'calendar-outline' } },
-  invoices: { title: 'Invoices', icon: { active: 'receipt', inactive: 'receipt-outline' } },
-  settings: { title: 'Settings', icon: { active: 'settings', inactive: 'settings-outline' } },
+// Active = filled glyph; inactive = `<base>-outline`. Distinct silhouettes so no
+// two tabs look alike. CRM tab is briefcase (not people) to avoid clashing
+// with the person-circle row inside the CRM hub.
+const TAB_CONFIG: Record<TabKey, { title: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  dashboard: { title: 'Dashboard', icon: 'grid' },
+  crm: { title: 'CRM', icon: 'briefcase' },
+  activities: { title: 'Activities', icon: 'calendar' },
+  invoices: { title: 'Invoices', icon: 'receipt' },
+  settings: { title: 'Settings', icon: 'settings' },
 };
+
+/** Tab bar icon: filled when focused, outlined otherwise. */
+const tabIcon = (k: TabKey) =>
+  ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
+    (
+      <Ionicons
+        name={(focused ? TAB_CONFIG[k].icon : `${TAB_CONFIG[k].icon}-outline`) as keyof typeof Ionicons.glyphMap}
+        size={size}
+        color={color}
+      />
+    );
 
 export default function AppLayout() {
   const { status } = useAuth();
@@ -69,55 +75,13 @@ export default function AppLayout() {
           tabBarButton: (props) => <Pressable {...(props as object)} />,
         }}
       >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: TAB_CONFIG.dashboard.title,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={TAB_CONFIG.dashboard.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="more"
-        options={{
-          title: TAB_CONFIG.crm.title,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={TAB_CONFIG.crm.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="activities"
-        options={{
-          title: TAB_CONFIG.activities.title,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={TAB_CONFIG.activities.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="invoices"
-        options={{
-          title: TAB_CONFIG.invoices.title,
-          // The invoices tab owns a nested Stack (invoices/_layout.tsx) that
-          // renders its own headers (list + detail). Hide the tab-level header
-          // here so we never stack two headers on top of each other.
-          headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={TAB_CONFIG.invoices.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: TAB_CONFIG.settings.title,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={TAB_CONFIG.settings.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: TAB_CONFIG.dashboard.title, tabBarIcon: tabIcon('dashboard') }} />
+      <Tabs.Screen name="more" options={{ title: TAB_CONFIG.crm.title, tabBarIcon: tabIcon('crm') }} />
+      <Tabs.Screen name="activities" options={{ title: TAB_CONFIG.activities.title, tabBarIcon: tabIcon('activities') }} />
+      {/* Invoices owns a nested Stack that renders its own headers; hide the
+          tab-level header so we never stack two. */}
+      <Tabs.Screen name="invoices" options={{ title: TAB_CONFIG.invoices.title, headerShown: false, tabBarIcon: tabIcon('invoices') }} />
+      <Tabs.Screen name="settings" options={{ title: TAB_CONFIG.settings.title, tabBarIcon: tabIcon('settings') }} />
     </Tabs>
     </View>
   );
