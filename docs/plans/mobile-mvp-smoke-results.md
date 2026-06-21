@@ -53,3 +53,31 @@ Rationale & verified facts:
 Consequence for downstream tasks:
 - T9 (first distribution build) will exercise `crmmobile://` for the first time on a real device. If return-to-app fails in a standalone build, the debugging surface is the trusted-origin match in `convex/auth.ts`, not the client scheme.
 - Expo Go continues to work for development via `exp://`; it is not a distribution channel and must not be relied on for testers.
+
+---
+
+## Phase 2.1 — Contacts & Companies (2026-06-21)
+
+Branch `phase/mobile-p2.1-contacts-companies`. All code tasks A–F done; autonomous checks green:
+- mobile tsc ✓, **web tsc ✓ (untouched)**, convex tsc ✓
+- vitest 325 passing
+- `animate-*`/`active:scale`/`hover:` audit: clean (no new Reanimated-trigger classes)
+
+### Commits
+- `73a59d6` infra (usePaginatedQuery, useDebouncedSearch, SearchList)
+- `2a4017a` contacts list
+- `6f8a2a8` contact detail (tap-to-call/email + company cross-link)
+- `cd5a994` companies list
+- `3fe9287` company detail + contacts-at-company
+- `f301791` More menu entries (Contacts + Companies)
+
+### Smoke checklist (Expo Go on iPhone) — TO VERIFY
+1. More tab → Contacts row → contacts list loads + paginates + search debounces.
+2. Tap a contact → detail loads (avatar, name, jobTitle, lifecycle badge).
+3. Contact detail: Call button opens dialer (if phone present); Email opens mail composer (if email present).
+4. Contact detail: company row → pushes company detail.
+5. Company detail: website button opens browser (scheme-safe).
+6. Company detail: "Contacts" section lists contacts at that company; tap one → contact detail (cross-link back).
+7. More tab → Companies row → companies list loads + search.
+8. Empty states: org with no contacts/companies shows the empty messages, not blank.
+9. Pagination: scroll a long list → "Load more" (company contacts) / auto onEndReached (lists).
