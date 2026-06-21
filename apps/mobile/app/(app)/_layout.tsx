@@ -1,18 +1,19 @@
 /**
  * Authenticated app shell — bottom tab navigation.
  *
- * Four tabs map to the MVP attention model (U3 layout, screens fleshed out in
- * U5–U7):
- *   1. Dashboard  — what needs attention right now (U5)
- *   2. Activities — list + quick-create (U6)
- *   3. Invoices   — overdue / outstanding read-only (U7)
- *   4. More       — profile, sign-out, settings
+ * Five tabs put the core modules one tap away:
+ *   1. Dashboard  — what needs attention right now
+ *   2. CRM        — Contacts + Companies hub (was "More")
+ *   3. Activities — list + quick-create
+ *   4. Invoices   — overdue / outstanding read-only
+ *   5. Settings   — account, workspace, sign-out (far right)
  *
- * The tab bar uses the theme background/border tokens and a primary-tinted
- * active label so it reads as part of the CRM design system rather than the
- * default iOS/Android chrome.
+ * Active icons are filled; inactive icons are outlined so each tab has a clear,
+ * non-uniform silhouette. The tab bar uses the theme background/border tokens
+ * and a primary-tinted active label so it reads as part of the CRM design
+ * system rather than the default iOS/Android chrome.
  */
-import { Redirect, Tabs, useRouter } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,16 +22,17 @@ import { useNetwork } from '@/hooks/use-network';
 import { useAuth } from '@/hooks/use-auth';
 import { colors } from '@/styles/theme';
 
-type TabKey = 'dashboard' | 'activities' | 'invoices' | 'more';
+type TabKey = 'dashboard' | 'crm' | 'activities' | 'invoices' | 'settings';
 
 const TAB_CONFIG: Record<
   TabKey,
-  { title: string; icon: keyof typeof Ionicons.glyphMap }
+  { title: string; icon: { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap } }
 > = {
-  dashboard: { title: 'Dashboard', icon: 'grid-outline' },
-  activities: { title: 'Activities', icon: 'checkbox-outline' },
-  invoices: { title: 'Invoices', icon: 'receipt-outline' },
-  more: { title: 'More', icon: 'menu-outline' },
+  dashboard: { title: 'Dashboard', icon: { active: 'grid', inactive: 'grid-outline' } },
+  crm: { title: 'CRM', icon: { active: 'briefcase', inactive: 'briefcase-outline' } },
+  activities: { title: 'Activities', icon: { active: 'checkbox', inactive: 'checkbox-outline' } },
+  invoices: { title: 'Invoices', icon: { active: 'receipt', inactive: 'receipt-outline' } },
+  settings: { title: 'Settings', icon: { active: 'settings', inactive: 'settings-outline' } },
 };
 
 export default function AppLayout() {
@@ -52,9 +54,13 @@ export default function AppLayout() {
           tabBarStyle: {
             backgroundColor: colors.background,
             borderTopColor: colors.border,
+            height: 64,
+            paddingBottom: 8,
+            paddingTop: 6,
           },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.mutedForeground,
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
           tabBarButton: (props) => <Pressable {...(props as object)} />,
         }}
       >
@@ -62,8 +68,17 @@ export default function AppLayout() {
         name="index"
         options={{
           title: TAB_CONFIG.dashboard.title,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={TAB_CONFIG.dashboard.icon} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_CONFIG.dashboard.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: TAB_CONFIG.crm.title,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_CONFIG.crm.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
           ),
         }}
       />
@@ -71,12 +86,8 @@ export default function AppLayout() {
         name="activities"
         options={{
           title: TAB_CONFIG.activities.title,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons
-              name={TAB_CONFIG.activities.icon}
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_CONFIG.activities.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
           ),
         }}
       />
@@ -88,21 +99,17 @@ export default function AppLayout() {
           // renders its own headers (list + detail). Hide the tab-level header
           // here so we never stack two headers on top of each other.
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={TAB_CONFIG.invoices.icon} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_CONFIG.invoices.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="settings"
         options={{
-          title: TAB_CONFIG.more.title,
-          // Settings as a gear icon on the far right of the header (not a list
-          // row) so the More list stays focused on feature navigation and
-          // scales cleanly as Phase 2 adds more rows.
-          headerRight: () => <SettingsGearAction />,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name={TAB_CONFIG.more.icon} size={size} color={color} />
+          title: TAB_CONFIG.settings.title,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_CONFIG.settings.icon[focused ? 'active' : 'inactive']} size={size} color={color} />
           ),
         }}
       />
@@ -111,24 +118,7 @@ export default function AppLayout() {
   );
 }
 
-/**
- * Header settings gear (far-right). Big hit target via hitSlop; aria-label so
- * the icon-only button is announced. Pushes the settings stack.
- */
-function SettingsGearAction() {
-  const router = useRouter();
-  return (
-    <Pressable
-      onPress={() => router.push('/(app)/settings')}
-      accessibilityRole="button"
-      accessibilityLabel="Settings"
-      hitSlop={{ top: 10, bottom: 10, left: 12, right: 8 }}
-      className="px-3"
-    >
-      <Ionicons name="settings-outline" size={22} color={colors.foreground} />
-    </Pressable>
-  );
-}
+
 
 /**
  * Global connectivity banner rendered above the bottom tabs.
