@@ -1,9 +1,9 @@
 /**
  * Nested navigator for the Companies group (P2.1, Task D).
  *
- * Hosts the list (`index`). Detail (`[id]`) is added in Task E. Mirrors the
+ * Hosts the list (`index`) and detail (`[id]`) screens. Mirrors the
  * contacts `_layout.tsx`: a single Stack provides the themed header + back
- * button so list screens stay header-less bodies.
+ * button so screens stay header-less bodies.
  */
 import { Stack } from 'expo-router';
 
