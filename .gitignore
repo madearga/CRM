@@ -16,3 +16,7 @@ convex/_generated
 **/pi-session-*.html
 **/pi-session-*.json
 .worktrees/
+
+# Agent tool state (regenerable, not source)
+.ralph/
+.context/
