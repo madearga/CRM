@@ -25,6 +25,10 @@ export const colors = {
   successForeground: "#0a0a0f",
   warning: "#f97316",
   warningForeground: "#0a0a0f",
+  // Soft accent backgrounds for icon chips / badges (15% alpha of the accent).
+  successTint: "rgba(34,197,94,0.15)",
+  warningTint: "rgba(249,115,22,0.15)",
+  infoTint: "rgba(59,130,246,0.15)",
   border: "rgba(240,240,250,0.10)",
   ring: "rgba(240,240,250,0.30)",
 } as const;

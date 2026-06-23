@@ -23,28 +23,24 @@ import { useAuth } from '@/hooks/use-auth';
 import { colors } from '@/styles/theme';
 
 type TabKey = 'dashboard' | 'crm' | 'activities' | 'invoices' | 'settings';
+type IconName = keyof typeof Ionicons.glyphMap;
 
-// Active = filled glyph; inactive = `<base>-outline`. Distinct silhouettes so no
-// two tabs look alike. CRM tab is briefcase (not people) to avoid clashing
-// with the person-circle row inside the CRM hub.
-const TAB_CONFIG: Record<TabKey, { title: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  dashboard: { title: 'Dashboard', icon: 'grid' },
-  crm: { title: 'CRM', icon: 'briefcase' },
-  activities: { title: 'Activities', icon: 'calendar' },
-  invoices: { title: 'Invoices', icon: 'receipt' },
-  settings: { title: 'Settings', icon: 'settings' },
+// Explicit filled/outline pairs (not string-derived) so a tab whose glyph lacks
+// an -outline variant (logo-*, brand marks) is a compile error, not a blank
+// icon at runtime. CRM tab is briefcase (not people) to avoid clashing with
+// the person-circle row inside the CRM hub.
+const TAB_CONFIG: Record<TabKey, { title: string; filled: IconName; outline: IconName }> = {
+  dashboard: { title: 'Dashboard', filled: 'grid', outline: 'grid-outline' },
+  crm: { title: 'CRM', filled: 'briefcase', outline: 'briefcase-outline' },
+  activities: { title: 'Activities', filled: 'calendar', outline: 'calendar-outline' },
+  invoices: { title: 'Invoices', filled: 'receipt', outline: 'receipt-outline' },
+  settings: { title: 'Settings', filled: 'settings', outline: 'settings-outline' },
 };
 
 /** Tab bar icon: filled when focused, outlined otherwise. */
 const tabIcon = (k: TabKey) =>
   ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
-    (
-      <Ionicons
-        name={(focused ? TAB_CONFIG[k].icon : `${TAB_CONFIG[k].icon}-outline`) as keyof typeof Ionicons.glyphMap}
-        size={size}
-        color={color}
-      />
-    );
+    <Ionicons name={focused ? TAB_CONFIG[k].filled : TAB_CONFIG[k].outline} size={size} color={color} />;
 
 export default function AppLayout() {
   const { status } = useAuth();
@@ -76,6 +72,8 @@ export default function AppLayout() {
         }}
       >
       <Tabs.Screen name="index" options={{ title: TAB_CONFIG.dashboard.title, tabBarIcon: tabIcon('dashboard') }} />
+      {/* Route file is still more.tsx (kept to avoid deep-link churn); the
+          tab itself is the CRM hub — hence key/title "CRM". */}
       <Tabs.Screen name="more" options={{ title: TAB_CONFIG.crm.title, tabBarIcon: tabIcon('crm') }} />
       <Tabs.Screen name="activities" options={{ title: TAB_CONFIG.activities.title, tabBarIcon: tabIcon('activities') }} />
       {/* Invoices owns a nested Stack that renders its own headers; hide the
@@ -86,8 +84,6 @@ export default function AppLayout() {
     </View>
   );
 }
-
-
 
 /**
  * Global connectivity banner rendered above the bottom tabs.

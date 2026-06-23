@@ -4,7 +4,7 @@
  * Replaces the old "More" tab. Settings now lives as its own bottom-tab
  * (far-right), so this screen stays focused on CRM feature navigation.
  */
-import { Pressable, ScrollView, View, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -44,11 +44,9 @@ function MenuRow({ icon, label, onPress, disabled, badge, chipTint }: MenuRowPro
       onPress={onPress}
       disabled={!enabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={badge ? `${label}, ${badge}` : label}
       accessibilityState={{ disabled: !enabled }}
-      style={({ pressed }) =>
-        ({ opacity: enabled && pressed ? 0.7 : undefined }) as ViewStyle
-      }
+      style={({ pressed }) => ({ opacity: enabled && pressed ? 0.7 : undefined })}
     >
       <View className="min-h-14 flex-row items-center justify-between gap-3 px-4 py-3">
         <View className="flex-row flex-1 items-center gap-3">
@@ -81,6 +79,7 @@ function SectionHeader({ title }: { title: string }) {
   return (
     <Text
       variant="caption"
+      accessibilityRole="header"
       className="px-4 pb-1.5 pt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
     >
       {title}
@@ -104,14 +103,14 @@ export default function CrmHubScreen() {
         <MenuRow
           icon="person-circle-outline"
           label="Contacts"
-          chipTint="rgba(59,130,246,0.15)"
+          chipTint={colors.infoTint}
           onPress={() => router.push('/(app)/contacts')}
         />
         <View className="h-px bg-border mx-4" />
         <MenuRow
           icon="business-outline"
           label="Companies"
-          chipTint="rgba(34,197,94,0.15)"
+          chipTint={colors.successTint}
           onPress={() => router.push('/(app)/companies')}
         />
       </Card>
@@ -119,7 +118,7 @@ export default function CrmHubScreen() {
       {/** Pipeline — revenue in motion */}
       <SectionHeader title="Pipeline" />
       <Card className="overflow-hidden">
-        <MenuRow icon="trending-up-outline" label="Deals" disabled badge="Coming soon" chipTint="rgba(249,115,22,0.15)" />
+        <MenuRow icon="trending-up-outline" label="Deals" disabled badge="Coming soon" chipTint={colors.warningTint} />
       </Card>
     </ScrollView>
   );
