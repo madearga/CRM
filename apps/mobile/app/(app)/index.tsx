@@ -24,13 +24,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityRow } from '@/components/activity-row';
 import { AttentionCard } from '@/components/attention-card';
 import { EmptyState } from '@/components/empty-state';
-import { KpiCard } from '@/components/kpi-card';
+import { PipelineBar } from '@/components/pipeline-bar';
+import { RevenueSparkline } from '@/components/revenue-sparkline';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
-import { formatCurrencyCompact } from '@/lib/format';
 import { colors } from '@/styles/theme';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,7 @@ function DashboardContent() {
 
   const goToActivities = () => router.navigate('/(app)/activities');
   const goToInvoices = () => router.navigate('/(app)/invoices');
+  const goToDeals = () => router.navigate('/(app)/deals');
 
   // Loading: never render partial numbers — wait for the whole payload.
   if (data === undefined) {
@@ -133,11 +134,16 @@ function DashboardContent() {
   }
 
   // Empty workspace (first-run / nothing owed): friendly full empty state.
+  // The two new visual blocks must also be all-zero for the screen to read as
+  // fully empty — otherwise the attention section and per-block muted empty
+  // states render (spec: "Workspace with only overdue items, no deals/revenue").
   const isWorkspaceEmpty =
     data.openDealsCount === 0 &&
     data.overdueActivitiesCount === 0 &&
     data.recentActivities.length === 0 &&
-    data.overdueInvoices.length === 0;
+    data.overdueInvoices.length === 0 &&
+    data.dealsByStage.every((s) => s.count === 0) &&
+    data.revenueByMonth.every((m) => m.revenue === 0);
 
   if (isWorkspaceEmpty) {
     return (
@@ -177,26 +183,18 @@ function DashboardContent() {
         onPressInvoices={goToInvoices}
       />
 
-      {/* 2. KPI cards — pipeline readout (deltas pending backend period data) */}
-      <View>
-        <SectionHeader>Pipeline</SectionHeader>
-        <View className="mt-2 flex-row gap-3">
-          <View className="flex-1">
-            <KpiCard
-              label="Open deals"
-              value={`${data.openDealsCount}`}
-              testID="kpi-open-deals"
-            />
-          </View>
-          <View className="flex-1">
-            <KpiCard
-              label="Revenue MTD"
-              value={formatCurrencyCompact(data.revenueMTD)}
-              testID="kpi-revenue-mtd"
-            />
-          </View>
-        </View>
-      </View>
+      {/* 2. Pipeline-by-stage + revenue sparkline visuals (deep-link to deals/invoices) */}
+      <PipelineBar
+        dealsByStage={data.dealsByStage}
+        onPress={goToDeals}
+        testID="pipeline-bar"
+      />
+      <RevenueSparkline
+        revenueByMonth={data.revenueByMonth}
+        revenueMTD={data.revenueMTD}
+        onPress={goToInvoices}
+        testID="revenue-sparkline"
+      />
 
       {/* 3. Recent / upcoming activities */}
       <View>
@@ -287,13 +285,10 @@ function DashboardSkeleton() {
         <SkeletonRow divider={false} />
       </Card>
 
-      {/* KPI skeleton */}
+      {/* Pipeline + revenue visual skeleton (sized to match the real blocks) */}
       <View style={{ gap: 8 }}>
-        <Skeleton className="h-3 w-20" />
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Skeleton className="h-24 flex-1 rounded-xl" />
-          <Skeleton className="h-24 flex-1 rounded-xl" />
-        </View>
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </View>
 
       {/* Activities skeleton */}

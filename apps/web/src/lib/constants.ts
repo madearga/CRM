@@ -8,22 +8,13 @@ export const STAGE_COLORS: Record<string, string> = {
 };
 
 /** Recharts bar chart fills — Tailwind classes don't work in SVG `fill`. */
-export const STAGE_CHART_COLORS: Record<string, string> = {
-  new: '#94a3b8',
-  contacted: '#60a5fa',
-  proposal: '#fbbf24',
-  won: '#4ade80',
-  lost: '#f87171',
-};
+export {
+  STAGE_CHART_COLORS,
+  STAGE_BAR_COLORS,
+  STAGE_DEFAULT_COLOR,
+} from '@crm/domain';
 
-/** Dashboard pipeline bar colors (for the thin summary bars). */
-export const STAGE_BAR_COLORS: Record<string, string> = {
-  new: 'bg-slate-400',
-  contacted: 'bg-blue-400',
-  proposal: 'bg-amber-400',
-  won: 'bg-green-400',
-  lost: 'bg-red-400',
-};
+// STAGE_BAR_COLORS re-exported above from @crm/domain.
 
 /** Company status badge colors. */
 export const STATUS_COLORS: Record<string, string> = {

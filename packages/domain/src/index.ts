@@ -114,6 +114,11 @@ export function isValidTransition(
 export const DEAL_AGING_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ============================================================
+// Shared Stage Colors (web + mobile dashboards)
+// ============================================================
+export * from "./stage-colors";
+
+// ============================================================
 // Mobile Dashboard Classifiers (pure logic)
 // Used by convex/dashboard.ts `mobileOverview`. See packages/domain/src/dashboard.ts
 // ============================================================

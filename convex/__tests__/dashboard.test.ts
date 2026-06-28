@@ -25,6 +25,7 @@ import {
   isInvoiceOverdue,
   isRevenueInvoice,
   monthStartOf,
+  bucketRevenueByMonth,
   type DashboardActivity,
   type DashboardInvoice,
   type DashboardDeal,
@@ -251,5 +252,83 @@ describe("monthStartOf", () => {
     expect(d.getFullYear()).toBe(2026);
     expect(d.getMonth()).toBe(11); // December
     expect(d.getDate()).toBe(1);
+  });
+});
+
+describe("bucketRevenueByMonth", () => {
+  // Use a local `now` so month boundaries are TZ-independent, mirroring the
+  // runtime. mid-June 2026.
+  const NOW = new Date(2026, 5, 15, 10, 0, 0).getTime();
+
+  function monthStart(y: number, m: number): number {
+    return new Date(y, m, 1, 0, 0, 0).getTime();
+  }
+
+  it("returns 6 buckets oldest → newest ending at the current month", () => {
+    const buckets = bucketRevenueByMonth([], NOW, 6);
+    expect(buckets).toHaveLength(6);
+    expect(buckets[5].month).toBe(monthStartOf(NOW));
+    // 6-month window ending June 2026 starts at January 2026 (5 months back).
+    expect(buckets[0].month).toBe(monthStart(2026, 0));
+    // Ordered ascending.
+    for (let i = 1; i < buckets.length; i++) {
+      expect(buckets[i].month).toBeGreaterThan(buckets[i - 1].month);
+    }
+  });
+
+  it("emits zero-revenue buckets when there are no invoices (no data vs zero)", () => {
+    const buckets = bucketRevenueByMonth([], NOW, 6);
+    expect(buckets.every((b) => b.revenue === 0)).toBe(true);
+  });
+
+  it("sums totalAmount per calendar month and ignores out-of-window invoices", () => {
+    const invoices = [
+      { invoiceDate: monthStart(2026, 5) + 5 * 86400000, totalAmount: 1_000_000 }, // June
+      { invoiceDate: monthStart(2026, 5) + 10 * 86400000, totalAmount: 500_000 }, // June
+      { invoiceDate: monthStart(2026, 4) + 3 * 86400000, totalAmount: 2_000_000 }, // May
+      { invoiceDate: monthStart(2025, 11) + 2 * 86400000, totalAmount: 9_999_999 }, // Dec 2025, out of window
+    ];
+    const buckets = bucketRevenueByMonth(invoices, NOW, 6);
+    const jun = buckets[5];
+    const may = buckets[4];
+    const jan = buckets[0];
+    expect(jun.revenue).toBe(1_500_000);
+    expect(may.revenue).toBe(2_000_000);
+    expect(jan.revenue).toBe(0); // Dec 2025 invoice ignored
+  });
+
+  it("treats the exact month-start instant as belonging to that month", () => {
+    const juneStart = monthStart(2026, 5);
+    const buckets = bucketRevenueByMonth(
+      [{ invoiceDate: juneStart, totalAmount: 750_000 }],
+      NOW,
+      6
+    );
+    expect(buckets[5].revenue).toBe(750_000);
+  });
+
+  it("handles a shorter window (e.g. 3 months)", () => {
+    const buckets = bucketRevenueByMonth([], NOW, 3);
+    expect(buckets).toHaveLength(3);
+    expect(buckets[2].month).toBe(monthStartOf(NOW));
+    expect(buckets[0].month).toBe(monthStart(2026, 3)); // April (3-month window = Apr, May, Jun)
+  });
+
+  it("skips invoices with invalid invoiceDate", () => {
+    const buckets = bucketRevenueByMonth(
+      [
+        { invoiceDate: NaN, totalAmount: 1_000_000 },
+        { invoiceDate: monthStart(2026, 5) + 1000, totalAmount: 300_000 },
+      ],
+      NOW,
+      6
+    );
+    expect(buckets[5].revenue).toBe(300_000);
+  });
+
+  it("empty workspace: all buckets zero but still present", () => {
+    const buckets = bucketRevenueByMonth([], NOW, 6);
+    expect(buckets).toHaveLength(6);
+    expect(buckets.every((b) => b.revenue === 0)).toBe(true);
   });
 });

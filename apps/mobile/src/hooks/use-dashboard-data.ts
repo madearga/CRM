@@ -23,3 +23,5 @@ export function useDashboardData() {
 export type MobileOverview = NonNullable<ReturnType<typeof useDashboardData>>;
 export type MobileActivity = MobileOverview['recentActivities'][number];
 export type MobileOverdueInvoice = MobileOverview['overdueInvoices'][number];
+export type MobileStageDatum = MobileOverview['dealsByStage'][number];
+export type MobileRevenueMonth = MobileOverview['revenueByMonth'][number];

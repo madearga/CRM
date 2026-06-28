@@ -120,3 +120,55 @@ export function monthStartOf(now: number): number {
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
+
+/** Minimal invoice shape needed by the 6-month revenue bucketing helper. */
+export interface RevenueInvoice {
+  invoiceDate: number;
+  totalAmount: number;
+}
+
+/** A single 6-month revenue sparkline bucket: month-start epoch + revenue. */
+export interface RevenueMonthBucket {
+  /** Epoch ms at the start of the calendar month. */
+  month: number;
+  revenue: number;
+}
+
+/**
+ * Bucket revenue invoices into the last `monthsBack` calendar months
+ * (oldest → newest), relative to `now`. Months with no invoices still emit a
+ * `{ month, revenue: 0 }` entry so the client can distinguish "no data" from
+ * "zero revenue". Only invoices whose `invoiceDate` falls inside the window
+ * contribute; out-of-window invoices are ignored.
+ *
+ * Pure / deployment-free so it can be unit-tested directly (see
+ * convex/__tests__/dashboard.test.ts). Used by `dashboard.mobileOverview`.
+ */
+export function bucketRevenueByMonth(
+  invoices: RevenueInvoice[],
+  now: number,
+  monthsBack = 6
+): RevenueMonthBucket[] {
+  const thisMonthStart = monthStartOf(now);
+  const months: RevenueMonthBucket[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(thisMonthStart);
+    d.setMonth(d.getMonth() - i);
+    months.push({ month: monthStartOf(d.getTime()), revenue: 0 });
+  }
+
+  for (const inv of invoices) {
+    if (typeof inv.invoiceDate !== 'number' || !Number.isFinite(inv.invoiceDate)) {
+      continue;
+    }
+    const idx = months.findIndex((m, i) => {
+      const next = i + 1 < months.length ? months[i + 1].month : Infinity;
+      return inv.invoiceDate >= m.month && inv.invoiceDate < next;
+    });
+    if (idx >= 0) {
+      months[idx].revenue += inv.totalAmount ?? 0;
+    }
+  }
+
+  return months;
+}

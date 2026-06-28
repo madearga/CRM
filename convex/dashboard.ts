@@ -17,6 +17,7 @@ import {
   isInvoiceOverdue,
   isRevenueInvoice,
   monthStartOf,
+  bucketRevenueByMonth,
   type DashboardInvoice,
 } from '@crm/domain';
 
@@ -307,6 +308,19 @@ export const mobileOverview = createAuthQuery()({
         currency: z.string().optional(),
       })
     ),
+    dealsByStage: z.array(
+      z.object({
+        stage: z.string(),
+        count: z.number(),
+        value: z.number(),
+      })
+    ),
+    revenueByMonth: z.array(
+      z.object({
+        month: z.number(),
+        revenue: z.number(),
+      })
+    ),
   }),
   handler: async (ctx) => {
     const orgId = ctx.user.activeOrganization?.id;
@@ -344,6 +358,12 @@ export const mobileOverview = createAuthQuery()({
     //     fully-paid-but-still-posted invoices do not inflate the
     //     overdue total.
     //   - revenue MTD: `organizationId_invoiceDate` gte monthStart.
+    //   - pipeline-by-stage (5 stages incl won/lost): `aggregateDealsByStage`
+    //     countBatch + sumBatch — 2 bounded aggregate reads over the stage
+    //     index. Includes archived deals (matches web `overview`).
+    //   - revenue 6-month sparkline: `organizationId_invoiceDate` gte
+    //     (now - 6 months), capped at REVENUE_6M_CAP, filtered to revenue
+    //     invoices client-side and bucketed by calendar month.
     //
     // Aggregates were not available for the multi-field filters needed
     // (state + archivedAt + amountDue + paymentStatus). We use
@@ -355,6 +375,7 @@ export const mobileOverview = createAuthQuery()({
     const RECENT_ACTIVITIES_FETCH = 25;
     const OVERDUE_INVOICES_CAP = 500;
     const REVENUE_MTD_INVOICES_CAP = 1000;
+    const REVENUE_6M_CAP = 500;
 
     const openStageQueries = OPEN_DEAL_STAGES.map((stage) =>
       ctx
@@ -364,34 +385,67 @@ export const mobileOverview = createAuthQuery()({
         .take(OPEN_DEALS_PER_STAGE_CAP)
     );
 
-    const [openDealsByStage, overdueActivityRows, recentActivityRows, pastDueInvoices, monthInvoices] =
-      await Promise.all([
-        Promise.all(openStageQueries),
-        ctx
-          .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
-            q
-              .eq('assigneeId', ctx.user._id)
-              .eq('organizationId', orgId)
-              .lt('dueAt', now)
-          )
-          .take(OVERDUE_ACTIVITIES_CAP),
-        ctx
-          .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
-            q.eq('assigneeId', ctx.user._id).eq('organizationId', orgId)
-          )
-          .order('asc')
-          .take(RECENT_ACTIVITIES_FETCH),
-        ctx
-          .table('invoices', 'organizationId_dueDate', (q) =>
-            q.eq('organizationId', orgId).lt('dueDate', now)
-          )
-          .take(OVERDUE_INVOICES_CAP),
-        ctx
-          .table('invoices', 'organizationId_invoiceDate', (q) =>
-            q.eq('organizationId', orgId).gte('invoiceDate', monthStartMs)
-          )
-          .take(REVENUE_MTD_INVOICES_CAP),
-      ]);
+    // 6-month sparkline window start (first day of the month 5 months ago).
+    const sixMonthsAgo = (() => {
+      const d = new Date(monthStartMs);
+      d.setMonth(d.getMonth() - 5);
+      return d.getTime();
+    })();
+
+    // All 5 stages for the pipeline-by-stage visual (incl won/lost). Aggregates
+    // include archived deals, matching web `overview`.
+    const allStages = ['new', 'contacted', 'proposal', 'won', 'lost'];
+    const stageAggregateBounds = allStages.map((stage) => ({
+      namespace: orgId,
+      bounds: {
+        lower: { key: stage, inclusive: true },
+        upper: { key: stage, inclusive: true },
+      },
+    }));
+
+    const [
+      openDealsByStage,
+      overdueActivityRows,
+      recentActivityRows,
+      pastDueInvoices,
+      monthInvoices,
+      stageCounts,
+      stageValues,
+      sixMonthInvoices,
+    ] = await Promise.all([
+      Promise.all(openStageQueries),
+      ctx
+        .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
+          q
+            .eq('assigneeId', ctx.user._id)
+            .eq('organizationId', orgId)
+            .lt('dueAt', now)
+        )
+        .take(OVERDUE_ACTIVITIES_CAP),
+      ctx
+        .table('activities', 'assigneeId_organizationId_dueAt', (q) =>
+          q.eq('assigneeId', ctx.user._id).eq('organizationId', orgId)
+        )
+        .order('asc')
+        .take(RECENT_ACTIVITIES_FETCH),
+      ctx
+        .table('invoices', 'organizationId_dueDate', (q) =>
+          q.eq('organizationId', orgId).lt('dueDate', now)
+        )
+        .take(OVERDUE_INVOICES_CAP),
+      ctx
+        .table('invoices', 'organizationId_invoiceDate', (q) =>
+          q.eq('organizationId', orgId).gte('invoiceDate', monthStartMs)
+        )
+        .take(REVENUE_MTD_INVOICES_CAP),
+      aggregateDealsByStage.countBatch(ctx, stageAggregateBounds),
+      aggregateDealsByStage.sumBatch(ctx, stageAggregateBounds),
+      ctx
+        .table('invoices', 'organizationId_invoiceDate', (q) =>
+          q.eq('organizationId', orgId).gte('invoiceDate', sixMonthsAgo)
+        )
+        .take(REVENUE_6M_CAP),
+    ]);
 
     // --- Open deals count ---
     // Flatten per-stage results and filter archived; archived open-stage
@@ -446,6 +500,24 @@ export const mobileOverview = createAuthQuery()({
       .filter((inv) => isRevenueInvoice(inv))
       .reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0);
 
+    // --- Pipeline-by-stage (5 stages incl won/lost) ---
+    const dealsByStage = allStages.map((stage, i) => ({
+      stage,
+      count: stageCounts[i] ?? 0,
+      value: stageValues[i] ?? 0,
+    }));
+
+    // --- Revenue 6-month sparkline ---
+    // Filter to revenue invoices, then bucket into the last 6 calendar months.
+    // Months with no revenue still emit { month, revenue: 0 }.
+    const revenueInvoices6m = (sixMonthInvoices as unknown as DashboardInvoice[])
+      .filter((inv) => isRevenueInvoice(inv))
+      .map((inv) => ({
+        invoiceDate: inv.invoiceDate,
+        totalAmount: inv.totalAmount ?? 0,
+      }));
+    const revenueByMonth = bucketRevenueByMonth(revenueInvoices6m, now, 6);
+
     return {
       openDealsCount,
       overdueActivitiesCount,
@@ -453,6 +525,8 @@ export const mobileOverview = createAuthQuery()({
       revenueMTD,
       recentActivities,
       overdueInvoices,
+      dealsByStage,
+      revenueByMonth,
     };
   },
 });
