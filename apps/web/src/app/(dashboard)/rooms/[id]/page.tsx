@@ -820,6 +820,15 @@ export default function RoomPage() {
                     Anda tidak memiliki izin untuk melihat agen.
                   </p>
                 ) : null}
+                {agents && agents.length === 0 && canViewAgents ? (
+                  <Link
+                    href="/agents"
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    Belum punya agen? Buat di halaman Agen
+                    <RuangIcon name="lucide:arrow-right" className="h-3 w-3" />
+                  </Link>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-1.5">

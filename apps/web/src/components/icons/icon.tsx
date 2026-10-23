@@ -14,6 +14,7 @@ export type RuangIconName =
   | 'lucide:circle-alert'
   | 'lucide:archive'
   | 'lucide:arrow-left'
+  | 'lucide:arrow-right'
   | 'lucide:bot'
   | 'lucide:info'
   | 'lucide:lock'

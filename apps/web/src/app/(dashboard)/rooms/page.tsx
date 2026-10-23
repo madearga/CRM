@@ -322,9 +322,17 @@ export default function RoomsPage() {
                   agen yang bisa diundang dari sini.
                 </p>
               ) : !agents || agents.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Belum ada agen di organisasi ini.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Belum ada agen di organisasi ini.
+                  </p>
+                  <Link
+                    href="/agents"
+                    className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    Buat agen pertama di halaman Agen
+                  </Link>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {agents.map((agent) => {
