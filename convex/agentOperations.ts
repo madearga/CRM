@@ -44,6 +44,15 @@ const MAX_LIST_LIMIT = 200;
 const MAX_PENDING_APPROVALS = 100;
 const MILLISECONDS_PER_MINUTE = 60 * 1000;
 
+/**
+ * How long a claimed operation may stay `executing` before the claim is read
+ * as lost. The execute action runs the effect and reports in separate
+ * transactions, so a crashed executor cannot be told apart from a slow one.
+ * The timeout must be longer than the slowest normal effect, and its output
+ * is `unknown`, which a person resolves.
+ */
+export const OPERATION_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
+
 /** Parse a stored result text. A missing or broken text means no result. */
 function parseStoredResult(resultJson: string | null | undefined): unknown {
   if (resultJson === undefined || resultJson === null) return null;
@@ -395,6 +404,18 @@ export const execute = createOrgAction({
       };
     }
 
+    if (claim.outcome === 'timed_out') {
+      // The previous attempt is unresolved: the effect may have happened. A
+      // person reads the row in the approval inbox and decides, so the
+      // executor does not run the effect twice on a guess.
+      return {
+        operationId: operation.id,
+        status: 'unknown',
+        error: 'The previous attempt was interrupted before it reported',
+        duplicate: false,
+      };
+    }
+
     if (claim.outcome === 'in_flight') {
       return {
         operationId: operation.id,
@@ -720,6 +741,19 @@ export const claimOperation = createInternalMutation()({
     }
 
     if (operation.status === 'executing') {
+      // An action that died between the claim and the completion leaves the
+      // operation here forever. A claim older than the timeout is read as
+      // lost: the effect may have happened, so the row becomes unknown and a
+      // person decides, instead of the operation being stuck.
+      const claimAge = now - (operation.startedAt ?? 0);
+      if (claimAge > OPERATION_CLAIM_TIMEOUT_MS) {
+        await ctx.db.patch(operation._id, {
+          status: 'unknown',
+          errorMessage: 'Claim timeout: the executor stopped before it reported',
+          updatedAt: now,
+        });
+        return { outcome: 'timed_out' as const };
+      }
       return { outcome: 'in_flight' as const };
     }
 
