@@ -1418,6 +1418,75 @@ const schema = defineEntSchema(
       toolResults: v.optional(v.array(v.record(v.string(), v.any()))),
     })
       .field('conversationId', v.id('aiChatConversations'), { index: true }),
+
+    // ----------------------------
+    // Agent Operations — proposals, approvals, ledger of agent effects
+    // ----------------------------
+
+    approvals: defineEnt({
+      organizationId: v.id('organization'),
+      operationId: v.id('agentOperations'),
+      status: v.string(),
+      payloadHash: v.string(),
+      payloadJson: v.string(),
+      revision: v.number(),
+      requestedByUserId: v.id('user'),
+      approverUserId: v.optional(v.id('user')),
+      comment: v.optional(v.string()),
+      decidedAt: v.optional(v.number()),
+      expiresAt: v.optional(v.number()),
+      createdAt: v.number(),
+    })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('organizationId_operationId', ['organizationId', 'operationId']),
+
+    agentOperations: defineEnt({
+      organizationId: v.id('organization'),
+      kind: v.string(),
+      status: v.string(),
+      requiresApproval: v.boolean(),
+      idempotencyKey: v.string(),
+      payloadHash: v.string(),
+      payloadJson: v.string(),
+      revision: v.number(),
+      summary: v.optional(v.string()),
+      agentId: v.optional(v.string()),
+      agentLabel: v.optional(v.string()),
+      requestedByUserId: v.id('user'),
+      approvalId: v.optional(v.id('approvals')),
+      resultJson: v.optional(v.string()),
+      errorMessage: v.optional(v.string()),
+      attempts: v.number(),
+      startedAt: v.optional(v.number()),
+      finishedAt: v.optional(v.number()),
+      expiresAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index('organizationId_status', ['organizationId', 'status'])
+      .index('organizationId_idempotencyKey', [
+        'organizationId',
+        'idempotencyKey',
+      ])
+      .index('organizationId_kind', ['organizationId', 'kind'])
+      .index('organizationId_createdAt', ['organizationId', 'createdAt']),
+
+    // The effect an operation caused, keyed by the idempotency key of the
+    // operation. A handler looks the key up before it writes, so a repeated
+    // execution, or a second operation that carries the same key, reuses the
+    // effect instead of causing a second one.
+    agentOperationEffects: defineEnt({
+      organizationId: v.id('organization'),
+      operationKey: v.string(),
+      operationId: v.id('agentOperations'),
+      kind: v.string(),
+      effectId: v.string(),
+      createdAt: v.number(),
+    })
+      .index('organizationId_operationKey', [
+        'organizationId',
+        'operationKey',
+      ]),
   },
   {
     schemaValidation: true,

@@ -112,3 +112,5 @@ export function isValidTransition(
 
 /** Flag deals that have been in the same stage longer than this (ms) */
 export const DEAL_AGING_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export * from './agentOperations';

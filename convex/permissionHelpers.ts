@@ -25,6 +25,7 @@ export const FEATURES = [
   'hr_reports',
   'hr_branches',
   'hr_holidays',
+  'agents',
 ] as const;
 
 export type Feature = (typeof FEATURES)[number];
@@ -63,6 +64,9 @@ export const FEATURE_ACTIONS: Record<Feature, Action[]> = {
   hr_reports: ['view', 'export'],
   hr_branches: ['view', 'create', 'edit', 'delete'],
   hr_holidays: ['view', 'create', 'delete'],
+  // Agent operations: view the ledger, propose an effect, manage approvals
+  // and execution.
+  agents: ['view', 'create', 'manage'],
 };
 
 // ---------------------------------------------------------------------------
