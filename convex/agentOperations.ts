@@ -17,7 +17,9 @@ import {
   approvalMatchesApproval,
   canTransition,
   hashPayload,
+  narrowAgentScopes,
   nextStatusAfterApproval,
+  scopesGrantRoomWrite,
   stableStringify,
   type ApprovalStatus,
   type OperationStatus,
@@ -34,7 +36,13 @@ import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import type { DatabaseReader } from './_generated/server';
 import { checkPermission, requirePermission } from './permissionHelpers';
-import { findUserMembership, requireRoomWriteAccess } from './roomAccess';
+import {
+  findAgentByKey,
+  findAgentMembership,
+  findUserMembership,
+  requireRoom,
+  requireRoomWriteAccess,
+} from './roomAccess';
 import {
   createInternalMutation,
   createInternalQuery,
@@ -307,6 +315,210 @@ export const propose = createOrgMutation({
         operationId,
         text: args.summary ?? `Proposal: ${args.kind}`,
       });
+    }
+
+    return {
+      id: operationId,
+      status,
+      approvalId,
+      duplicate: false,
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// proposeFromService
+// ---------------------------------------------------------------------------
+
+/**
+ * A proposal of an agent service.
+ *
+ * The service is not a person, so it has no session and no permission of its
+ * own. The room and the agent are the authority here: the agent must exist
+ * in the organization, it must be active, it must be a member of the room,
+ * and it must be allowed to write there. The same rules that
+ * `rooms.postFromAgent` applies to a message apply here to a proposal.
+ *
+ * The proposal always waits for a person. The service cannot ask for an
+ * approval that is not needed, and it cannot name the person that asked:
+ * the room keeps the person that created it, and that person is the one the
+ * approval is attributed to. This is an attribution of the room, not a
+ * claim that the creator of the room sent the proposal.
+ *
+ * The key of the operation is built from the agent, the room and the hash of
+ * the payload. A repeated delivery of the same proposal returns the
+ * operation that already exists. A different payload under the same key is
+ * a conflict, because the key must always name one exact payload.
+ */
+export const proposeFromService = createInternalMutation()({
+  args: {
+    organizationId: zid('organization'),
+    roomId: zid('rooms'),
+    agentId: z.string().min(1).max(60),
+    operationKind: z.enum(AGENT_OPERATION_KINDS),
+    payload: z
+      .record(z.unknown())
+      .refine(
+        (value) => isJsonValue(value),
+        'Payload must contain only finite JSON values'
+      ),
+    summary: z.string().max(500).optional(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const agent = await findAgentByKey(
+      ctx,
+      args.organizationId,
+      args.agentId
+    );
+    if (!agent) {
+      throw new ConvexError({
+        code: 'NOT_FOUND',
+        message: `The agent "${args.agentId}" does not exist in this organization`,
+      });
+    }
+    if (agent.status !== 'active') {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: `The agent "${args.agentId}" is disabled`,
+      });
+    }
+
+    const room = await requireRoom(ctx, args.organizationId, args.roomId);
+    if (room.archivedAt !== undefined) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'The room is archived',
+      });
+    }
+
+    const membership = await findAgentMembership(
+      ctx,
+      room._id,
+      args.agentId
+    );
+    if (!membership) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: `The agent "${args.agentId}" is not a member of this room`,
+      });
+    }
+    if (membership.role === 'observer') {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: `The agent "${args.agentId}" may not write into this room`,
+      });
+    }
+    // The scopes of the membership narrow the scopes of the agent, so a room
+    // can never give an agent more than the agent holds.
+    const effectiveScopes = narrowAgentScopes(agent.scopes, membership.scopes);
+    if (!scopesGrantRoomWrite(effectiveScopes)) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: `The agent "${args.agentId}" may not write into this room`,
+      });
+    }
+
+    // The canonical text is the identity of the payload. Two proposals with
+    // the same key must carry the very same text.
+    const payloadJson = stableStringify(args.payload);
+    if (payloadJson.length > 32_000) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: 'The operation payload is too large',
+      });
+    }
+    const payloadHash = hashPayload(args.payload);
+    const idempotencyKey = `svc:${args.agentId}:${room._id}:${payloadHash}`;
+
+    const existing = await ctx.db
+      .query('agentOperations')
+      .withIndex('organizationId_idempotencyKey', (q) =>
+        q
+          .eq('organizationId', args.organizationId)
+          .eq('idempotencyKey', idempotencyKey)
+      )
+      .first();
+
+    if (existing) {
+      if (
+        existing.payloadJson !== payloadJson ||
+        existing.kind !== args.operationKind
+      ) {
+        throw new ConvexError({
+          code: 'CONFLICT',
+          message: 'The same idempotency key was used for a different proposal',
+        });
+      }
+      return {
+        id: existing._id,
+        status: existing.status,
+        approvalId: existing.approvalId ?? undefined,
+        duplicate: true,
+      };
+    }
+
+    const expiresAt = computeExpiry(now, undefined);
+    // A service proposal always waits for a person. The service cannot ask
+    // for an approval that is not needed.
+    const status = 'awaiting_approval' as const;
+
+    const operationId = await ctx.db.insert('agentOperations', {
+      organizationId: args.organizationId,
+      kind: args.operationKind,
+      status,
+      requiresApproval: true,
+      idempotencyKey,
+      payloadHash,
+      payloadJson,
+      revision: 1,
+      summary: args.summary,
+      agentId: agent.agentId,
+      agentLabel: agent.name,
+      requestedByUserId: room.createdByUserId,
+      attempts: 0,
+      expiresAt,
+      roomId: room._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const approvalId = await ctx.db.insert('approvals', {
+      organizationId: args.organizationId,
+      operationId,
+      status: 'pending',
+      payloadHash,
+      payloadJson,
+      revision: 1,
+      requestedByUserId: room.createdByUserId,
+      expiresAt,
+      createdAt: now,
+    });
+
+    await ctx.db.patch(operationId, { approvalId, updatedAt: now });
+
+    // The proposal is written into the room it belongs to, so the room talk
+    // and the ledger tell the same story. A room that refuses the message
+    // does not stop the proposal, because the proposal is the real work.
+    const text = args.summary?.trim()
+      ? args.summary
+      : `Proposal: ${args.operationKind}`;
+
+    try {
+      await ctx.runMutation(internal.rooms.postFromAgent, {
+        organizationId: args.organizationId,
+        roomId: room._id,
+        agentId: agent.agentId,
+        kind: 'proposal',
+        operationId,
+        text,
+      });
+    } catch (error) {
+      console.warn(
+        '[agentOperations.proposeFromService] The room refused the proposal message',
+        error
+      );
     }
 
     return {

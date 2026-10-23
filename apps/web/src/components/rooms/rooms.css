@@ -1,0 +1,67 @@
+/*
+ * Ruang: the room thread and its composer.
+ * The motion here is small. A message slides in over 200 ms, a thought bubble
+ * pulses, and nothing scales from zero.
+ */
+
+/* A new message enters with a small lift. */
+.room-message {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+}
+
+@starting-style {
+  .room-message {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The composer grows with the text, up to six rows. */
+.room-composer-input {
+  field-sizing: fixed;
+  resize: none;
+  min-height: 2.5rem;
+  overflow-y: hidden;
+}
+
+/* Three dots, one beat apart. */
+.room-thinking-dot {
+  animation: room-thinking-pulse 1.2s ease-out infinite;
+}
+
+.room-thinking-dot:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.room-thinking-dot:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+@keyframes room-thinking-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-message {
+    transition: none;
+  }
+
+  .room-thinking-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+}

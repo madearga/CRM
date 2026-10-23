@@ -24,6 +24,7 @@ import {
   Harness,
   type AgentChange,
   type Harness as PiHarness,
+  type HarnessSettings,
   type Registry,
   type Storage,
 } from '@earendil-works/pi-durable';
@@ -62,6 +63,11 @@ export interface PiHarnessOptions {
   readonly proposeOperation?: ProposeOperationHandler;
   /** The clock of the harness. Every process on one storage must use it. */
   readonly now?: () => number;
+  /**
+   * The settings of the harness. They hold the timeout of the model call,
+   * so a call that hangs is aborted.
+   */
+  readonly settings?: HarnessSettings;
   /** The context of the calls. The default never cancels. */
   readonly context?: Context;
 }
@@ -112,6 +118,7 @@ export async function openPiHarness(
       models,
       registry,
       ...(options.now === undefined ? {} : { now: options.now }),
+      ...(options.settings === undefined ? {} : { settings: options.settings }),
     },
     context
   );

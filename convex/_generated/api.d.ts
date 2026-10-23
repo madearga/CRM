@@ -50,6 +50,7 @@ import type * as emails_organizationInvite from "../emails/organizationInvite.js
 import type * as emails_weeklyPipelineDigest from "../emails/weeklyPipelineDigest.js";
 import type * as externalPlugins from "../externalPlugins.js";
 import type * as functions from "../functions.js";
+import type * as helpers_agentBridge from "../helpers/agentBridge.js";
 import type * as helpers_callbackUrl from "../helpers/callbackUrl.js";
 import type * as helpers_getEnv from "../helpers/getEnv.js";
 import type * as helpers_premiumGuard from "../helpers/premiumGuard.js";
@@ -158,6 +159,7 @@ declare const fullApi: ApiFromModules<{
   "emails/weeklyPipelineDigest": typeof emails_weeklyPipelineDigest;
   externalPlugins: typeof externalPlugins;
   functions: typeof functions;
+  "helpers/agentBridge": typeof helpers_agentBridge;
   "helpers/callbackUrl": typeof helpers_callbackUrl;
   "helpers/getEnv": typeof helpers_getEnv;
   "helpers/premiumGuard": typeof helpers_premiumGuard;

@@ -1,16 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useConvex } from 'convex/react';
 import type { Id } from '@convex/_generated/dataModel';
 import { api } from '@convex/_generated/api';
-import { useAuthQuery, useAuthMutation, useCurrentUser } from '@/lib/convex/hooks';
+import {
+  useAuthQuery,
+  useAuthMutation,
+  useCurrentUser,
+} from '@/lib/convex/hooks';
+import { useAuthStore } from '@/lib/convex/components/convex-provider';
 import { usePermission } from '@/lib/permissions/use-permission';
 import { scopesGrantRoomWrite } from '@crm/domain';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -33,9 +38,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useConfirmDialog } from '@/components/ui/confirm-dialog';
-import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from '@/lib/format-date';
+import { RoomComposer } from '@/components/rooms/room-composer';
+import { RoomMessageList } from '@/components/rooms/room-message-list';
+import { requestRoomAgent } from '@/components/rooms/room-agent-client';
+import type { RoomListMessage, RoomProposal } from '@/components/rooms/types';
+import '../../../../components/rooms/rooms.css';
 import {
   AlertCircle,
   Archive,
@@ -43,9 +51,7 @@ import {
   Bot,
   Info,
   Lock,
-  MessageSquare,
   Plus,
-  Send,
   Trash2,
   UserPlus,
   Users,
@@ -67,12 +73,6 @@ const ROLE_LABEL: Record<string, string> = {
   observer: 'Pengamat',
 };
 
-const MESSAGE_KIND_LABEL: Record<string, string> = {
-  proposal: 'Proposal',
-  decision: 'Keputusan',
-  system: 'Sistem',
-};
-
 export default function RoomPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -86,7 +86,6 @@ export default function RoomPage() {
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
 
-  const [text, setText] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [memberForm, setMemberForm] = useState({
     memberType: 'agent' as 'agent' | 'user',
@@ -96,6 +95,26 @@ export default function RoomPage() {
     scopes: '',
   });
   const [memberError, setMemberError] = useState<string | null>(null);
+
+  // Pesan dan balasan yang belum tersimpan di server.
+  const [pendingUser, setPendingUser] = useState<{
+    text: string;
+    at: number;
+  } | null>(null);
+  const [pendingReply, setPendingReply] = useState<{
+    text: string;
+    at: number;
+  } | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [proposalUpdates, setProposalUpdates] = useState<
+    Record<string, RoomProposal>
+  >({});
+  const [statusOverrides, setStatusOverrides] = useState<
+    Record<string, string>
+  >({});
+  const [decidingOperationId, setDecidingOperationId] = useState<string | null>(
+    null
+  );
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
@@ -111,6 +130,10 @@ export default function RoomPage() {
     api.rooms.listMessages,
     roomId ? { roomId, limit: 100 } : ('skip' as const)
   );
+  const { data: operations } = useAuthQuery(
+    api.agentOperations.list,
+    canViewAgents ? { limit: 100 } : ('skip' as const)
+  );
   const { data: agents } = useAuthQuery(
     api.agents.list,
     canViewAgents ? {} : ('skip' as const)
@@ -120,13 +143,15 @@ export default function RoomPage() {
     orgSlug ? { slug: orgSlug } : ('skip' as const)
   );
 
-  const postMessage = useAuthMutation(api.rooms.postMessage);
   const archiveRoom = useAuthMutation(api.rooms.archive);
   const addMember = useAuthMutation(api.rooms.addMember);
   const removeMember = useAuthMutation(api.rooms.removeMember);
+  const decide = useAuthMutation(api.agentOperations.decide);
+
+  const convex = useConvex();
+  const { state: authState } = useAuthStore();
 
   const threadRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const forceScrollRef = useRef(false);
 
   // The thread opens at the newest message, but it never jumps while the
@@ -139,12 +164,12 @@ export default function RoomPage() {
     ) as HTMLElement | null;
     if (!viewport) return;
 
-    const writing = document.activeElement === textareaRef.current;
+    const writing = document.activeElement?.id === 'room-message-input';
     if (writing && !forceScrollRef.current) return;
 
     forceScrollRef.current = false;
     viewport.scrollTop = viewport.scrollHeight;
-  }, [messages]);
+  }, [messages, pendingUser, pendingReply]);
 
   const membership = room?.membership ?? null;
 
@@ -192,15 +217,232 @@ export default function RoomPage() {
     return a.memberType === 'user' ? -1 : 1;
   });
 
-  const handleSend = async () => {
-    const value = text.trim();
-    if (!value || !roomId || !write.allowed) return;
+  // Nama agen yang menjawab di ruang ini.
+  const agentName = useMemo(() => {
+    const agent = (members ?? []).find(
+      (member) => member.memberType === 'agent'
+    );
+    return agent?.displayName ?? 'Agen';
+  }, [members]);
+
+  const currentUserName = user?.name || 'Anda';
+
+  // Daftar ulang dari server setelah balasan agen masuk.
+  const refetchMessages = useCallback(async () => {
+    if (!roomId) return;
     try {
-      await postMessage.mutateAsync({ roomId, text: value });
-      setText('');
-      forceScrollRef.current = true;
+      const fresh = await convex.query(api.rooms.listMessages, {
+        roomId,
+        limit: 100,
+      });
+      setPendingUser((previous) =>
+        previous &&
+        fresh.some(
+          (message) =>
+            message.authorType === 'user' &&
+            message.text === previous.text &&
+            message.createdAt >= previous.at
+        )
+          ? null
+          : previous
+      );
+      setPendingReply((previous) =>
+        previous &&
+        fresh.some(
+          (message) =>
+            message.authorType === 'agent' && message.createdAt >= previous.at
+        )
+          ? null
+          : previous
+      );
+    } catch {
+      // Daftar langsung tetap berlaku bila server tidak menjawab.
+    }
+  }, [convex, roomId]);
+
+  // Pesan yang sudah tersimpan berubah lagi bila pesan optimistic sudah ada
+  // di server.
+  useEffect(() => {
+    if (!pendingUser) return;
+    const stored = (messages ?? []).some(
+      (message) =>
+        message.authorType === 'user' &&
+        message.text === pendingUser.text &&
+        message.createdAt >= pendingUser.at
+    );
+    if (stored) setPendingUser(null);
+  }, [messages, pendingUser]);
+
+  useEffect(() => {
+    if (!pendingReply) return;
+    const stored = (messages ?? []).some(
+      (message) =>
+        message.authorType === 'agent' && message.createdAt >= pendingReply.at
+    );
+    if (stored) setPendingReply(null);
+  }, [messages, pendingReply]);
+
+  // Proposal yang sudah terlihat di thread ini.
+  const proposals = useMemo(() => {
+    const map: Record<string, RoomProposal> = {};
+
+    for (const operation of operations ?? []) {
+      map[operation.id] = {
+        operationId: operation.id,
+        kind: operation.kind,
+        summary: operation.summary ?? '',
+        status: operation.status,
+        duplicate: false,
+      };
+    }
+
+    for (const proposal of Object.values(proposalUpdates)) {
+      map[proposal.operationId] = {
+        ...(map[proposal.operationId] ?? proposal),
+        ...proposal,
+      };
+    }
+
+    for (const [operationId, status] of Object.entries(statusOverrides)) {
+      const proposal = map[operationId];
+      if (proposal) map[operationId] = { ...proposal, status };
+    }
+
+    return map;
+  }, [operations, proposalUpdates, statusOverrides]);
+
+  const listMessages = useMemo<RoomListMessage[]>(() => {
+    const items: RoomListMessage[] = (messages ?? []).map((message) => ({
+      id: message.id,
+      authorType: message.authorType,
+      authorName: message.authorName,
+      kind: message.kind,
+      text: message.text,
+      createdAt: message.createdAt,
+      operationId: message.operationId,
+    }));
+
+    if (
+      pendingUser &&
+      !items.some(
+        (message) =>
+          message.authorType === 'user' &&
+          message.text === pendingUser.text &&
+          message.createdAt >= pendingUser.at
+      )
+    ) {
+      items.push({
+        id: 'pending-user',
+        authorType: 'user',
+        authorName: currentUserName,
+        kind: 'message',
+        text: pendingUser.text,
+        createdAt: pendingUser.at,
+        pending: true,
+      });
+    }
+
+    if (
+      pendingReply &&
+      !items.some(
+        (message) =>
+          message.authorType === 'agent' && message.createdAt >= pendingReply.at
+      )
+    ) {
+      items.push({
+        id: 'pending-reply',
+        authorType: 'agent',
+        authorName: agentName,
+        kind: 'message',
+        text: pendingReply.text,
+        createdAt: pendingReply.at,
+        pending: true,
+      });
+    }
+
+    return items;
+  }, [messages, pendingUser, pendingReply, currentUserName, agentName]);
+
+  // Proposal yang belum punya pesan di thread.
+  const trailingProposals = useMemo(() => {
+    const linked = new Set(
+      listMessages
+        .map((message) => message.operationId)
+        .filter((operationId): operationId is string => Boolean(operationId))
+    );
+    return Object.values(proposalUpdates).filter(
+      (proposal) => !linked.has(proposal.operationId)
+    );
+  }, [listMessages, proposalUpdates]);
+
+  const handleSend = async (value: string) => {
+    if (!roomId) throw new Error('Ruang tidak tersedia');
+
+    const sentAt = Date.now();
+    setIsSending(true);
+
+    try {
+      const response = await requestRoomAgent(
+        roomId,
+        value,
+        authState.token ?? null
+      );
+
+      if (response.proposals.length > 0) {
+        setProposalUpdates((previous) => {
+          const next = { ...previous };
+          for (const proposal of response.proposals) {
+            next[proposal.operationId] = proposal;
+          }
+          return next;
+        });
+      }
+
+      if (response.agentReply) {
+        setPendingReply({ text: response.agentReply, at: sentAt });
+      }
+
+      await refetchMessages();
+    } catch (error) {
+      setPendingUser(null);
+      throw error;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleOptimistic = (value: string) => {
+    setPendingUser({ text: value, at: Date.now() });
+    forceScrollRef.current = true;
+  };
+
+  const handleDecide = async (
+    operationId: string,
+    decision: 'approve' | 'reject'
+  ) => {
+    setDecidingOperationId(operationId);
+    setStatusOverrides((previous) => ({
+      ...previous,
+      [operationId]: decision === 'approve' ? 'pending' : 'rejected',
+    }));
+
+    try {
+      await decide.mutateAsync({
+        operationId: operationId as Id<'agentOperations'>,
+        decision,
+      });
+      toast.success(
+        decision === 'approve' ? 'Proposal disetujui' : 'Proposal ditolak'
+      );
     } catch (e: any) {
-      toast.error(e?.data?.message ?? 'Gagal mengirim pesan');
+      setStatusOverrides((previous) => {
+        const next = { ...previous };
+        delete next[operationId];
+        return next;
+      });
+      toast.error(e?.data?.message ?? 'Gagal menyimpan keputusan');
+    } finally {
+      setDecidingOperationId(null);
     }
   };
 
@@ -396,93 +638,32 @@ export default function RoomPage() {
           <div className="flex items-center justify-between border-b px-4 py-2.5">
             <h2 className="text-sm font-medium">Percakapan</h2>
             <span className="text-xs text-muted-foreground">
-              {messages?.length ?? 0} pesan
+              {listMessages.length} pesan
             </span>
           </div>
 
           <ScrollArea ref={threadRef} className="h-[55vh]">
-            <div className="flex flex-col gap-3 p-4">
-              {!messages || messages.length === 0 ? (
-                <EmptyState
-                  icon={<MessageSquare className="size-6" />}
-                  title="Belum ada pesan"
-                  description="Pesan pertama di ruang ini ditulis di bawah."
-                  className="py-8"
-                />
-              ) : (
-                messages.map((message) => (
-                  <div key={message.id} className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {message.authorName}
-                      </span>
-                      {message.authorType === 'agent' ? (
-                        <Badge
-                          variant="outline"
-                          className="h-5 gap-1 text-[11px]"
-                        >
-                          <Bot className="h-3 w-3" />
-                          Agen
-                        </Badge>
-                      ) : null}
-                      {MESSAGE_KIND_LABEL[message.kind] ? (
-                        <Badge variant="secondary" className="h-5 text-[11px]">
-                          {MESSAGE_KIND_LABEL[message.kind]}
-                        </Badge>
-                      ) : null}
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(message.createdAt)}
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap text-sm">{message.text}</p>
-                  </div>
-                ))
-              )}
-            </div>
+            <RoomMessageList
+              messages={listMessages}
+              agentName={agentName}
+              isThinking={isSending}
+              canDecide={write.allowed}
+              decidingOperationId={decidingOperationId}
+              proposals={proposals}
+              trailingProposals={trailingProposals}
+              onDecide={handleDecide}
+            />
           </ScrollArea>
         </Card>
 
         <Card className="gap-3 py-4">
-          <Label htmlFor="message-text">Tulis pesan</Label>
-          <Textarea
-            id="message-text"
-            ref={textareaRef}
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void handleSend();
-              }
-            }}
-            disabled={!write.allowed}
-            placeholder={
-              write.allowed
-                ? 'Tulis pesan untuk ruang ini'
-                : 'Anda tidak dapat menulis di ruang ini'
-            }
-            maxLength={4000}
+          <RoomComposer
+            canWrite={write.allowed}
+            writeReason={write.reason}
+            isSending={isSending}
+            onSend={handleSend}
+            onOptimistic={handleOptimistic}
           />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {write.allowed ? (
-              <p className="text-xs text-muted-foreground">
-                Enter untuk mengirim, Shift+Enter untuk baris baru.
-              </p>
-            ) : (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3.5 w-3.5" />
-                {write.reason}
-              </p>
-            )}
-            <Button
-              onClick={handleSend}
-              disabled={!write.allowed || text.trim().length === 0}
-            >
-              <Send className="h-4 w-4" />
-              Kirim
-            </Button>
-          </div>
         </Card>
       </div>
 

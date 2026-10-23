@@ -29,3 +29,38 @@ export {
   type ProposeOperationProposal,
   type ProposeOperationTool,
 } from './propose-operation';
+
+// The bridge and the room turn are server-side only. The bridge reads the
+// service secret, so it must never reach a client bundle.
+export {
+  BRIDGE_MESSAGE_PATH,
+  BRIDGE_PROPOSAL_PATH,
+  BRIDGE_SIGNATURE_HEADER,
+  BRIDGE_SIGNATURE_VERSION,
+  BRIDGE_TIMESTAMP_HEADER,
+  bridgeCall,
+  buildBridgeHeaders,
+  buildSignature,
+  buildSignatureHeader,
+  buildSigningText,
+  toSignaturePath,
+  type BridgeCallOptions,
+  type BridgeEnvelope,
+} from './bridge';
+export {
+  AGENT_TURN_TIMEOUT_MS,
+  AgentTurnTimeoutError,
+  buildAgentInstructions,
+  extractReplyText,
+  runAgentTurn,
+  type AgentTurnInput,
+  type AgentTurnResult,
+} from './agent-turn';
+export {
+  authorLabel,
+  buildProposalSummary,
+  formatTranscript,
+  formatTranscriptMessage,
+  toOperationKind,
+  type TranscriptMessage,
+} from './transcript';
