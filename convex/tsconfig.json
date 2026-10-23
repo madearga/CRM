@@ -40,10 +40,9 @@
     "module": "ESNext",
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": "../",
     "paths": {
-      "@convex/*": ["convex/*"],
-      "@crm/domain": ["packages/domain/src/index.ts"]
+      "@convex/*": ["./*"],
+      "@crm/domain": ["../packages/domain/src/index.ts"]
     }
   },
   "include": ["./**/*"],

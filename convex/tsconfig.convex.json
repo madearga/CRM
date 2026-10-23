@@ -40,9 +40,8 @@
     "module": "ESNext",
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": "../",
     "paths": {
-      "@convex/*": ["convex/*"]
+      "@convex/*": ["./*"]
     }
   },
   "include": ["./**/*"],

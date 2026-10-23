@@ -131,9 +131,22 @@ export const propose = createOrgMutation({
     agentLabel: z.string().optional(),
     summary: z.string().max(500).optional(),
     expiresInMinutes: z.number().int().positive().optional(),
+    roomId: zid('rooms').optional(),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+
+    // The room is checked before the operation is written, so a proposal can
+    // never point at a room that does not exist in this organization.
+    if (args.roomId) {
+      const room = await ctx.db.get(args.roomId);
+      if (!room || room.organizationId !== ctx.orgId) {
+        throw new ConvexError({
+          code: 'NOT_FOUND',
+          message: 'The room does not exist in this organization',
+        });
+      }
+    }
     // The canonical text is the identity of the payload. Two proposals with
     // the same idempotency key must carry the very same text.
     const payloadJson = stableStringify(args.payload);
@@ -184,6 +197,7 @@ export const propose = createOrgMutation({
       requestedByUserId: ctx.userId,
       attempts: 0,
       expiresAt,
+      roomId: args.roomId,
       createdAt: now,
       updatedAt: now,
     });
@@ -206,6 +220,25 @@ export const propose = createOrgMutation({
       });
 
       await ctx.db.patch(operationId, { approvalId, updatedAt: now });
+    }
+
+    // The proposal is written into the room it belongs to, so the room talk
+    // and the ledger tell the same story.
+    if (args.roomId) {
+      try {
+        await ctx.runMutation(internal.rooms.postFromAgent, {
+          organizationId: ctx.orgId,
+          roomId: args.roomId,
+          agentId: args.agentId,
+          kind: 'proposal',
+          operationId,
+          text: args.summary ?? `Proposal: ${args.kind}`,
+        });
+      } catch (error) {
+        // The operation is the record of the work. A room that refuses the
+        // message must not throw the proposal away.
+        console.warn('[agentOperations.propose] The room refused the proposal message', error);
+      }
     }
 
     return {
@@ -277,6 +310,29 @@ export const decide = createOrgMutation({
       updatedAt: now,
       ...(status === 'rejected' ? { finishedAt: now } : {}),
     });
+
+    // The decision is written next to the work it settles, so the room reads
+    // the decision in the place of the operation.
+    if (operation.roomId) {
+      const text = args.comment
+        ? `Decision: ${args.decision} (${operation.kind})\n${args.comment}`
+        : `Decision: ${args.decision} (${operation.kind})`;
+
+      try {
+        await ctx.runMutation(internal.rooms.postFromUser, {
+          organizationId: ctx.orgId,
+          roomId: operation.roomId,
+          userId: ctx.userId,
+          kind: 'decision',
+          operationId: operation._id,
+          text,
+        });
+      } catch (error) {
+        // The decision itself must stand, also when the room refuses the
+        // message.
+        console.warn('[agentOperations.decide] The room refused the decision message', error);
+      }
+    }
 
     return {
       operationId: operation._id,

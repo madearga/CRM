@@ -1452,6 +1452,7 @@ const schema = defineEntSchema(
       summary: v.optional(v.string()),
       agentId: v.optional(v.string()),
       agentLabel: v.optional(v.string()),
+      roomId: v.optional(v.id('rooms')),
       requestedByUserId: v.id('user'),
       approvalId: v.optional(v.id('approvals')),
       resultJson: v.optional(v.string()),
@@ -1487,6 +1488,73 @@ const schema = defineEntSchema(
         'organizationId',
         'operationKey',
       ]),
+
+    // ----------------------------
+    // Rooms — people and agents work together in a room
+    // ----------------------------
+
+    agents: defineEnt({
+      organizationId: v.id('organization'),
+      agentId: v.string(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      status: v.string(),
+      model: v.optional(v.string()),
+      scopes: v.array(v.string()),
+      createdByUserId: v.id('user'),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index('organizationId_agentId', ['organizationId', 'agentId'])
+      .index('organizationId_status', ['organizationId', 'status']),
+
+    rooms: defineEnt({
+      organizationId: v.id('organization'),
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      kind: v.string(),
+      visibility: v.string(),
+      createdByUserId: v.id('user'),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      archivedAt: v.optional(v.number()),
+    })
+      .index('organizationId_slug', ['organizationId', 'slug'])
+      .index('organizationId_updatedAt', ['organizationId', 'updatedAt']),
+
+    roomMembers: defineEnt({
+      organizationId: v.id('organization'),
+      roomId: v.id('rooms'),
+      memberType: v.string(),
+      userId: v.optional(v.id('user')),
+      agentId: v.optional(v.string()),
+      displayName: v.string(),
+      role: v.string(),
+      scopes: v.array(v.string()),
+      joinedAt: v.number(),
+      leftAt: v.optional(v.number()),
+    })
+      .index('roomId_memberType', ['roomId', 'memberType'])
+      .index('organizationId_roomId', ['organizationId', 'roomId'])
+      .index('roomId_userId', ['roomId', 'userId'])
+      .index('roomId_agentId', ['roomId', 'agentId']),
+
+    roomMessages: defineEnt({
+      organizationId: v.id('organization'),
+      roomId: v.id('rooms'),
+      authorType: v.string(),
+      authorUserId: v.optional(v.id('user')),
+      authorAgentId: v.optional(v.string()),
+      kind: v.string(),
+      text: v.string(),
+      operationId: v.optional(v.id('agentOperations')),
+      replyToId: v.optional(v.id('roomMessages')),
+      createdAt: v.number(),
+    })
+      .index('roomId_createdAt', ['roomId', 'createdAt'])
+      .index('organizationId_roomId', ['organizationId', 'roomId'])
+      .index('roomId_operationId', ['roomId', 'operationId']),
   },
   {
     schemaValidation: true,
