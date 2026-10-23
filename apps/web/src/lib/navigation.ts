@@ -13,6 +13,8 @@ import {
   Landmark,
   LayoutDashboard,
   LayoutTemplate,
+  MessageSquare,
+  Network,
   Package,
   RefreshCw,
   Settings,
@@ -21,6 +23,7 @@ import {
   Store,
   Users,
   UsersRound,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -93,6 +96,17 @@ export const navGroups: NavGroupConfig[] = [
     ],
   },
   {
+    id: 'collaboration',
+    label: 'Kolaborasi',
+    icon: Network,
+    defaultOpen: true,
+    items: [
+      { title: 'Persetujuan', href: '/approvals', icon: ClipboardCheck },
+      { title: 'Ruang', href: '/rooms', icon: MessageSquare },
+      { title: 'Agen', href: '/agents', icon: Workflow },
+    ],
+  },
+  {
     id: 'system',
     label: 'System',
     icon: Settings,
@@ -124,6 +138,9 @@ export const featureMap: Record<string, string> = {
   '/hr/corrections': 'hr_attendance',
   '/hr/holidays': 'hr_holidays',
   '/hr/reports': 'hr_reports',
+  '/approvals': 'agents',
+  '/rooms': 'rooms',
+  '/agents': 'agents',
   '/settings/shop': 'settings',
   '/settings': 'settings',
 }

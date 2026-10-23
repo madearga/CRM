@@ -51,6 +51,7 @@ const FEATURE_LABELS: Record<string, string> = {
   settings: 'Settings',
   activities: 'Activities',
   agents: 'Agen',
+  rooms: 'Ruang',
 };
 
 export function PermissionMatrix({ entries, onChange, readOnly = false }: PermissionMatrixProps) {
