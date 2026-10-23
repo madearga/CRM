@@ -2,7 +2,9 @@
 
 ## 1. Visual Theme & Atmosphere
 
-Dark-first product UI for all-day professional use. Tinted near-black background (`oklch(10% 0.005 260)`) with near-white text (`#f0f0fa`), avoiding pure black harshness. Cards and popovers sit at `oklch(14% 0.005 260)` for subtle surface separation.
+Dark-first product UI for all-day professional use. Tinted near-black background (`oklch(10% 0.005 260)`) with near-white text (`#f0f0fa`), avoiding pure black harshness.
+
+**Glass direction (v2, owner-approved):** surfaces are translucent (`--card: rgba(240,240,250,0.05)`, `--sidebar: rgba(240,240,250,0.035)`) with `backdrop-blur-xl` over a quiet fixed ambience (two large radial indigo glows at 6–9% opacity on the body and layout). Separation is still carried by hairline `--border` (rgba(240,240,250,0.1)) — glass never replaces contrast. Popovers stay near-opaque (`rgba(16,16,24,0.85)`) for legibility. Buttons confirm presses with `active:scale-[0.97]` (160ms ease-out); no `transition: all` anywhere; `prefers-reduced-motion` is honored.
 
 **Key Characteristics:**
 - Dark-first palette — never pure black

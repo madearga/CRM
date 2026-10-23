@@ -131,7 +131,7 @@ export function RoomComposer({
           {isSending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin duration-500" />
-              Mengirim...
+              Mengirim…
             </>
           ) : (
             <>

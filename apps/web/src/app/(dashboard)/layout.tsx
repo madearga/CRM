@@ -120,6 +120,10 @@ export default function DashboardLayout({
         '--sidebar-ring': 'rgba(240,240,250,0.2)',
       } as React.CSSProperties}
     >
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-40 left-[6%] h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle,var(--glow-indigo-soft),transparent_65%)]" />
+        <div className="absolute bottom-[-12%] right-[4%] h-[26rem] w-[26rem] rounded-full bg-[radial-gradient(circle,var(--glow-violet-soft),transparent_65%)]" />
+      </div>
       <Sidebar>
         <SidebarHeader className="gap-2 p-4 pb-3">
           <div className="flex items-center gap-3 px-1 py-2">

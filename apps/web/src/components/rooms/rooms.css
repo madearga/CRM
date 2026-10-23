@@ -1,4 +1,5 @@
-/*
+/* Hallmark v2.0.0 · theme: none — DESIGN.md locked system (dark glass v2) · scope app · genre modern-minimal
+ * waive 20: project styles live in globals.css tokens (Tailwind v4); this file holds room-scoped motion only.
  * Ruang: the room thread and its composer.
  * The motion here is small. A message slides in over 200 ms, a thought bubble
  * pulses, and nothing scales from zero.

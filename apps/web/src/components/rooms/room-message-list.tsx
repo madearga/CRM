@@ -2,13 +2,13 @@
 
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/empty-state';
-import { Bot, MessageSquare } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
 import { formatDistanceToNow } from '@/lib/format-date';
 
 import { formatRoomTimestamp } from './format';
 import { RoomProposalCard } from './room-proposal-card';
-import { RoomThinkingDots } from './room-thinking-dots';
+import { AsciiFrame, AsciiSpinner } from './ascii';
 import type { RoomListMessage, RoomProposal } from './types';
 
 const MESSAGE_KIND_LABEL: Record<string, string> = {
@@ -56,12 +56,12 @@ export function RoomMessageList({
       aria-label="Percakapan ruang"
     >
       {isEmpty && !isThinking ? (
-        <EmptyState
-          icon={<MessageSquare className="size-6" />}
-          title="Belum ada pesan"
-          description="Pesan pertama di ruang ini ditulis di bawah."
-          className="py-8"
-        />
+        <div className="flex flex-col items-center gap-3 py-8">
+          <AsciiFrame lines={['belum ada pesan', 'ruang ini menunggu kata pertama']} />
+          <p className="text-sm text-muted-foreground">
+            Pesan pertama di ruang ini ditulis di bawah.
+          </p>
+        </div>
       ) : null}
 
       {messages.map((message, index) => (
@@ -93,7 +93,7 @@ export function RoomMessageList({
 
       {isThinking ? (
         <div className="room-message flex items-center gap-2 text-sm text-muted-foreground">
-          <RoomThinkingDots />
+          <AsciiSpinner label="nara berpikir…" />
           <span>{agentName} sedang berpikir</span>
         </div>
       ) : null}
@@ -131,7 +131,7 @@ function RoomMessageRow({
       >
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{message.authorName}</span>
-          {message.pending ? <span>mengirim...</span> : null}
+          {message.pending ? <span>mengirim…</span> : null}
           <time
             dateTime={new Date(message.createdAt).toISOString()}
             title={formatRoomTimestamp(message.createdAt)}

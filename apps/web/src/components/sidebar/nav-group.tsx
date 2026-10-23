@@ -44,9 +44,9 @@ export function NavGroup({ label, icon: Icon, items, defaultOpen = false }: NavG
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <SidebarGroup>
         <CollapsibleTrigger asChild>
-          <SidebarGroupLabel className="cursor-pointer gap-2">
+          <SidebarGroupLabel className="cursor-pointer gap-2 font-mono text-[11px] lowercase tracking-normal">
             {Icon && <Icon className="h-4 w-4" />}
-            <span>{label}</span>
+            <span className="text-muted-foreground/80">{label}</span>
             <ChevronRight
               className={cn(
                 'ml-auto h-3.5 w-3.5 transition-transform duration-200',

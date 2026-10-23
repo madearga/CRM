@@ -11,6 +11,8 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { OperationTag } from './ascii';
+
 import type { RoomProposal } from './types';
 
 const KIND_LABEL: Record<string, string> = {
@@ -78,7 +80,7 @@ export function RoomProposalCard({
   const canApprove = canDecide && proposal.status === 'awaiting_approval';
 
   return (
-    <div className="rounded-md border bg-card p-3">
+    <div className="glass rounded-md p-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className="h-5 text-[11px]">
           {kindLabel}
@@ -87,6 +89,7 @@ export function RoomProposalCard({
           <StatusIcon className="h-3 w-3" />
           {status.label}
         </Badge>
+        <OperationTag operationId={proposal.operationId} className="ml-auto" />
         {proposal.duplicate ? (
           <span className="text-[11px] text-muted-foreground">
             Proposal duplikat
