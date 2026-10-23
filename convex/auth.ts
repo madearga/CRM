@@ -13,7 +13,6 @@ import {
   ActionCtx,
   MutationCtx,
   QueryCtx,
-  type GenericCtx,
 } from './_generated/server';
 import { entsTableFactory } from 'convex-ents';
 import schema, { entDefinitions } from './schema';
@@ -157,6 +156,10 @@ export const authClient = createClient<DataModel>(
     } as any,
   } as any
 );
+
+// `convex/server` no longer exports `GenericCtx`, so the context type that the
+// Better Auth adapter accepts is spelled out here.
+type GenericCtx = QueryCtx | MutationCtx | ActionCtx;
 
 export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
   const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
