@@ -18,7 +18,7 @@ export default function LoginPage() {
   }, [data, isPending, router]);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-x-clip bg-background p-4">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-x-clip bg-background p-4">
       {/* Ambient glass backdrop */}
       <div aria-hidden className="pointer-events-none fixed inset-0">
         <div className="absolute -top-32 left-[8%] h-96 w-96 rounded-full bg-[radial-gradient(circle,var(--glow-indigo),transparent_65%)]" />

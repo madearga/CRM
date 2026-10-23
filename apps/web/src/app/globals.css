@@ -134,5 +134,6 @@ html, body {
   --glow-indigo: rgba(79, 156, 247, 0.12);
   --glow-violet: rgba(129, 140, 248, 0.10);
   --glow-indigo-soft: rgba(79, 156, 247, 0.09);
+  --sidebar-mobile: rgba(12, 12, 18, 0.92);
   --glow-violet-soft: rgba(129, 140, 248, 0.07);
 }
