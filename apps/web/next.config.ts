@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, '../..'),
   },
+  // Development access over Tailscale Serve (HTTPS). Production is unaffected.
+  allowedDevOrigins: ['vmi3311790.taila50457.ts.net'],
   images: {
     remotePatterns: [
       {

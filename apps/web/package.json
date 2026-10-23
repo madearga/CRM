@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "node ../../scripts/convex-dev.mjs check && next dev --turbopack --hostname 127.0.0.1 --port 3005",
+    "dev": "node ../../scripts/convex-dev.mjs check && next dev --turbopack --hostname \"${RUANG_DEV_HOST:-127.0.0.1}\" --port 3005",
     "lint": "eslint",
     "lint:fix": "eslint --fix && prettier --write . --log-level warn",
     "start": "next start",

@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../_generated/api';
-import { createTest, seed } from './roomTestApp';
+import { createTest, seed } from './roomTestApp.fixtures';
 
 const session = vi.hoisted(() => ({
   user: null as Record<string, unknown> | null,

@@ -1,10 +1,3 @@
-const forbiddenOverrides = [
-  'CONVEX_DEPLOY_KEY',
-  'CONVEX_DEPLOYMENT_TOKEN',
-  'CONVEX_SELF_HOSTED_URL',
-  'CONVEX_SELF_HOSTED_ADMIN_KEY',
-];
-
 function selectionValues(source) {
   const values = {};
   for (const line of source.split(/\r?\n/)) {
@@ -23,8 +16,36 @@ function selectionValues(source) {
   return values;
 }
 
+/**
+ * The deployment a deploy key targets, or null when the value is not a
+ * deployment-scoped key. Keys look like `dev:name|payload`.
+ */
+export function keyDeployment(value) {
+  if (typeof value !== 'string') return null;
+  const match = value.match(/^(dev|prod|preview):([^|]+)\|/);
+  if (!match) return null;
+  return { type: match[1], name: match[2] };
+}
+
 function requireValue(values, key, expected) {
   if (values[key] !== expected) {
+    throw new Error(
+      `${key} does not match the pinned Ruang development deployment.`
+    );
+  }
+}
+
+function requireUrl(values, key, name, suffix) {
+  const value = values[key];
+  let host = null;
+  if (typeof value === 'string') {
+    try {
+      host = new URL(value).hostname;
+    } catch {
+      host = null;
+    }
+  }
+  if (!host || !host.startsWith(`${name}.`) || !host.endsWith(suffix)) {
     throw new Error(
       `${key} does not match the pinned Ruang development deployment.`
     );
@@ -47,16 +68,38 @@ export function validateConvexTarget({
     throw new Error(
       'A development deployment must be explicitly pinned before deployment.'
     );
-  if (!/^dev:[a-z]+-[a-z]+-\d+$/.test(deployment)) {
+  if (!/^dev:[a-z0-9]+(-[a-z0-9]+)+$/.test(deployment)) {
     throw new Error(
       'The pinned target must be a cloud development deployment, not production.'
     );
   }
+  const name = deployment.slice(4);
 
   const backendValues = selectionValues(backend);
   const frontendValues = selectionValues(frontend);
-  for (const values of [backendValues, frontendValues, environment]) {
-    for (const key of forbiddenOverrides) {
+
+  // A deployment-scoped key is the normal credential for a bootstrap push
+  // from a server. It is accepted only when it targets exactly the pinned
+  // development deployment; any other key, including a production or preview
+  // one, is refused before the CLI runs.
+  let hasMatchingKey = false;
+  const sources = [
+    ['the environment', environment],
+    ['the backend env file', backendValues],
+    ['the frontend env file', frontendValues],
+  ];
+  for (const [source, values] of sources) {
+    for (const key of ['CONVEX_DEPLOY_KEY', 'CONVEX_DEPLOYMENT_TOKEN']) {
+      if (!values[key]) continue;
+      const targeted = keyDeployment(values[key]);
+      if (!targeted || targeted.type !== 'dev' || targeted.name !== name) {
+        throw new Error(
+          `${key} in ${source} does not target the pinned deployment ${deployment}; remove it.`
+        );
+      }
+      hasMatchingKey = true;
+    }
+    for (const key of ['CONVEX_SELF_HOSTED_URL', 'CONVEX_SELF_HOSTED_ADMIN_KEY']) {
       if (values[key])
         throw new Error(
           `${key} can override deployment selection; remove it before using this command.`
@@ -64,22 +107,26 @@ export function validateConvexTarget({
     }
   }
 
-  const name = deployment.slice(4);
-  const cloudUrl = `https://${name}.convex.cloud`;
-  const siteUrl = `https://${name}.convex.site`;
   requireValue(backendValues, 'CONVEX_DEPLOYMENT', deployment);
-  requireValue(backendValues, 'CONVEX_URL', cloudUrl);
-  requireValue(backendValues, 'CONVEX_SITE_URL', siteUrl);
-  requireValue(frontendValues, 'NEXT_PUBLIC_CONVEX_URL', cloudUrl);
-  requireValue(frontendValues, 'NEXT_PUBLIC_CONVEX_SITE_URL', siteUrl);
+  requireUrl(backendValues, 'CONVEX_URL', name, '.convex.cloud');
+  requireUrl(backendValues, 'CONVEX_SITE_URL', name, '.convex.site');
+  requireUrl(frontendValues, 'NEXT_PUBLIC_CONVEX_URL', name, '.convex.cloud');
+  requireUrl(frontendValues, 'NEXT_PUBLIC_CONVEX_SITE_URL', name, '.convex.site');
   for (const [key, expected] of Object.entries({
     CONVEX_DEPLOYMENT: deployment,
-    CONVEX_URL: cloudUrl,
-    CONVEX_SITE_URL: siteUrl,
-    NEXT_PUBLIC_CONVEX_URL: cloudUrl,
-    NEXT_PUBLIC_CONVEX_SITE_URL: siteUrl,
+    NEXT_PUBLIC_CONVEX_URL: backendValues.CONVEX_URL,
+    NEXT_PUBLIC_CONVEX_SITE_URL: backendValues.CONVEX_SITE_URL,
   })) {
-    if (environment[key]) requireValue(environment, key, expected);
+    // A matching key is the runtime credential and stale ambient selection
+    // values are stripped from the child environment, so with a verified key
+    // an ambient CONVEX_DEPLOYMENT cannot override anything and is ignored.
+    if (environment[key] && !(hasMatchingKey && key === 'CONVEX_DEPLOYMENT')) {
+      requireValue(environment, key, expected);
+    }
   }
-  return { deployment, cloudUrl, siteUrl };
+  return {
+    deployment,
+    cloudUrl: backendValues.CONVEX_URL,
+    siteUrl: backendValues.CONVEX_SITE_URL,
+  };
 }

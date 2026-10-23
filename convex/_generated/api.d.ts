@@ -21,6 +21,7 @@ import type * as aiToolInternals from "../aiToolInternals.js";
 import type * as aiTools_definitions from "../aiTools/definitions.js";
 import type * as aiTools_executor from "../aiTools/executor.js";
 import type * as aiTools_index from "../aiTools/index.js";
+import type * as aiTools_policy from "../aiTools/policy.js";
 import type * as analytics from "../analytics.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
@@ -49,6 +50,7 @@ import type * as emails_organizationInvite from "../emails/organizationInvite.js
 import type * as emails_weeklyPipelineDigest from "../emails/weeklyPipelineDigest.js";
 import type * as externalPlugins from "../externalPlugins.js";
 import type * as functions from "../functions.js";
+import type * as helpers_callbackUrl from "../helpers/callbackUrl.js";
 import type * as helpers_getEnv from "../helpers/getEnv.js";
 import type * as helpers_premiumGuard from "../helpers/premiumGuard.js";
 import type * as helpers_rateLimiter from "../helpers/rateLimiter.js";
@@ -74,6 +76,7 @@ import type * as migrations_activateAllPlugins from "../migrations/activateAllPl
 import type * as migrations_seedPluginInstances from "../migrations/seedPluginInstances.js";
 import type * as migrations_teamPermissions from "../migrations/teamPermissions.js";
 import type * as onboarding from "../onboarding.js";
+import type * as orgAccess from "../orgAccess.js";
 import type * as organization from "../organization.js";
 import type * as organizationHelpers from "../organizationHelpers.js";
 import type * as paymentTerms from "../paymentTerms.js";
@@ -89,6 +92,7 @@ import type * as products from "../products.js";
 import type * as quotationTemplates from "../quotationTemplates.js";
 import type * as recurringInvoices from "../recurringInvoices.js";
 import type * as reset from "../reset.js";
+import type * as roomAccess from "../roomAccess.js";
 import type * as rooms from "../rooms.js";
 import type * as saleOrders from "../saleOrders.js";
 import type * as search from "../search.js";
@@ -125,6 +129,7 @@ declare const fullApi: ApiFromModules<{
   "aiTools/definitions": typeof aiTools_definitions;
   "aiTools/executor": typeof aiTools_executor;
   "aiTools/index": typeof aiTools_index;
+  "aiTools/policy": typeof aiTools_policy;
   analytics: typeof analytics;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
@@ -153,6 +158,7 @@ declare const fullApi: ApiFromModules<{
   "emails/weeklyPipelineDigest": typeof emails_weeklyPipelineDigest;
   externalPlugins: typeof externalPlugins;
   functions: typeof functions;
+  "helpers/callbackUrl": typeof helpers_callbackUrl;
   "helpers/getEnv": typeof helpers_getEnv;
   "helpers/premiumGuard": typeof helpers_premiumGuard;
   "helpers/rateLimiter": typeof helpers_rateLimiter;
@@ -178,6 +184,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/seedPluginInstances": typeof migrations_seedPluginInstances;
   "migrations/teamPermissions": typeof migrations_teamPermissions;
   onboarding: typeof onboarding;
+  orgAccess: typeof orgAccess;
   organization: typeof organization;
   organizationHelpers: typeof organizationHelpers;
   paymentTerms: typeof paymentTerms;
@@ -193,6 +200,7 @@ declare const fullApi: ApiFromModules<{
   quotationTemplates: typeof quotationTemplates;
   recurringInvoices: typeof recurringInvoices;
   reset: typeof reset;
+  roomAccess: typeof roomAccess;
   rooms: typeof rooms;
   saleOrders: typeof saleOrders;
   search: typeof search;

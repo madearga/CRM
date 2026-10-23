@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import { internal } from '../_generated/api';
 import { requireOrganizationMember } from '../roomAccess';
-import { createTest, refusal, seed, seedOperation } from './roomTestApp';
+import { createTest, refusal, seed, seedOperation } from './roomTestApp.fixtures';
 
 describe('the membership of a person in an organization', () => {
   it('accepts a person of the organization', async () => {

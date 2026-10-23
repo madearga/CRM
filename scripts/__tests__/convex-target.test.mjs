@@ -86,10 +86,44 @@ test('rejects a frontend that still points to the old backend', () => {
   );
 });
 
-test('rejects ambient deploy keys and alternate self-hosted targets', () => {
+test('accepts regional deployment URLs', () => {
+  const regional = check({
+    backend: backend
+      .replace('https://ruang-test-123.convex.cloud', 'https://ruang-test-123.ap-southeast-2.convex.cloud')
+      .replace('https://ruang-test-123.convex.site', 'https://ruang-test-123.ap-southeast-2.convex.site'),
+    frontend: frontend
+      .replace('https://ruang-test-123.convex.cloud', 'https://ruang-test-123.ap-southeast-2.convex.cloud')
+      .replace('https://ruang-test-123.convex.site', 'https://ruang-test-123.ap-southeast-2.convex.site'),
+  });
+  assert.equal(regional.cloudUrl, 'https://ruang-test-123.ap-southeast-2.convex.cloud');
+});
+
+test('rejects a URL that names another deployment or service', () => {
+  assert.throws(() => check({ backend: backend.replace('ruang-test-123.convex.cloud', 'other-app-123.ap-southeast-2.convex.cloud') }), /CONVEX_URL/);
+  assert.throws(() => check({ frontend: frontend.replace('ruang-test-123.convex.site', 'ruang-test-123.convex.cloud') }), /NEXT_PUBLIC_CONVEX_SITE_URL/);
+});
+
+test('accepts a deploy key that targets the pinned development deployment', () => {
+  const key = 'dev:ruang-test-123|cGF5bG9hZA==';
+  assert.doesNotThrow(() => check({ environment: { CONVEX_DEPLOY_KEY: key } }));
+  assert.doesNotThrow(() => check({ backend: backend + `CONVEX_DEPLOY_KEY=${key}\n` }));
+});
+
+test('refuses deploy keys that target another deployment or type', () => {
   for (const key of [
-    'CONVEX_DEPLOY_KEY',
-    'CONVEX_DEPLOYMENT_TOKEN',
+    'dev:prestigious-goshawk-967|cGF5bG9hZA==',
+    'prod:ruang-test-123|cGF5bG9hZA==',
+    'preview:ruang-test-123|cGF5bG9hZA==',
+    'dev:ruang-test-456|cGF5bG9hZA==',
+    'not-a-deployment-key',
+  ]) {
+    assert.throws(() => check({ environment: { CONVEX_DEPLOY_KEY: key } }), /CONVEX_DEPLOY_KEY/);
+    assert.throws(() => check({ backend: backend + `CONVEX_DEPLOYMENT_TOKEN=${key}\n` }), /CONVEX_DEPLOYMENT_TOKEN/);
+  }
+});
+
+test('rejects ambient alternate self-hosted targets', () => {
+  for (const key of [
     'CONVEX_SELF_HOSTED_URL',
     'CONVEX_SELF_HOSTED_ADMIN_KEY',
   ]) {
@@ -116,10 +150,21 @@ test('rejects target overrides hidden in the backend env file', () => {
   );
 });
 
-test('rejects ambient deployment selection when it disagrees', () => {
+test('rejects ambient deployment selection when it disagrees without a key', () => {
   assert.throws(
     () => check({ environment: { CONVEX_DEPLOYMENT: 'dev:other-app-123' } }),
     /CONVEX_DEPLOYMENT/
+  );
+});
+
+test('ignores a stale ambient selection when the matching key authorizes the run', () => {
+  assert.doesNotThrow(() =>
+    check({
+      environment: {
+        CONVEX_DEPLOY_KEY: 'dev:ruang-test-123|cGF5bG9hZA==',
+        CONVEX_DEPLOYMENT: 'dev:prestigious-goshawk-967',
+      },
+    })
   );
 });
 
