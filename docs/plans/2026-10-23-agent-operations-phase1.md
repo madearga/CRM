@@ -97,14 +97,14 @@ Feature baru `agents` dengan aksi `view`, `create`, `manage`:
 | mengusulkan operasi | `agents:create` |
 | menyetujui, menolak, menjalankan | `agents:manage` |
 
-Member tidak punya entri, jadi aksesnya ditolak sampai template权限 diberikan. Owner
+Member tidak punya entri, jadi aksesnya ditolak sampai template permission diberikan. Owner
 melewati pemeriksaan. Penambahan feature ini butuh label UI di halaman permission matrix
 (fase lanjutan).
 
 ## Batas fase ini
 
 - Tidak ada runtime agent durable. `convex/aiChat.ts` masih berjalan seperti sekarang.
-- Tidak ada ruang tim.，里面 belum ada konsep agent sebagai anggota.
+- Tidak ada ruang tim. Belum ada konsep agen sebagai anggota.
 - `unknown` diisi manual, belum ada reconciliation worker.
 - Audit trail memakai `auditLogs` yang sudah ada; penulisan entri audit untuk operasi
   ditambahkan pada fase berikutnya.
