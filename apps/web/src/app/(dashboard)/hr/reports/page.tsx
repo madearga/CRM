@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { AttendanceReportPDF, type AttendanceReportPDFData } from "@/pdf/attendance-report-pdf";
 import { PdfDownloadButton } from "@/components/pdf-download-button";
+import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
 import { usePermission } from '@/lib/permissions/use-permission';
 
