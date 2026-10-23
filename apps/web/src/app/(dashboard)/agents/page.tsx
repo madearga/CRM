@@ -35,7 +35,7 @@ export default function AgentsPage() {
     agentId: '',
     name: '',
     description: '',
-    model: '',
+    model: 'glm-5.3-flash',
   });
   const [scopes, setScopes] = useState<string[]>([]);
   const [scopeDraft, setScopeDraft] = useState('');
@@ -88,7 +88,7 @@ export default function AgentsPage() {
         agentId: key,
         name,
         description: form.description.trim() || undefined,
-        model: form.model.trim() || undefined,
+        model: form.model.trim() || 'glm-5.3-flash',
         scopes: scopes.length > 0 ? scopes : undefined,
       });
 
@@ -316,12 +316,15 @@ export default function AgentsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="agent-model">Model (opsional)</Label>
+              <Label htmlFor="agent-model">Model</Label>
+              <p className="text-xs text-muted-foreground">
+                Runtime menjalankan agen dengan glm-5.3-flash via Z.AI.
+              </p>
               <Input
                 id="agent-model"
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
-                placeholder="Contoh: gpt-5-mini"
+                readOnly
                 maxLength={100}
               />
             </div>

@@ -23,7 +23,7 @@
   --foreground: #f0f0fa;
   --card: rgba(240, 240, 250, 0.05);
   --card-foreground: #f0f0fa;
-  --popover: rgba(16, 16, 24, 0.85);
+  --popover: rgba(14, 14, 20, 0.97);
   --popover-foreground: #f0f0fa;
   --primary: #f0f0fa;
   --primary-foreground: oklch(10% 0.005 260);
