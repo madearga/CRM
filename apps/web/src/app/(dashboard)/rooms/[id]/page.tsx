@@ -7,7 +7,7 @@ import type { Id } from '@convex/_generated/dataModel';
 import { api } from '@convex/_generated/api';
 import { useAuthQuery, useAuthMutation, useCurrentUser } from '@/lib/convex/hooks';
 import { usePermission } from '@/lib/permissions/use-permission';
-import { agentCanPerform } from '@crm/domain';
+import { scopesGrantRoomWrite } from '@crm/domain';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -168,7 +168,7 @@ export default function RoomPage() {
       }
       if (
         membership.scopes.length > 0 &&
-        !agentCanPerform(membership.scopes, 'write')
+        !scopesGrantRoomWrite(membership.scopes)
       ) {
         return {
           allowed: false,

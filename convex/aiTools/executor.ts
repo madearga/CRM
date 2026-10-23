@@ -1,6 +1,7 @@
 import type { Id } from '../_generated/dataModel';
 import type { ActionCtx } from '../_generated/server';
 import { internal } from '../_generated/api';
+import { isLegacyReadTool } from './policy';
 
 interface ToolExecutionContext {
   ctx: ActionCtx;
@@ -22,6 +23,12 @@ export async function executeTool(
   execCtx: ToolExecutionContext
 ): Promise<unknown> {
   const { ctx, orgId, userId } = execCtx;
+  if (!isLegacyReadTool(toolName)) {
+    return {
+      error:
+        'Writes require the human approval ledger; this legacy chat is read-only.',
+    };
+  }
 
   try {
     switch (toolName) {
@@ -67,26 +74,6 @@ export async function executeTool(
           id: args.id as Id<'deals'>,
         });
 
-      case 'createActivity':
-        return await ctx.runMutation(internal.aiToolInternals.createActivityForHttp, {
-          organizationId: orgId,
-          userId,
-          type: args.type as string,
-          entityType: args.entityType as string,
-          entityId: args.entityId as string,
-          title: args.title as string,
-          description: args.description as string | undefined,
-          dueAt: args.dueAt as number | undefined,
-        });
-
-      case 'updateDealStage':
-        return await ctx.runMutation(internal.aiToolInternals.updateDealStageForHttp, {
-          organizationId: orgId,
-          id: args.dealId as Id<'deals'>,
-          stage: args.stage as string,
-          lostReason: args.lostReason as string | undefined,
-        });
-
       case 'searchEntities': {
         const query = args.query as string;
         const limit = (args.limit as number) ?? 10;
@@ -121,11 +108,15 @@ export async function executeTool(
         });
 
       case 'getAttendance':
-        return await ctx.runQuery(internal.aiToolInternals.getAttendanceDailySummary, {
-          organizationId: orgId,
-          date: (args.date ?? new Date().toISOString().split('T')[0]) as string,
-          branchId: args.branchId as Id<'branches'> | undefined,
-        });
+        return await ctx.runQuery(
+          internal.aiToolInternals.getAttendanceDailySummary,
+          {
+            organizationId: orgId,
+            date: (args.date ??
+              new Date().toISOString().split('T')[0]) as string,
+            branchId: args.branchId as Id<'branches'> | undefined,
+          }
+        );
 
       case 'markAttendance':
         return {
@@ -143,11 +134,15 @@ export async function executeTool(
 
       case 'getAttendanceCorrections':
         // TODO: add internal query if this tool is actively used
-        return { info: 'Fitur koreksi absensi belum tersedia via chat untuk saat ini.' };
+        return {
+          info: 'Fitur koreksi absensi belum tersedia via chat untuk saat ini.',
+        };
 
       case 'approveCorrection':
         // TODO: add internal mutation if this tool is actively used
-        return { info: 'Fitur approve koreksi absensi belum tersedia via chat untuk saat ini.' };
+        return {
+          info: 'Fitur approve koreksi absensi belum tersedia via chat untuk saat ini.',
+        };
 
       case 'getHolidays':
         return await ctx.runQuery(internal.aiToolInternals.listHolidays, {
@@ -201,7 +196,9 @@ export async function executeTool(
 
       case 'getAttendanceReport':
         // TODO: add internal monthly summary if actively used
-        return { info: 'Laporan bulanan absensi belum tersedia via chat untuk saat ini.' };
+        return {
+          info: 'Laporan bulanan absensi belum tersedia via chat untuk saat ini.',
+        };
 
       case 'getDealPipelineReport':
         return await ctx.runQuery(internal.aiToolInternals.listDeals, {

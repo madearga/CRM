@@ -47,17 +47,126 @@ export function roomSlug(name: string): string {
 }
 
 /**
- * True when the scopes grant the action. A scope is either the plain action
- * ('read') or the action bound to a resource ('inventory:read'). A bare
- * resource name grants nothing, because naming a resource is not asking for
- * any right on it.
+ * The action of a scope. The scope "inventory:read" asks for the action
+ * "read". A scope that names no known action is not a scope, so a bare
+ * resource name such as "inventory" has no action and grants nothing.
+ */
+export function scopeAction(scope: string): string | null {
+  const separator = scope.lastIndexOf(':');
+  const action = separator < 0 ? scope : scope.slice(separator + 1);
+  return (AGENT_ACTIONS as readonly string[]).includes(action) ? action : null;
+}
+
+/**
+ * The resource of a scope. The scope "inventory:read" names the resource
+ * "inventory". A scope without a resource names none, so it reaches every
+ * resource of its action.
+ */
+export function scopeResource(scope: string): string | null {
+  const separator = scope.lastIndexOf(':');
+  if (separator < 0) return null;
+  const resource = scope.slice(0, separator);
+  return resource.length > 0 ? resource : null;
+}
+
+/**
+ * True when a wanted scope stays inside the scopes that were granted.
+ *
+ * A granted scope without a resource reaches every resource of its action.
+ * A granted scope with a resource reaches that resource only. A wanted scope
+ * without a resource asks for more than a granted scope with a resource, so
+ * it does not fit.
+ */
+export function scopeFits(
+  granted: readonly string[],
+  wanted: string
+): boolean {
+  const wantedAction = scopeAction(wanted);
+  if (wantedAction === null) return false;
+  const wantedResource = scopeResource(wanted);
+
+  return granted.some((scope) => {
+    if (scopeAction(scope) !== wantedAction) return false;
+    const grantedResource = scopeResource(scope);
+    if (grantedResource === null) return true;
+    return grantedResource === wantedResource;
+  });
+}
+
+/**
+ * The scopes that bound an agent in a room.
+ *
+ * The scopes of the room membership can only narrow the scopes of the agent.
+ * A membership without scopes keeps the scopes of the agent. A membership
+ * with scopes keeps only the scopes of the membership that the agent also
+ * holds, so a room can never give an agent more than the agent has.
+ *
+ * The rule fails closed: an agent without scopes holds no right at all, so a
+ * membership can never grant a right that the agent does not have.
+ */
+export function narrowAgentScopes(
+  granted: readonly string[],
+  memberScopes: readonly string[]
+): string[] {
+  if (granted.length === 0) return [];
+  if (memberScopes.length === 0) return [...granted];
+  return memberScopes.filter(
+    (scope) => scopeAction(scope) !== null && scopeFits(granted, scope)
+  );
+}
+
+/**
+ * True when the scopes grant the action for every resource.
+ *
+ * The semantics of a scope are these:
+ * - A plain scope such as "write" names the action only, so it reaches every
+ *   resource of that action.
+ * - A scope with a resource such as "inventory:write" names one resource, so
+ *   it reaches that resource only.
+ * - A bare resource name such as "inventory" names no action, so it grants
+ *   nothing.
+ *
+ * A request without a resource asks for the action on every resource, so a
+ * scope with a resource never answers it. A request with a resource is
+ * answered by a plain scope and by a scope of the same resource.
  */
 export function agentCanPerform(
   scopes: readonly string[],
   action: AgentAction
 ): boolean {
+  return scopes.some(
+    (scope) => scopeAction(scope) === action && scopeResource(scope) === null
+  );
+}
+
+/**
+ * True when the scopes grant the action for the resource.
+ *
+ * A plain scope reaches every resource, so it answers the request. A scope
+ * with a resource answers the request only for that resource.
+ */
+export function agentCanPerformFor(
+  scopes: readonly string[],
+  action: AgentAction,
+  resource: string
+): boolean {
   return scopes.some((scope) => {
-    if (scope === action) return true;
-    return scope.endsWith(`:${action}`);
+    if (scopeAction(scope) !== action) return false;
+    const scopeName = scopeResource(scope);
+    return scopeName === null || scopeName === resource;
   });
+}
+
+/** The resource name of a room. */
+export const ROOM_RESOURCE = 'rooms';
+
+/**
+ * True when the scopes grant the write into a room.
+ *
+ * A room is the resource "rooms", so the scope "write" and the scope
+ * "rooms:write" grant the write into a room. A scope of another resource,
+ * such as "inventory:write", grants no write into a room.
+ */
+export function scopesGrantRoomWrite(scopes: readonly string[]): boolean {
+  return agentCanPerformFor(scopes, 'write', ROOM_RESOURCE);
 }

@@ -20,8 +20,9 @@ import {
   ROOM_MEMBER_TYPES,
   ROOM_MESSAGE_KINDS,
   ROOM_VISIBILITIES,
-  agentCanPerform,
+  narrowAgentScopes,
   roomSlug,
+  scopesGrantRoomWrite,
 } from '@crm/domain';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
@@ -34,95 +35,29 @@ import {
   createOrgMutation,
   createOrgQuery,
 } from './functions';
+import {
+  activeMembers,
+  findAgentByKey,
+  findAgentMembership,
+  findUserMembership,
+  membershipCanWrite,
+  requireOrganizationMember,
+  requireRoom,
+  requireRoomWriteAccess,
+  requireVisibleRoom,
+  roomForbidden as forbidden,
+  roomNotFound as notFound,
+} from './roomAccess';
 
-const DEFAULT_MESSAGE_LIMIT = 50;
-const MAX_MESSAGE_LIMIT = 200;
+// The shared access rules live in roomAccess, so the operations module can
+// ask the same question about a room as this module does.
+
+const DEFAULT_MESSAGE_LIMIT = 50;const MAX_MESSAGE_LIMIT = 200;
 
 type RoomDoc = Doc<'rooms'>;
 type RoomMemberDoc = Doc<'roomMembers'>;
 type RoomMessageDoc = Doc<'roomMessages'>;
 type AgentDoc = Doc<'agents'>;
-
-/** Not found error with the code the callers expect. */
-function notFound(message: string): ConvexError<{ code: string; message: string }> {
-  return new ConvexError({ code: 'NOT_FOUND', message });
-}
-
-/** Refused error with the code the callers expect. */
-function forbidden(message: string): ConvexError<{ code: string; message: string }> {
-  return new ConvexError({ code: 'FORBIDDEN', message });
-}
-
-/** The members of a room that did not leave. */
-async function activeMembers(
-  ctx: { db: DatabaseReader },
-  roomId: RoomDoc['_id']
-): Promise<RoomMemberDoc[]> {
-  const members = await ctx.db
-    .query('roomMembers')
-    .withIndex('roomId_memberType', (q) => q.eq('roomId', roomId))
-    .collect();
-
-  return members.filter((member) => member.leftAt === undefined);
-}
-
-/** The membership of a person in a room, or null when there is none. */
-async function findUserMembership(
-  ctx: { db: DatabaseReader },
-  roomId: RoomDoc['_id'],
-  userId: Id<'user'>
-): Promise<RoomMemberDoc | null> {
-  const members = await ctx.db
-    .query('roomMembers')
-    .withIndex('roomId_userId', (q) => q.eq('roomId', roomId).eq('userId', userId))
-    .collect();
-
-  return members.find((member) => member.leftAt === undefined) ?? null;
-}
-
-/** The membership of an agent in a room, or null when there is none. */
-async function findAgentMembership(
-  ctx: { db: DatabaseReader },
-  roomId: RoomDoc['_id'],
-  agentId: string
-): Promise<RoomMemberDoc | null> {
-  const members = await ctx.db
-    .query('roomMembers')
-    .withIndex('roomId_agentId', (q) => q.eq('roomId', roomId).eq('agentId', agentId))
-    .collect();
-
-  return members.find((member) => member.leftAt === undefined) ?? null;
-}
-
-/** The agent of an organization with this key, or null. */
-async function findAgentByKey(
-  ctx: { db: DatabaseReader },
-  organizationId: Id<'organization'>,
-  agentId: string
-): Promise<AgentDoc | null> {
-  return ctx.db
-    .query('agents')
-    .withIndex('organizationId_agentId', (q) =>
-      q.eq('organizationId', organizationId).eq('agentId', agentId)
-    )
-    .first();
-}
-
-/**
- * True when a member may write into a room.
- *
- * The role decides first: an observer reads but never writes. A scope list
- * decides next when it is not empty, so a member that was given the scope
- * "read" alone stays a reader.
- */
-function memberCanWrite(member: {
-  role: string;
-  scopes: string[];
-}): boolean {
-  if (member.role === 'observer') return false;
-  if (member.scopes.length > 0) return agentCanPerform(member.scopes, 'write');
-  return true;
-}
 
 /**
  * True when a person may write into a room.
@@ -134,18 +69,37 @@ function personCanWrite(
   room: RoomDoc,
   membership: RoomMemberDoc | null
 ): boolean {
-  if (membership) return memberCanWrite(membership);
+  if (membership) return membershipCanWrite(membership);
   return room.visibility === 'open';
 }
 
 /**
  * The scopes that bound an agent in a room.
  *
- * The scopes of the room membership win, because they are the scopes the room
- * gave. The scopes of the agent are the fallback for a member without scopes.
+ * The scopes of the room membership can only narrow the scopes of the agent.
+ * A membership without scopes keeps the scopes of the agent. A membership
+ * with scopes keeps only the scopes that the agent also holds, so a room
+ * can never give an agent more than the agent has. An agent without scopes
+ * holds no right at all.
  */
 function agentScopes(member: RoomMemberDoc, agent: AgentDoc): string[] {
-  return member.scopes.length > 0 ? member.scopes : agent.scopes;
+  return narrowAgentScopes(agent.scopes, member.scopes);
+}
+
+/**
+ * True when an agent may write into a room.
+ *
+ * The role decides first: an observer reads but never writes. The scopes
+ * decide next. The scopes of the membership narrow the scopes of the agent,
+ * so the agent must hold the write itself. The rule fails closed: an agent
+ * without scopes writes nothing, even when the room grants the write.
+ */
+function agentCanWrite(member: RoomMemberDoc, agent: AgentDoc): boolean {
+  if (member.role === 'observer') return false;
+
+  const effective = agentScopes(member, agent);
+
+  return scopesGrantRoomWrite(effective);
 }
 
 /** Plain view of a member. */
@@ -160,41 +114,6 @@ function toMemberView(member: RoomMemberDoc) {
     scopes: member.scopes,
     joinedAt: member.joinedAt,
   };
-}
-
-/** The room of the organization, or a not found error. */
-async function requireRoom(
-  ctx: { db: DatabaseReader },
-  organizationId: Id<'organization'>,
-  roomId: Id<'rooms'>
-): Promise<RoomDoc> {
-  const room = await ctx.db.get(roomId);
-  if (!room || room.organizationId !== organizationId) {
-    throw notFound('The room does not exist in this organization');
-  }
-  return room;
-}
-
-/**
- * The room a person may see, with the membership of that person.
- *
- * A private room that the person is not a member of does not exist for that
- * person, so the answer is a not found error and not a forbidden one.
- */
-async function requireVisibleRoom(
-  ctx: { db: DatabaseReader },
-  organizationId: Id<'organization'>,
-  roomId: Id<'rooms'>,
-  userId: Id<'user'>
-): Promise<{ room: RoomDoc; membership: RoomMemberDoc | null }> {
-  const room = await requireRoom(ctx, organizationId, roomId);
-  const membership = await findUserMembership(ctx, roomId, userId);
-
-  if (room.visibility === 'private' && !membership) {
-    throw notFound('The room does not exist in this organization');
-  }
-
-  return { room, membership };
 }
 
 /** A slug that no other room of the organization uses. */
@@ -406,7 +325,15 @@ export const update = createOrgMutation({
     visibility: z.enum(ROOM_VISIBILITIES).optional(),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, ctx.orgId, args.roomId);
+    // A private room is only known to its members, and only a member that
+    // may write may change it. The permission to manage rooms is not a way
+    // around the limits of the room.
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      ctx.orgId,
+      args.roomId,
+      ctx.userId
+    );
 
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.name !== undefined) {
@@ -445,7 +372,14 @@ export const archive = createOrgMutation({
     roomId: zid('rooms'),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, ctx.orgId, args.roomId);
+    // A private room is only known to its members, and only a member that
+    // may write may archive it.
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      ctx.orgId,
+      args.roomId,
+      ctx.userId
+    );
     const now = Date.now();
 
     await ctx.db.patch(room._id, { archivedAt: now, updatedAt: now });
@@ -488,7 +422,15 @@ export const addMember = createOrgMutation({
     scopes: z.array(z.string().min(1).max(100)).max(50).optional(),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, ctx.orgId, args.roomId);
+    // A private room is only known to its members, so a manager that is not
+    // a member cannot join it. Only a member that may write may add a
+    // member.
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      ctx.orgId,
+      args.roomId,
+      ctx.userId
+    );
     const now = Date.now();
 
     let displayName: string;
@@ -506,8 +448,10 @@ export const addMember = createOrgMutation({
       if (!user) {
         throw notFound('The user does not exist');
       }
-      userId = args.userId;
-      displayName = user.name;
+      // A person of another organization never joins a room of this
+      // organization.
+      await requireOrganizationMember(ctx, ctx.orgId, args.userId);
+      userId = args.userId;      displayName = user.name;
     } else {
       if (!args.agentId) {
         throw new ConvexError({
@@ -588,7 +532,14 @@ export const removeMember = createOrgMutation({
     memberId: zid('roomMembers'),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, ctx.orgId, args.roomId);
+    // A private room is only known to its members, and only a member that
+    // may write may remove anybody from it.
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      ctx.orgId,
+      args.roomId,
+      ctx.userId
+    );
 
     const member = await ctx.db.get(args.memberId);
     if (!member || member.roomId !== room._id) {
@@ -628,7 +579,15 @@ export const updateMember = createOrgMutation({
     scopes: z.array(z.string().min(1).max(100)).max(50).optional(),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, ctx.orgId, args.roomId);
+    // A private room is only known to its members, and only a member that
+    // may write may change its members. An observer cannot promote itself
+    // to owner this way.
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      ctx.orgId,
+      args.roomId,
+      ctx.userId
+    );
 
     const member = await ctx.db.get(args.memberId);
     if (!member || member.roomId !== room._id) {
@@ -691,6 +650,7 @@ export const listMessages = createOrgQuery({
         names.set(message.authorAgentId, name);
         return name;
       }
+      if (message.authorType === 'system') return 'System';
       return 'Unknown';
     };
 
@@ -790,6 +750,10 @@ export const postMessage = createOrgMutation({
  * This is the way the ledger reaches the room: the agent must exist, must be
  * active, must be a member of the room and must be allowed to write there.
  * An agent that fails one of these checks writes nothing at all.
+ *
+ * A message without an agent is never the chat of an agent. Such a message
+ * must be a system message, and it must point at an operation that exists in
+ * this room, so the note of the ledger always belongs to real work.
  */
 export const postFromAgent = createInternalMutation()({
   args: {
@@ -803,6 +767,12 @@ export const postFromAgent = createInternalMutation()({
   },
   handler: async (ctx, args) => {
     const room = await requireRoom(ctx, args.organizationId, args.roomId);
+
+    if (room.archivedAt !== undefined) {
+      throw forbidden('The room is archived');
+    }
+
+    let authorType = 'agent';
 
     if (args.agentId) {
       const agent = await findAgentByKey(ctx, args.organizationId, args.agentId);
@@ -823,26 +793,43 @@ export const postFromAgent = createInternalMutation()({
         );
       }
 
-      const scopes = agentScopes(membership, agent);
-      if (!memberCanWrite({ role: membership.role, scopes })) {
+      if (!agentCanWrite(membership, agent)) {
         throw forbidden(
           `The agent "${args.agentId}" may not write into this room`
         );
       }
-    } else if (args.kind !== 'proposal' && args.kind !== 'system') {
-      // A message without an agent has no membership to check, so it may
-      // only be the note of the ledger, never the chat of an agent.
-      throw forbidden('A message without an agent must be a proposal or a system message');
-    }
+    } else {
+      // A message without an agent must be the note of the ledger about a
+      // real operation of this room. A proposal of a person is not a service
+      // message, so it is refused here.
+      if (args.kind !== 'system') {
+        throw forbidden(
+          'A message without an agent must be a system message of an operation'
+        );
+      }
 
-    if (room.archivedAt !== undefined) {
-      throw forbidden('The room is archived');
+      if (!args.operationId) {
+        throw forbidden(
+          'A system message without an agent must point at an operation'
+        );
+      }
+
+      const operation = await ctx.db.get(args.operationId);
+      if (!operation || operation.organizationId !== args.organizationId) {
+        throw notFound('The operation does not exist in this organization');
+      }
+
+      if (operation.roomId !== room._id) {
+        throw forbidden('The operation does not belong to this room');
+      }
+
+      authorType = 'system';
     }
 
     const messageId = await ctx.db.insert('roomMessages', {
       organizationId: args.organizationId,
       roomId: room._id,
-      authorType: 'agent',
+      authorType,
       authorAgentId: args.agentId,
       kind: args.kind ?? 'message',
       text: args.text,
@@ -875,6 +862,9 @@ export const postFromAgent = createInternalMutation()({
  *
  * The ledger uses this for a decision: the approver wrote the decision, and
  * the decision belongs next to the operation it settles.
+ *
+ * The write access of the person is checked here, so the ledger cannot put
+ * a message into a room that the person may not write in.
  */
 export const postFromUser = createInternalMutation()({
   args: {
@@ -887,7 +877,12 @@ export const postFromUser = createInternalMutation()({
     replyToId: zid('roomMessages').optional(),
   },
   handler: async (ctx, args) => {
-    const room = await requireRoom(ctx, args.organizationId, args.roomId);
+    const { room } = await requireRoomWriteAccess(
+      ctx,
+      args.organizationId,
+      args.roomId,
+      args.userId
+    );
 
     const messageId = await ctx.db.insert('roomMessages', {
       organizationId: args.organizationId,

@@ -11,6 +11,7 @@
 //   changed payload can never reuse an old approval.
 
 import {
+  AGENT_OPERATION_KINDS,
   DEFAULT_OPERATION_EXPIRY_MINUTES,
   MAX_OPERATION_EXPIRY_MINUTES,
   approvalMatchesApproval,
@@ -30,7 +31,10 @@ import {
   isSupportedKind,
 } from './agentOperationHandlers';
 import { internal } from './_generated/api';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
+import type { DatabaseReader } from './_generated/server';
+import { checkPermission, requirePermission } from './permissionHelpers';
+import { findUserMembership, requireRoomWriteAccess } from './roomAccess';
 import {
   createInternalMutation,
   createInternalQuery,
@@ -52,6 +56,50 @@ const MILLISECONDS_PER_MINUTE = 60 * 1000;
  * is `unknown`, which a person resolves.
  */
 export const OPERATION_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
+
+function isJsonValue(value: unknown, depth = 0): boolean {
+  if (depth > 32) return false;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean')
+    return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value))
+    return value.every((item) => isJsonValue(item, depth + 1));
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    (Object.getPrototypeOf(value) !== Object.prototype &&
+      Object.getPrototypeOf(value) !== null)
+  )
+    return false;
+  return Object.values(value).every((item) => isJsonValue(item, depth + 1));
+}
+
+function permissionForKind(kind: string) {
+  if (kind === 'create_activity')
+    return { feature: 'activities', action: 'create' };
+  if (kind === 'update_deal_stage') return { feature: 'deals', action: 'edit' };
+  throw new ConvexError({
+    code: 'BAD_REQUEST',
+    message: 'Unsupported operation kind',
+  });
+}
+
+async function canReadOperation(
+  ctx: { db: DatabaseReader },
+  operation: Doc<'agentOperations'>,
+  userId: Id<'user'>
+): Promise<boolean> {
+  if (!operation.roomId) return true;
+  const room = await ctx.db.get(operation.roomId);
+  if (!room || room.organizationId !== operation.organizationId) return false;
+  if (room.visibility === 'open') return true;
+  const member = await findUserMembership(ctx, room._id, userId);
+  return (
+    member !== null &&
+    member.organizationId === operation.organizationId &&
+    member.memberType === 'user'
+  );
+}
 
 /** Parse a stored result text. A missing or broken text means no result. */
 function parseStoredResult(resultJson: string | null | undefined): unknown {
@@ -132,10 +180,15 @@ export const propose = createOrgMutation({
   permission: { feature: 'agents', action: 'create' },
 })({
   args: {
-    kind: z.string().min(1).max(100),
-    payload: z.any(),
+    kind: z.enum(AGENT_OPERATION_KINDS),
+    payload: z
+      .record(z.unknown())
+      .refine(
+        (value) => isJsonValue(value),
+        'Payload must contain only finite JSON values'
+      ),
     idempotencyKey: z.string().min(1).max(200),
-    requiresApproval: z.boolean(),
+    requiresApproval: z.boolean().optional(),
     agentId: z.string().optional(),
     agentLabel: z.string().optional(),
     summary: z.string().max(500).optional(),
@@ -145,20 +198,27 @@ export const propose = createOrgMutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // The room is checked before the operation is written, so a proposal can
-    // never point at a room that does not exist in this organization.
+    // Human calls cannot acquire a service identity through caller-supplied text.
+    if (args.agentId !== undefined || args.agentLabel !== undefined) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message:
+          'Only an authenticated agent service can attribute an agent proposal',
+      });
+    }
+    await requirePermission(ctx, permissionForKind(args.kind));
     if (args.roomId) {
-      const room = await ctx.db.get(args.roomId);
-      if (!room || room.organizationId !== ctx.orgId) {
-        throw new ConvexError({
-          code: 'NOT_FOUND',
-          message: 'The room does not exist in this organization',
-        });
-      }
+      await requireRoomWriteAccess(ctx, ctx.orgId, args.roomId, ctx.userId);
     }
     // The canonical text is the identity of the payload. Two proposals with
     // the same idempotency key must carry the very same text.
     const payloadJson = stableStringify(args.payload);
+    if (payloadJson.length > 32_000) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: 'The operation payload is too large',
+      });
+    }
     const payloadHash = hashPayload(args.payload);
 
     const existing = await ctx.db
@@ -171,11 +231,16 @@ export const propose = createOrgMutation({
       .first();
 
     if (existing) {
-      if (existing.payloadJson !== payloadJson) {
+      if (
+        existing.payloadJson !== payloadJson ||
+        existing.kind !== args.kind ||
+        existing.roomId !== args.roomId ||
+        existing.requestedByUserId !== ctx.userId ||
+        existing.agentId !== undefined
+      ) {
         throw new ConvexError({
           code: 'CONFLICT',
-          message:
-            'The same idempotency key was used with a different payload',
+          message: 'The same idempotency key was used for a different proposal',
         });
       }
       // Same key and same payload: the operation already exists, so no second
@@ -189,20 +254,20 @@ export const propose = createOrgMutation({
     }
 
     const expiresAt = computeExpiry(now, args.expiresInMinutes);
-    const status = args.requiresApproval ? 'awaiting_approval' : 'pending';
+    // Every currently supported operation changes business data. The client
+    // cannot opt out of the human approval policy.
+    const status = 'awaiting_approval' as const;
 
     const operationId = await ctx.db.insert('agentOperations', {
       organizationId: ctx.orgId,
       kind: args.kind,
       status,
-      requiresApproval: args.requiresApproval,
+      requiresApproval: true,
       idempotencyKey: args.idempotencyKey,
       payloadHash,
       payloadJson,
       revision: 1,
       summary: args.summary,
-      agentId: args.agentId,
-      agentLabel: args.agentLabel,
       requestedByUserId: ctx.userId,
       attempts: 0,
       expiresAt,
@@ -213,7 +278,7 @@ export const propose = createOrgMutation({
 
     let approvalId: Id<'approvals'> | undefined;
 
-    if (args.requiresApproval) {
+    {
       // The approval stores the same canonical payload, so the execution can
       // check that the granted approval belongs to this exact payload.
       approvalId = await ctx.db.insert('approvals', {
@@ -234,20 +299,14 @@ export const propose = createOrgMutation({
     // The proposal is written into the room it belongs to, so the room talk
     // and the ledger tell the same story.
     if (args.roomId) {
-      try {
-        await ctx.runMutation(internal.rooms.postFromAgent, {
-          organizationId: ctx.orgId,
-          roomId: args.roomId,
-          agentId: args.agentId,
-          kind: 'proposal',
-          operationId,
-          text: args.summary ?? `Proposal: ${args.kind}`,
-        });
-      } catch (error) {
-        // The operation is the record of the work. A room that refuses the
-        // message must not throw the proposal away.
-        console.warn('[agentOperations.propose] The room refused the proposal message', error);
-      }
+      await ctx.runMutation(internal.rooms.postFromUser, {
+        organizationId: ctx.orgId,
+        roomId: args.roomId,
+        userId: ctx.userId,
+        kind: 'proposal',
+        operationId,
+        text: args.summary ?? `Proposal: ${args.kind}`,
+      });
     }
 
     return {
@@ -303,7 +362,40 @@ export const decide = createOrgMutation({
       });
     }
 
-    const approvalStatus = args.decision === 'approve' ? 'approved' : 'rejected';
+    if (
+      args.decision === 'approve' &&
+      ((operation.expiresAt !== undefined && operation.expiresAt <= now) ||
+        (approval.expiresAt !== undefined && approval.expiresAt <= now))
+    ) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'The operation or approval has expired',
+      });
+    }
+    if (
+      approval.organizationId !== ctx.orgId ||
+      approval.operationId !== operation._id ||
+      approval.revision !== operation.revision ||
+      approval.payloadJson !== operation.payloadJson ||
+      approval.payloadHash !== operation.payloadHash
+    ) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'The approval does not match the current operation revision',
+      });
+    }
+    await requirePermission(ctx, permissionForKind(operation.kind));
+    if (operation.roomId) {
+      await requireRoomWriteAccess(
+        ctx,
+        ctx.orgId,
+        operation.roomId,
+        ctx.userId
+      );
+    }
+
+    const approvalStatus =
+      args.decision === 'approve' ? 'approved' : 'rejected';
 
     await ctx.db.patch(approval._id, {
       status: approvalStatus,
@@ -339,7 +431,10 @@ export const decide = createOrgMutation({
       } catch (error) {
         // The decision itself must stand, also when the room refuses the
         // message.
-        console.warn('[agentOperations.decide] The room refused the decision message', error);
+        console.warn(
+          '[agentOperations.decide] The room refused the decision message',
+          error
+        );
       }
     }
 
@@ -439,6 +534,7 @@ export const execute = createOrgAction({
       payload = {};
     }
 
+    let effectReturned = false;
     try {
       const result = await handler(payload, {
         ctx,
@@ -448,8 +544,10 @@ export const execute = createOrgAction({
         // effect that already happened instead of causing a second one.
         operationKey: claim.operationKey,
         operationId: operation.id,
+        attempt: claim.attempt,
       });
 
+      effectReturned = true;
       // A result that cannot be serialised still means the effect happened, so
       // the operation is stored as succeeded with an empty result.
       let resultJson: string;
@@ -459,14 +557,18 @@ export const execute = createOrgAction({
         resultJson = 'null';
       }
 
-      await ctx.runMutation(internal.agentOperations.completeOperation, {
-        operationId: operation.id,
-        resultJson,
-      });
+      const completion = await ctx.runMutation(
+        internal.agentOperations.completeOperation,
+        {
+          operationId: operation.id,
+          attempt: claim.attempt,
+          resultJson,
+        }
+      );
 
       return {
         operationId: operation.id,
-        status: 'succeeded',
+        status: completion.status,
         result: result ?? null,
         duplicate: false,
       };
@@ -475,14 +577,32 @@ export const execute = createOrgAction({
         error instanceof Error ? error.message : error
       );
 
-      await ctx.runMutation(internal.agentOperations.failOperation, {
-        operationId: operation.id,
-        errorMessage,
-      });
+      const code =
+        error instanceof ConvexError &&
+        typeof error.data === 'object' &&
+        error.data !== null
+          ? (error.data as { code?: string }).code
+          : undefined;
+      const definitelyFailed =
+        !effectReturned &&
+        (error instanceof z.ZodError ||
+          (code !== undefined &&
+            ['BAD_REQUEST', 'NOT_FOUND', 'FORBIDDEN', 'CONFLICT'].includes(
+              code
+            )));
+      const failure = await ctx.runMutation(
+        internal.agentOperations.failOperation,
+        {
+          operationId: operation.id,
+          attempt: claim.attempt,
+          errorMessage,
+          definitelyFailed,
+        }
+      );
 
       return {
         operationId: operation.id,
-        status: 'failed',
+        status: failure.status,
         error: errorMessage,
         duplicate: false,
       };
@@ -530,7 +650,12 @@ export const list = createOrgQuery({
         .take(limit);
     }
 
-    return operations.map((operation) => ({
+    const visible: Doc<'agentOperations'>[] = [];
+    for (const operation of operations) {
+      if (await canReadOperation(ctx, operation, ctx.userId))
+        visible.push(operation);
+    }
+    return visible.map((operation) => ({
       id: operation._id,
       kind: operation.kind,
       status: operation.status,
@@ -557,6 +682,13 @@ export const get = createOrgQuery({
   handler: async (ctx, args) => {
     const operation = await ctx.db.get(args.operationId);
     if (!operation || operation.organizationId !== ctx.orgId) {
+      throw new ConvexError({
+        code: 'NOT_FOUND',
+        message: 'The operation does not exist in this organization',
+      });
+    }
+
+    if (!(await canReadOperation(ctx, operation, ctx.userId))) {
       throw new ConvexError({
         code: 'NOT_FOUND',
         message: 'The operation does not exist in this organization',
@@ -616,6 +748,7 @@ export const listPendingApprovals = createOrgQuery({
     for (const approval of approvals) {
       const operation = await ctx.db.get(approval.operationId);
       if (!operation || operation.organizationId !== ctx.orgId) continue;
+      if (!(await canReadOperation(ctx, operation, ctx.userId))) continue;
 
       result.push({
         id: approval._id,
@@ -661,6 +794,25 @@ export const reconcile = createOrgMutation({
       });
     }
 
+    await requirePermission(ctx, permissionForKind(operation.kind));
+    if (operation.roomId) {
+      await requireRoomWriteAccess(
+        ctx,
+        ctx.orgId,
+        operation.roomId,
+        ctx.userId
+      );
+    }
+    if (
+      operation.status === 'executing' &&
+      now - (operation.startedAt ?? now) <= OPERATION_CLAIM_TIMEOUT_MS
+    ) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: 'The current executor claim has not expired',
+      });
+    }
+
     const target =
       args.resolution === 'retry'
         ? 'pending'
@@ -668,7 +820,11 @@ export const reconcile = createOrgMutation({
           ? 'succeeded'
           : 'failed';
 
-    if (!canTransition(operation.status as OperationStatus, target as OperationStatus)) {
+    const fromStatus =
+      operation.status === 'executing' ? 'unknown' : operation.status;
+    if (
+      !canTransition(fromStatus as OperationStatus, target as OperationStatus)
+    ) {
       throw new ConvexError({
         code: 'CONFLICT',
         message: `The operation cannot move from ${operation.status} to ${target}`,
@@ -733,6 +889,39 @@ export const claimOperation = createInternalMutation()({
       });
     }
 
+    const effectPermission = permissionForKind(operation.kind);
+    for (const [userId, action] of [
+      [args.userId, 'manage'],
+      [operation.requestedByUserId, 'create'],
+    ] as const) {
+      const allowed = await checkPermission(ctx, {
+        userId,
+        orgId: args.organizationId,
+        feature: 'agents',
+        action,
+      });
+      const mayCauseEffect = await checkPermission(ctx, {
+        userId,
+        orgId: args.organizationId,
+        ...effectPermission,
+      });
+      if (!allowed || !mayCauseEffect) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message:
+            'Current organization permissions do not allow this operation',
+        });
+      }
+    }
+    if (operation.roomId) {
+      await requireRoomWriteAccess(
+        ctx,
+        args.organizationId,
+        operation.roomId,
+        args.userId
+      );
+    }
+
     if (operation.status === 'succeeded') {
       return {
         outcome: 'already_succeeded' as const,
@@ -749,7 +938,8 @@ export const claimOperation = createInternalMutation()({
       if (claimAge > OPERATION_CLAIM_TIMEOUT_MS) {
         await ctx.db.patch(operation._id, {
           status: 'unknown',
-          errorMessage: 'Claim timeout: the executor stopped before it reported',
+          errorMessage:
+            'Claim timeout: the executor stopped before it reported',
           updatedAt: now,
         });
         return { outcome: 'timed_out' as const };
@@ -764,7 +954,19 @@ export const claimOperation = createInternalMutation()({
       });
     }
 
-    if (operation.status === 'pending' && operation.requiresApproval) {
+    if (
+      operation.status === 'pending' &&
+      operation.expiresAt !== undefined &&
+      operation.expiresAt <= now
+    ) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'The operation has expired',
+      });
+    }
+
+    // Old rows cannot bypass the current server-side approval policy.
+    if (operation.status === 'pending') {
       const approval = operation.approvalId
         ? await ctx.db.get(operation.approvalId)
         : await ctx.db
@@ -778,6 +980,9 @@ export const claimOperation = createInternalMutation()({
 
       if (
         !approval ||
+        approval.organizationId !== args.organizationId ||
+        approval.operationId !== operation._id ||
+        approval.revision !== operation.revision ||
         !approvalMatchesApproval(
           {
             status: approval.status as ApprovalStatus,
@@ -796,6 +1001,25 @@ export const claimOperation = createInternalMutation()({
           code: 'FORBIDDEN',
           message:
             'The approval is missing, expired or bound to another payload',
+        });
+      }
+      if (
+        !approval.approverUserId ||
+        !(await checkPermission(ctx, {
+          userId: approval.approverUserId,
+          orgId: args.organizationId,
+          feature: 'agents',
+          action: 'manage',
+        })) ||
+        !(await checkPermission(ctx, {
+          userId: approval.approverUserId,
+          orgId: args.organizationId,
+          ...effectPermission,
+        }))
+      ) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message: 'The approver no longer has permission for this effect',
         });
       }
     }
@@ -819,6 +1043,7 @@ export const claimOperation = createInternalMutation()({
       kind: operation.kind,
       payloadJson: operation.payloadJson,
       operationKey: operation.idempotencyKey,
+      attempt: operation.attempts + 1,
     };
   },
 });
@@ -826,11 +1051,10 @@ export const claimOperation = createInternalMutation()({
 export const completeOperation = createInternalMutation()({
   args: {
     operationId: zid('agentOperations'),
+    attempt: z.number().int().positive(),
     resultJson: z.string(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
-
     const operation = await ctx.db.get(args.operationId);
     if (!operation) {
       throw new ConvexError({
@@ -838,33 +1062,32 @@ export const completeOperation = createInternalMutation()({
         message: 'The operation does not exist',
       });
     }
-
-    if (operation.status !== 'executing') {
-      throw new ConvexError({
-        code: 'CONFLICT',
-        message: `Only an executing operation can be completed (current status: ${operation.status})`,
-      });
+    // A late executor must not overwrite an operator decision or a new claim.
+    if (
+      operation.status !== 'executing' ||
+      operation.attempts !== args.attempt
+    ) {
+      return { status: operation.status, recorded: false };
     }
-
+    const now = Date.now();
     await ctx.db.patch(operation._id, {
       status: 'succeeded',
       resultJson: args.resultJson,
       finishedAt: now,
       updatedAt: now,
     });
-
-    return null;
+    return { status: 'succeeded', recorded: true };
   },
 });
 
 export const failOperation = createInternalMutation()({
   args: {
     operationId: zid('agentOperations'),
+    attempt: z.number().int().positive(),
     errorMessage: z.string(),
+    definitelyFailed: z.boolean().default(false),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
-
     const operation = await ctx.db.get(args.operationId);
     if (!operation) {
       throw new ConvexError({
@@ -872,21 +1095,22 @@ export const failOperation = createInternalMutation()({
         message: 'The operation does not exist',
       });
     }
-
-    if (operation.status !== 'executing') {
-      throw new ConvexError({
-        code: 'CONFLICT',
-        message: `Only an executing operation can be failed (current status: ${operation.status})`,
-      });
+    if (
+      operation.status !== 'executing' ||
+      operation.attempts !== args.attempt
+    ) {
+      return { status: operation.status, recorded: false };
     }
-
+    // Only a confirmed validation or rolled-back business mutation is failed.
+    // A lost response or completion error leaves the effect outcome unknown.
+    const status = args.definitelyFailed ? 'failed' : 'unknown';
+    const now = Date.now();
     await ctx.db.patch(operation._id, {
-      status: 'failed',
+      status,
       errorMessage: args.errorMessage,
-      finishedAt: now,
       updatedAt: now,
+      ...(args.definitelyFailed ? { finishedAt: now } : {}),
     });
-
-    return null;
+    return { status, recorded: true };
   },
 });
