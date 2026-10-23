@@ -5,8 +5,8 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Info, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { RuangIcon } from '@/components/icons/icon';
 
 const MAX_ROWS = 6;
 
@@ -119,7 +119,7 @@ export function RoomComposer({
             id="room-composer-hint"
             className="flex items-center gap-1.5 text-xs text-muted-foreground"
           >
-            <Info className="h-3.5 w-3.5" />
+            <RuangIcon name="lucide:info" className="h-3.5 w-3.5" />
             {writeReason}
           </p>
         )}
@@ -130,12 +130,12 @@ export function RoomComposer({
         >
           {isSending ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin duration-500" />
+              <RuangIcon name="lucide:loader-circle" className="h-4 w-4 animate-spin duration-500" />
               Mengirim…
             </>
           ) : (
             <>
-              <Send className="h-4 w-4" />
+              <RuangIcon name="lucide:send" className="h-4 w-4" />
               Kirim
             </>
           )}

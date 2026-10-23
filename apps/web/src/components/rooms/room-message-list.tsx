@@ -2,7 +2,6 @@
 
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/empty-state';
-import { Bot } from 'lucide-react';
 
 import { formatDistanceToNow } from '@/lib/format-date';
 
@@ -10,6 +9,7 @@ import { formatRoomTimestamp } from './format';
 import { RoomProposalCard } from './room-proposal-card';
 import { AsciiFrame, AsciiSpinner } from './ascii';
 import type { RoomListMessage, RoomProposal } from './types';
+import { RuangIcon } from '@/components/icons/icon';
 
 const MESSAGE_KIND_LABEL: Record<string, string> = {
   proposal: 'Proposal',
@@ -152,7 +152,7 @@ function RoomMessageRow({
         <span className="text-sm font-medium">{message.authorName}</span>
         {message.authorType === 'agent' ? (
           <Badge variant="outline" className="h-5 gap-1 text-[11px]">
-            <Bot className="h-3 w-3" />
+            <RuangIcon name="lucide:bot" className="h-3 w-3" />
             Agen
           </Badge>
         ) : null}

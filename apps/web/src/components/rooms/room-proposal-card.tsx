@@ -2,18 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  AlertCircle,
-  CheckCircle2,
-  CircleDot,
-  Clock,
-  HelpCircle,
-  XCircle,
-} from 'lucide-react';
 
 import { OperationTag } from './ascii';
 
 import type { RoomProposal } from './types';
+import { RuangIcon, type RuangIconName } from '@/components/icons/icon';
 
 const KIND_LABEL: Record<string, string> = {
   create_activity: 'Buat Aktivitas',
@@ -22,37 +15,37 @@ const KIND_LABEL: Record<string, string> = {
 
 const STATUS_META: Record<
   string,
-  { label: string; className: string; icon: typeof Clock }
+  { label: string; className: string; icon: RuangIconName }
 > = {
   awaiting_approval: {
     label: 'Menunggu persetujuan',
     className: 'border-orange-500/30 bg-orange-500/10 text-orange-400',
-    icon: Clock,
+    icon: 'lucide:clock',
   },
   pending: {
     label: 'Menunggu eksekusi',
     className: 'border-border bg-muted text-muted-foreground',
-    icon: CircleDot,
+    icon: 'lucide:circle-dot',
   },
   succeeded: {
     label: 'Berhasil',
     className: 'border-green-500/30 bg-green-500/10 text-green-400',
-    icon: CheckCircle2,
+    icon: 'lucide:circle-check-big',
   },
   failed: {
     label: 'Gagal',
     className: 'border-red-500/30 bg-red-500/10 text-red-400',
-    icon: AlertCircle,
+    icon: 'lucide:circle-alert',
   },
   unknown: {
     label: 'Status tidak diketahui',
     className: 'border-border bg-muted text-muted-foreground',
-    icon: HelpCircle,
+    icon: 'lucide:circle-help',
   },
   rejected: {
     label: 'Ditolak',
     className: 'border-border bg-muted text-muted-foreground',
-    icon: XCircle,
+    icon: 'lucide:circle-x',
   },
 };
 
@@ -75,7 +68,6 @@ export function RoomProposalCard({
   onDecide,
 }: RoomProposalCardProps) {
   const status = STATUS_META[proposal.status] ?? STATUS_META.unknown;
-  const StatusIcon = status.icon;
   const kindLabel = KIND_LABEL[proposal.kind] ?? humanizeKind(proposal.kind);
   const canApprove = canDecide && proposal.status === 'awaiting_approval';
 
@@ -86,7 +78,7 @@ export function RoomProposalCard({
           {kindLabel}
         </Badge>
         <Badge className={`h-5 gap-1 text-[11px] ${status.className}`}>
-          <StatusIcon className="h-3 w-3" />
+          <RuangIcon name={status.icon} className="h-3 w-3" />
           {status.label}
         </Badge>
         <OperationTag operationId={proposal.operationId} className="ml-auto" />

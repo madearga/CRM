@@ -44,18 +44,7 @@ import { RoomMessageList } from '@/components/rooms/room-message-list';
 import { requestRoomAgent } from '@/components/rooms/room-agent-client';
 import type { RoomListMessage, RoomProposal } from '@/components/rooms/types';
 import '../../../../components/rooms/rooms.css';
-import {
-  AlertCircle,
-  Archive,
-  ArrowLeft,
-  Bot,
-  Info,
-  Lock,
-  Plus,
-  Trash2,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { RuangIcon } from '@/components/icons/icon';
 
 const KIND_LABEL: Record<string, string> = {
   project: 'Proyek',
@@ -530,7 +519,7 @@ export default function RoomPage() {
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">Ruang</h1>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertCircle className="h-4 w-4" />
+          <RuangIcon name="lucide:circle-alert" className="h-4 w-4" />
           Anda tidak memiliki izin untuk melihat ruang.
         </p>
       </div>
@@ -544,11 +533,11 @@ export default function RoomPage() {
           href="/rooms"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <RuangIcon name="lucide:arrow-left" className="h-4 w-4" />
           Daftar ruang
         </Link>
         <p className="flex items-center gap-2 text-sm text-destructive">
-          <AlertCircle className="h-4 w-4" />
+          <RuangIcon name="lucide:circle-alert" className="h-4 w-4" />
           Ruang tidak dapat dibuka. Ruang ini mungkin sudah ditutup atau Anda
           bukan anggotanya.
         </p>
@@ -574,7 +563,7 @@ export default function RoomPage() {
             href="/rooms"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <RuangIcon name="lucide:arrow-left" className="h-4 w-4" />
             Daftar ruang
           </Link>
 
@@ -582,7 +571,7 @@ export default function RoomPage() {
             <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-xl font-semibold">
                 {room.visibility === 'private' ? (
-                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <RuangIcon name="lucide:lock" className="h-4 w-4 text-muted-foreground" />
                 ) : null}
                 <span className="truncate">{room.name}</span>
               </h1>
@@ -613,13 +602,13 @@ export default function RoomPage() {
                   variant="outline"
                   onClick={() => setAddOpen(true)}
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <RuangIcon name="lucide:user-plus" className="h-4 w-4" />
                   Kelola anggota
                 </Button>
               ) : null}
               {canManage ? (
                 <Button size="sm" variant="outline" onClick={handleArchive}>
-                  <Archive className="h-4 w-4" />
+                  <RuangIcon name="lucide:archive" className="h-4 w-4" />
                   Tutup ruang
                 </Button>
               ) : null}
@@ -628,7 +617,7 @@ export default function RoomPage() {
 
           {!canManage ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Info className="h-4 w-4" />
+              <RuangIcon name="lucide:info" className="h-4 w-4" />
               Anda tidak memiliki izin untuk mengelola anggota ruang ini.
             </p>
           ) : null}
@@ -671,7 +660,7 @@ export default function RoomPage() {
         <Card className="gap-0 py-0">
           <div className="flex items-center justify-between border-b px-4 py-2.5">
             <h2 className="flex items-center gap-1.5 text-sm font-medium">
-              <Users className="h-4 w-4" />
+              <RuangIcon name="lucide:users" className="h-4 w-4" />
               Anggota
             </h2>
             <span className="text-xs text-muted-foreground">
@@ -698,7 +687,7 @@ export default function RoomPage() {
                             variant="outline"
                             className="h-5 gap-1 text-[11px]"
                           >
-                            <Bot className="h-3 w-3" />
+                            <RuangIcon name="lucide:bot" className="h-3 w-3" />
                             Agen
                           </Badge>
                         ) : null}
@@ -731,7 +720,7 @@ export default function RoomPage() {
                         disabled={removeMember.isPending}
                         aria-label={`Keluarkan ${member.displayName}`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <RuangIcon name="lucide:trash-2" className="h-3.5 w-3.5" />
                       </Button>
                     ) : null}
                   </div>
@@ -750,7 +739,7 @@ export default function RoomPage() {
                   className="w-full"
                   onClick={() => setAddOpen(true)}
                 >
-                  <Plus className="h-4 w-4" />
+                  <RuangIcon name="lucide:plus" className="h-4 w-4" />
                   Tambah anggota
                 </Button>
               </div>
@@ -827,7 +816,7 @@ export default function RoomPage() {
                 </Select>
                 {!canViewAgents ? (
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Info className="h-3.5 w-3.5" />
+                    <RuangIcon name="lucide:info" className="h-3.5 w-3.5" />
                     Anda tidak memiliki izin untuk melihat agen.
                   </p>
                 ) : null}
@@ -894,7 +883,7 @@ export default function RoomPage() {
 
             {memberError ? (
               <p className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
+                <RuangIcon name="lucide:circle-alert" className="h-4 w-4" />
                 {memberError}
               </p>
             ) : null}
