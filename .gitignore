@@ -4,7 +4,9 @@ node_modules
 dist
 .env
 .env.local
-convex/_generated
+# Commit convex/_generated so typechecks and tests work without deployment access.
+# This nested directory was created by an incorrect historical import path.
+convex/convex/
 *.tsbuildinfo
 .DS_Store
 .superpowers/

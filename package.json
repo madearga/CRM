@@ -2,25 +2,21 @@
   "name": "crm",
   "version": "0.0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "turbo dev",
+    "backend:check": "node scripts/convex-dev.mjs check",
+    "backend:dev": "node scripts/convex-dev.mjs watch",
+    "backend:push": "node scripts/convex-dev.mjs push",
     "build": "turbo build",
+    "dev": "pnpm backend:check && turbo dev",
     "lint": "turbo lint",
-    "typecheck": "turbo typecheck",
-    "test": "vitest run --passWithNoTests",
-    "seed": "convex run seed:seed"
-  },
-  "devDependencies": {
-    "@types/node": "^24.19.2",
-    "@types/react": "^19.3.0",
-    "react": "19.1.1",
-    "turbo": "^2.11.10",
-    "typescript": "6.0.3",
-    "vitest": "3.2.4"
-  },
-  "packageManager": "pnpm@10.14.0",
-  "pnpm": {
-    "dangerouslyAllowAllBuilds": true
+    "seed": "node scripts/convex-dev.mjs seed",
+    "test": "vitest run --passWithNoTests && pnpm test:safety",
+    "test:safety": "node --test scripts/__tests__/*.test.mjs",
+    "typecheck": "turbo typecheck"
   },
   "dependencies": {
     "@convex-dev/aggregate": "^0.1.25",
@@ -41,8 +37,18 @@
     "type-fest": "^5.10.0",
     "zod": "3.25.76"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "convex-test": "0.0.64",
+    "react": "19.1.1",
+    "turbo": "^2.11.10",
+    "typescript": "6.0.3",
+    "vite": "7.3.7",
+    "vitest": "3.2.4"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "pnpm": {
+    "dangerouslyAllowAllBuilds": true
+  }
 }

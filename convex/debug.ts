@@ -1,15 +1,12 @@
-import { query } from "./_generated/server";
-import { getEnv } from "./helpers/getEnv";
+import { internalQuery } from './_generated/server';
 
-export const getDebugEnv = query({
+// Diagnostic configuration status only. Never return environment values.
+export const getDebugEnv = internalQuery({
   args: {},
-  handler: async (ctx) => {
-    return {
-      env: getEnv(),
-      processEnv: {
-        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-      }
-    };
-  },
+  handler: async () => ({
+    authConfigured: Boolean(process.env.BETTER_AUTH_SECRET),
+    googleConfigured: Boolean(
+      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ),
+  }),
 });

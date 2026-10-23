@@ -1,19 +1,14 @@
-import { mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { internalMutation } from './_generated/server';
+import { ConvexError, v } from 'convex/values';
 
-export const createSession = mutation({
+// Sessions must come from Better Auth. This former public fixture must not
+// create an identity, even when an internal caller invokes it accidentally.
+export const createSession = internalMutation({
   args: { userId: v.string(), orgId: v.string() },
-  handler: async (ctx, args) => {
-    const token = "test-token-" + Date.now();
-    // @ts-ignore
-    await ctx.db.insert("betterAuth.session", {
-      userId: args.userId,
-      activeOrganizationId: args.orgId,
-      token: token,
-      expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+  handler: async () => {
+    throw new ConvexError({
+      code: 'FORBIDDEN',
+      message: 'Test session creation is disabled; use Better Auth',
     });
-    return token;
   },
 });

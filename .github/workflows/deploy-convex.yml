@@ -1,9 +1,10 @@
 name: Deploy Convex
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-convex-main
@@ -11,7 +12,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.CONVEX_DEPLOY_KEY != '' }}
+    if: ${{ vars.RUANG_PRODUCTION_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -26,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
