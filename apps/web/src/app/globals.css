@@ -111,15 +111,11 @@
 .glass {
   border: 1px solid rgba(240, 240, 250, 0.1);
   background: rgba(240, 240, 250, 0.05);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
 }
 
 .glass-strong {
   border: 1px solid rgba(240, 240, 250, 0.1);
   background: rgba(240, 240, 250, 0.08);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
 }
 
 body {

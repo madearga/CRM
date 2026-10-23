@@ -232,7 +232,7 @@ export default function DashboardLayout({
             {getPageTitle(pathname, pluginNavItems)}
           </h1>
         </header>
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
             <ErrorBoundary>{children}</ErrorBoundary>
           </Suspense>

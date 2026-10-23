@@ -25,7 +25,7 @@ export default function LoginPage() {
         <div className="absolute bottom-[-10%] right-[6%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,var(--glow-violet),transparent_65%)]" />
       </div>
 
-      <div className="glass relative w-full max-w-sm rounded-xl p-8 shadow-lg shadow-black/20">
+      <div className="glass backdrop-blur-xl relative w-full max-w-sm rounded-xl p-8 shadow-lg shadow-black/20">
         {/* Branding */}
         <div className="mb-8 flex flex-col items-center">
           <div className="flex size-14 items-center justify-center rounded-xl bg-primary shadow-lg shadow-black/30">

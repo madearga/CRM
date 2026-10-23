@@ -80,7 +80,7 @@ export function RoomProposalCard({
   const canApprove = canDecide && proposal.status === 'awaiting_approval';
 
   return (
-    <div className="glass rounded-md p-3">
+    <div className="glass backdrop-blur-xl rounded-md p-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className="h-5 text-[11px]">
           {kindLabel}

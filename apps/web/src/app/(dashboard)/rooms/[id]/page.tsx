@@ -642,7 +642,7 @@ export default function RoomPage() {
             </span>
           </div>
 
-          <ScrollArea ref={threadRef} className="h-[55vh]">
+          <ScrollArea ref={threadRef} className="h-[55dvh] lg:h-[55vh]">
             <RoomMessageList
               messages={listMessages}
               agentName={agentName}
