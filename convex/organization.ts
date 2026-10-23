@@ -1,8 +1,15 @@
 import type { Id } from './_generated/dataModel';
 
 import { hasPermission } from './authHelpers';
-import { listUserOrganizations } from './organizationHelpers';
-import { seedDefaultTemplates } from './permissionHelpers';
+import {
+  countOwnedOrganizations,
+  createCrmOrganization,
+  evaluateInvitation,
+  findMembership,
+  listUserOrganizations,
+  ORGANIZATION_LIMIT,
+} from './organizationHelpers';
+import { canAssignRole, canInviteRole } from './orgAccess';
 import { asyncMap } from 'convex-helpers';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
@@ -16,10 +23,11 @@ import {
 
 // Maximum members per organization (including pending invitations)
 const MEMBER_LIMIT = 5;
+// Validity of an invitation
+const INVITATION_EXPIRY_MS = 24 * 60 * 60 * 7 * 1000;
 // Default limit for listing operations to prevent unbounded queries
 const DEFAULT_LIST_LIMIT = 100;
 const DEFAULT_PLAN = 'free';
-const DEFAULT_ORG_CURRENCY = 'IDR' as const;
 const ORG_CURRENCIES = ['IDR', 'USD'] as const;
 
 // List all organizations for current user (excluding active organization)
@@ -43,17 +51,22 @@ export const listOrganizations = createAuthQuery()({
     // Get all organizations for user using helper
     const orgs = await listUserOrganizations(ctx, ctx.user._id);
 
+    // The user may own only a limited number of organizations. The personal
+    // organization counts as one.
+    const ownedCount = await countOwnedOrganizations(
+      ctx.table as any,
+      ctx.user._id
+    );
+    const canCreateOrganization = ownedCount < ORGANIZATION_LIMIT;
+
     if (!orgs || orgs.length === 0) {
       return {
-        canCreateOrganization: true, // No orgs, can create first one
+        canCreateOrganization,
         organizations: [],
       };
     }
 
     const activeOrgId = ctx.user.activeOrganization?.id;
-
-    // Calculate if user can create organization
-    const canCreateOrganization = true;
 
     // Filter out active organization from the list to return (but keep all orgs for permission check above)
     const filteredOrgs = orgs.filter((org): org is NonNullable<typeof org> => org != null && org._id !== activeOrgId);
@@ -88,6 +101,20 @@ export const createOrganization = createAuthMutation({
     slug: z.string(),
   }),
   handler: async (ctx, args) => {
+    // The user may own only a limited number of organizations. The personal
+    // organization counts as one.
+    const ownedCount = await countOwnedOrganizations(
+      ctx.table as any,
+      ctx.user._id
+    );
+
+    if (ownedCount >= ORGANIZATION_LIMIT) {
+      throw new ConvexError({
+        code: 'LIMIT_EXCEEDED',
+        message: `Organization limit reached. Maximum ${ORGANIZATION_LIMIT} organizations per user.`,
+      });
+    }
+
     // Generate unique slug
     let slug = args.name;
     let attempt = 0;
@@ -113,46 +140,31 @@ export const createOrganization = createAuthMutation({
       });
     }
 
-    // Create organization via Better Auth
-    const org = await ctx.auth.api.createOrganization({
-      body: {
-        monthlyCredits: 0,
-        name: args.name,
-        slug,
-      },
-      headers: ctx.auth.headers,
+    // Create the organization in the CRM tables. The CRM tables own the
+    // business organization and the business member, so the identifier of
+    // the auth component is never used as a CRM foreign key.
+    const { id: organizationId } = await createCrmOrganization(ctx.table as any, {
+      name: args.name,
+      ownerUserId: ctx.user._id,
+      slug,
     });
-
-    if (!org) {
-      throw new ConvexError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create organization',
-      });
-    }
-
-    await ctx.table('organization').getX(org.id as Id<'organization'>).patch({
-      settings: { currency: DEFAULT_ORG_CURRENCY },
-    });
-
-    // Seed default permission templates for the new organization
-    await seedDefaultTemplates(ctx, org.id as Id<'organization'>, ctx.user._id as Id<'user'>);
 
     // Auto-create ecommerce plugin instance for the new org
     await ctx.table('pluginInstances').insert({
-      organizationId: org.id as Id<'organization'>,
+      organizationId,
       pluginId: 'ecommerce',
       isActive: true,
-      publicSlug: org.slug,
+      publicSlug: slug,
     });
 
     // Set as active organization
     await setActiveOrganizationHandler(ctx, {
-      organizationId: org.id as Id<'organization'>,
+      organizationId,
     });
 
     return {
-      id: org.id as Id<'organization'>,
-      slug: org.slug,
+      id: organizationId,
+      slug,
     };
   },
 });
@@ -260,13 +272,24 @@ const setActiveOrganizationHandler = async (
   ctx: AuthMutationCtx,
   args: { organizationId: Id<'organization'> }
 ) => {
-  await ctx.auth.api.setActiveOrganization({
-    body: { organizationId: args.organizationId },
-    headers: ctx.auth.headers,
+  // Only an organization with a real CRM membership can become active.
+  const membership = await findMembership(ctx.table as any, {
+    organizationId: args.organizationId,
+    userId: ctx.user._id,
   });
 
-  // Skip updating lastActiveOrganizationId to avoid aggregate issues
-  // The active organization is already tracked in the session
+  if (!membership) {
+    throw new ConvexError({
+      code: 'FORBIDDEN',
+      message: 'You are not a member of this organization',
+    });
+  }
+
+  // The active organization is stored in the CRM user row. The session of the
+  // auth component has no organization field.
+  await ctx.table('user').getX(ctx.user._id).patch({
+    lastActiveOrganizationId: args.organizationId,
+  });
 
   return null;
 };
@@ -285,56 +308,83 @@ export const setActiveOrganization = createAuthMutation({
 });
 
 // Accept invitation
+//
+// The invitation row lives in the CRM tables. The identifier of the
+// invitation is a CRM identifier. The acceptance creates the CRM membership.
 export const acceptInvitation = createAuthMutation({})({
   args: {
     invitationId: zid('invitation'),
   },
   returns: z.null(),
   handler: async (ctx, args) => {
-    // Validate that the invitation is for the current user's email (optimized)
+    // The invitation row lives in the CRM tables.
     const invitation = await ctx.table('invitation').get(args.invitationId);
 
-    // Additional validation that it's for the current user
-    if (invitation && invitation.email !== ctx.user.email) {
-      throw new ConvexError({
-        code: 'FORBIDDEN',
-        message: 'This invitation is not found for your email address',
-      });
-    }
-    if (!invitation) {
-      throw new ConvexError({
-        code: 'FORBIDDEN',
-        message: 'This invitation is not found for your email address',
-      });
-    }
-    if (invitation.status !== 'pending') {
-      throw new ConvexError({
-        code: 'BAD_REQUEST',
-        message: 'This invitation has already been processed',
-      });
-    }
+    // The membership of the CRM tables is the business membership.
+    const existing = invitation
+      ? await findMembership(ctx.table as any, {
+          organizationId: invitation.organizationId,
+          userId: ctx.user._id,
+        })
+      : null;
 
-    // Save roleTemplateId before accepting (status will change)
-    const roleTemplateId = invitation.roleTemplateId;
-    const orgId = invitation.organizationId;
+    // The member limit of the organization applies to an accepted invitation.
+    const members = invitation
+      ? await ctx
+          .table('member', 'organizationId_userId', (q: any) =>
+            q.eq('organizationId', invitation.organizationId)
+          )
+          .take(DEFAULT_LIST_LIMIT)
+      : [];
 
-    await ctx.auth.api.acceptInvitation({
-      body: { invitationId: args.invitationId },
-      headers: ctx.auth.headers,
+    const decision = evaluateInvitation({
+      invitation: invitation
+        ? {
+            email: invitation.email,
+            expiresAt: invitation.expiresAt,
+            organizationId: invitation.organizationId,
+            role: invitation.role,
+            roleTemplateId: invitation.roleTemplateId,
+            status: invitation.status,
+          }
+        : null,
+      memberCount: members.length,
+      memberLimit: MEMBER_LIMIT,
+      userEmail: ctx.user.email,
     });
 
-    // Assign permissionTemplateId to the newly created member
-    if (roleTemplateId && orgId) {
-      const members = await ctx
-        .table('member', 'organizationId_userId', (q: any) =>
-          q.eq('organizationId', orgId).eq('userId', ctx.user._id),
-        )
-        .take(1);
+    if (!decision.allowed) {
+      const code = decision.reason?.includes('limit')
+        ? 'LIMIT_EXCEEDED'
+        : decision.reason?.includes('email address')
+          ? 'FORBIDDEN'
+          : 'BAD_REQUEST';
 
-      if (members[0]) {
-        await ctx.table('member').getX(members[0]._id).patch({ permissionTemplateId: roleTemplateId });
-      }
+      throw new ConvexError({
+        code,
+        message: decision.reason,
+      });
     }
+
+    if (existing) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: 'You are already a member of this organization',
+      });
+    }
+
+    const roleTemplateId = invitation!.roleTemplateId;
+    const orgId = invitation!.organizationId;
+
+    await ctx.table('member').insert({
+      createdAt: Date.now(),
+      organizationId: orgId,
+      role: invitation!.role ?? 'member',
+      userId: ctx.user._id,
+      ...(roleTemplateId ? { permissionTemplateId: roleTemplateId } : {}),
+    });
+
+    await invitation!.patch({ status: 'accepted' });
 
     return null;
   },
@@ -372,10 +422,7 @@ export const rejectInvitation = createAuthMutation({
       });
     }
 
-    await ctx.auth.api.rejectInvitation({
-      body: { invitationId: args.invitationId },
-      headers: ctx.auth.headers,
-    });
+    await invitation.patch({ status: 'rejected' });
 
     return null;
   },
@@ -393,13 +440,41 @@ export const removeMember = createAuthMutation({
     // Permission: member delete
     await hasPermission(ctx, { permissions: { member: ['delete'] } });
 
-    await ctx.auth.api.removeMember({
-      body: {
-        memberIdOrEmail: args.memberId,
-        organizationId: ctx.user.activeOrganization?.id,
-      },
-      headers: ctx.auth.headers,
-    });
+    const organizationId = ctx.user.activeOrganization?.id;
+    if (!organizationId) {
+      throw new ConvexError({
+        code: 'UNAUTHORIZED',
+        message: 'No active organization',
+      });
+    }
+
+    // The CRM member row is the business membership. The membership of the
+    // auth component is not used here.
+    const member = await ctx.table('member').get(args.memberId);
+    if (!member || member.organizationId !== organizationId) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'This member is not a member of the active organization',
+      });
+    }
+
+    if (member.role === 'owner') {
+      const owners = await ctx
+        .table('member', 'organizationId_role', (q) =>
+          q.eq('organizationId', organizationId).eq('role', 'owner')
+        )
+        .take(2);
+
+      if (owners.length <= 1) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message:
+            'Cannot remove the only owner of the organization. Transfer ownership or add another owner first.',
+        });
+      }
+    }
+
+    await member.delete();
 
     return null;
   },
@@ -442,10 +517,27 @@ export const leaveOrganization = createAuthMutation({
       }
     }
 
-    await ctx.auth.api.leaveOrganization({
-      body: { organizationId: ctx.user.activeOrganization!.id },
-      headers: ctx.auth.headers,
+    const organizationId = ctx.user.activeOrganization?.id;
+    if (!organizationId) {
+      throw new ConvexError({
+        code: 'UNAUTHORIZED',
+        message: 'No active organization',
+      });
+    }
+
+    const membership = await findMembership(ctx.table as any, {
+      organizationId,
+      userId: ctx.user._id,
     });
+
+    if (!membership) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'You are not a member of the active organization',
+      });
+    }
+
+    await ctx.table('member').getX(membership._id).delete();
 
     // Automatically switch to personal organization
     await setActiveOrganizationHandler(ctx, {
@@ -469,6 +561,66 @@ export const updateMemberRole = createAuthMutation({
     // Permission: member update
     await hasPermission(ctx, { permissions: { member: ['update'] } });
 
+    const organizationId = ctx.user.activeOrganization?.id;
+    if (!organizationId) {
+      throw new ConvexError({
+        code: 'UNAUTHORIZED',
+        message: 'No active organization',
+      });
+    }
+
+    const member = await ctx.table('member').get(args.memberId);
+    if (!member || member.organizationId !== organizationId) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'This member is not a member of the active organization',
+      });
+    }
+
+    // The current membership decides. A member that is not an owner may not
+    // give the owner role and may not change the role of an owner.
+    const membership = await findMembership(ctx.table as any, {
+      organizationId,
+      userId: ctx.user._id,
+    });
+
+    if (!membership) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'You are not a member of the active organization',
+      });
+    }
+
+    const roleDecision = canAssignRole({
+      currentRole: membership.role as string,
+      destinationRole: args.role,
+      sourceRole: member.role as string,
+    });
+
+    if (!roleDecision.allowed) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: roleDecision.reason,
+      });
+    }
+
+    // The organization must keep one owner.
+    if (member.role === 'owner' && args.role !== 'owner') {
+      const owners = await ctx
+        .table('member', 'organizationId_role', (q) =>
+          q.eq('organizationId', organizationId).eq('role', 'owner')
+        )
+        .take(2);
+
+      if (owners.length <= 1) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message:
+            'Cannot demote the only owner of the organization. Add another owner first.',
+        });
+      }
+    }
+
     // Update member role directly
     await ctx.table('member').getX(args.memberId).patch({ role: args.role });
 
@@ -477,6 +629,11 @@ export const updateMemberRole = createAuthMutation({
 });
 
 // Delete organization (owner only)
+//
+// The deletion fails closed. The business rows of an organization, such as
+// deals, contacts and invoices, point to the organization identifier. A
+// deletion without a cleanup of these rows would leave orphaned data. The
+// cleanup needs its own change, so the endpoint refuses the deletion.
 export const deleteOrganization = createAuthMutation({})({
   args: {},
   returns: z.null(),
@@ -495,17 +652,11 @@ export const deleteOrganization = createAuthMutation({})({
       });
     }
 
-    await setActiveOrganizationHandler(ctx, {
-      organizationId: ctx.user.personalOrganizationId!,
+    throw new ConvexError({
+      code: 'FAILED_PRECONDITION',
+      message:
+        'Deleting an organization is not available yet. The business data of the organization would be left behind. Remove the business data first.',
     });
-
-    // Delete organization via Better Auth
-    await ctx.auth.api.deleteOrganization({
-      body: { organizationId },
-      headers: ctx.auth.headers,
-    });
-
-    return null;
   },
 });
 
@@ -808,6 +959,10 @@ export const listPendingInvitations = createAuthQuery()({
 });
 
 // Invite member to organization by slug
+//
+// The invitation row lives in the CRM tables. The identifier of the
+// invitation is a CRM identifier. The tables of the auth component keep no
+// invitation for the organization.
 export const inviteMember = createAuthMutation({
   rateLimit: 'organization/invite',
 })({
@@ -830,6 +985,32 @@ export const inviteMember = createAuthMutation({
       throw new ConvexError({
         code: 'UNAUTHORIZED',
         message: 'No active organization',
+      });
+    }
+
+    // The current membership decides. An admin may invite members. An owner
+    // invitation needs an owner.
+    const membership = await findMembership(ctx.table as any, {
+      organizationId: orgId,
+      userId: ctx.user._id,
+    });
+
+    if (!membership) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'You are not a member of the active organization',
+      });
+    }
+
+    const inviteDecision = canInviteRole({
+      currentRole: membership.role as string,
+      invitedRole: args.role,
+    });
+
+    if (!inviteDecision.allowed) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: inviteDecision.reason,
       });
     }
 
@@ -904,16 +1085,19 @@ export const inviteMember = createAuthMutation({
       }
     }
 
-    // Create new invitation via Better Auth API (triggers configured email)
-    // Create new invitation directly
+    // Create the invitation in the CRM tables. The invitation owns its CRM
+    // identifier, so the acceptance creates the CRM membership.
     try {
-      const { id: invitationId } = await ctx.auth.api.createInvitation({
-        body: {
-          email: args.email,
-          organizationId: orgId,
-          role: args.role,
-        },
-        headers: ctx.auth.headers,
+      const invitationId = await ctx.table('invitation').insert({
+        email: args.email,
+        expiresAt: Date.now() + INVITATION_EXPIRY_MS,
+        inviterId: ctx.user._id,
+        organizationId: orgId,
+        role: args.role,
+        status: 'pending',
+        ...(args.roleTemplateId
+          ? { roleTemplateId: args.roleTemplateId }
+          : {}),
       });
 
       if (!invitationId) {
@@ -923,18 +1107,18 @@ export const inviteMember = createAuthMutation({
         });
       }
 
-      // Patch roleTemplateId onto the invitation if provided
-      if (args.roleTemplateId && invitationId) {
-        const invitation = await ctx.table('invitation').get(invitationId as Id<'invitation'>);
-        if (invitation) {
-          await invitation.patch({ roleTemplateId: args.roleTemplateId });
-        } else {
-          console.warn(
-            `[inviteMember] Could not patch roleTemplateId: invitation ${invitationId} not found after creation`,
-          );
-        }
-      }
+      // Known gap: the invitation email is not sent. The old flow only wrote
+      // a log line. The email step must call the action
+      // emails.sendOrganizationInviteEmail.
+      console.log(
+        '[inviteMember] Invitation email would be sent to:',
+        args.email,
+        'invitation:',
+        invitationId
+      );
     } catch (error: any) {
+      if (error instanceof ConvexError) throw error;
+
       throw new ConvexError({
         code: 'BAD_REQUEST',
         message: `Failed to send invitation: ${error.message || 'Unknown error'}`,
@@ -966,25 +1150,22 @@ export const cancelInvitation = createAuthMutation({
       });
     }
 
-    // Cancel the invitation in Better Auth
-    try {
-      await ctx.auth.api.cancelInvitation({
-        body: { invitationId: args.invitationId },
-        headers: ctx.auth.headers,
-      });
-    } catch (error: any) {
-      if (error.message?.includes('not found')) {
-        throw new ConvexError({
-          code: 'NOT_FOUND',
-          message: 'Invitation not found or already processed',
-        });
-      }
-
+    // Cancel the invitation in the CRM tables.
+    if (!invitation) {
       throw new ConvexError({
-        code: 'BAD_REQUEST',
-        message: `Failed to cancel invitation: ${error.message || 'Unknown error'}`,
+        code: 'NOT_FOUND',
+        message: 'Invitation not found or already processed',
       });
     }
+
+    if (invitation.status !== 'pending') {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: 'Invitation not found or already processed',
+      });
+    }
+
+    await invitation.patch({ status: 'canceled' });
 
     // Note: Email cancellation through Resend is non-critical
     // The invitation being cancelled is the primary action

@@ -6,6 +6,14 @@ import { Doc, Id } from './_generated/dataModel';
 import type { AuthCtx } from './functions';
 import { getAuth } from './auth';
 import { ConvexError } from 'convex/values';
+import { checkPermission } from './permissionHelpers';
+import {
+  isCrmFeature,
+  isCrmFeatureAction,
+  isOrganizationalResource,
+  roleAllows,
+} from './orgAccess';
+import { findMembership, resolveActiveOrganization } from './organizationHelpers';
 
 interface EntsTable {
   (name: 'user'): {
@@ -58,13 +66,10 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
     return null;
   }
 
-  // session.activeOrganizationId is set by Better Auth's organization plugin.
-  // It may be null if the session was created before the trigger fix.
-  // We'll fallback to the user's personalOrganizationId below.
-  const sessionOrgId =
-    session.activeOrganizationId as Id<'organization'> | null;
-
-  // session.userId is a COMPONENT table ID — find user in main table by email
+  // The session of the auth component has no organization field. The active
+  // organization is a CRM organization, so the CRM membership decides which
+  // organization is active. An identifier of the auth component is never used
+  // as a CRM identifier.
   const componentUser = sessionPayload?.user;
   if (!componentUser?.email) {
     return null;
@@ -78,37 +83,17 @@ const getSessionData = async (ctx: CtxWithTable<QueryCtx | MutationCtx>) => {
     return null;
   }
 
-  const mainUserId = user._id as Id<'user'>;
+  // Without a CRM membership there is no active organization. The caller must
+  // fail closed instead of guessing a role.
+  const active = await resolveActiveOrganization(table, user);
 
-  // Fallback: if session doesn't have activeOrganizationId, use the user's
-  // personal org or last active org. This handles sessions created before
-  // the session.onCreate trigger fix.
-  const activeOrganizationId =
-    sessionOrgId ??
-    user.personalOrganizationId ??
-    user.lastActiveOrganizationId;
-
-  const activeOrganization = await (async () => {
-    if (!activeOrganizationId) {
-      return null;
-    }
-
-    const [activeOrg, currentMember] = await Promise.all([
-      table('organization').getX(activeOrganizationId),
-      table('member', 'organizationId_userId', (q: any) =>
-          q
-            .eq('organizationId', activeOrganizationId)
-            .eq('userId', mainUserId)
-        )
-        .first(),
-    ]);
-
-    return {
-      ...activeOrg.doc(),
-      id: activeOrg._id as Id<'organization'>,
-      role: currentMember?.role || 'member',
-    };
-  })();
+  const activeOrganization = active
+    ? {
+        ...active.organization.doc(),
+        id: active.organization._id as Id<'organization'>,
+        role: active.membership.role,
+      }
+    : null;
 
   return {
     activeOrganization,
@@ -192,36 +177,116 @@ export const createUser = async (
   return id as Id<'user'>;
 };
 
-export const hasPermission = async (
-  ctx: AuthCtx,
-  body: {
-    permissions: Record<string, string[]>;
-    role?: string;
-  },
-  shouldThrow = true
-) => {
-  try {
-    const canUpdate = await ctx.auth.api.hasPermission({
-      body,
-      headers: ctx.auth.headers,
-    });
+export type PermissionRequest = {
+  permissions: Record<string, string[]>;
+  role?: string;
+};
 
-    if (shouldThrow && !canUpdate.success) {
-      throw new ConvexError({
-        code: 'FORBIDDEN',
-        message: 'Insufficient permissions for this action',
-      });
+export type PermissionResult = {
+  allowed: boolean;
+  reason?: string;
+};
+
+/**
+ * Check the permissions of the current user in the active organization.
+ *
+ * The check always uses the real CRM membership of the current user. A CRM
+ * business feature is checked with the permission template of that
+ * membership. An organizational action keeps the role based rules of the
+ * access control definition. Every other case fails closed.
+ */
+export const evaluatePermissions = async (
+  ctx: AuthCtx,
+  body: PermissionRequest
+): Promise<PermissionResult> => {
+  const organizationId = ctx.user.activeOrganization?.id;
+
+  if (!organizationId) {
+    return { allowed: false, reason: 'No active organization' };
+  }
+
+  const membership = await findMembership(ctx.table as any, {
+    organizationId,
+    userId: ctx.user._id,
+  });
+
+  if (!membership) {
+    return {
+      allowed: false,
+      reason: 'You are not a member of the active organization',
+    };
+  }
+
+  const role = membership.role as string;
+
+  // A caller may not ask for a role that is not the role of the membership.
+  if (body.role && body.role !== role) {
+    return { allowed: false, reason: 'The requested role is not your role' };
+  }
+
+  for (const [resource, actions] of Object.entries(body.permissions ?? {})) {
+    if (isCrmFeature(resource)) {
+      for (const action of actions) {
+        if (!isCrmFeatureAction(resource, action)) {
+          return {
+            allowed: false,
+            reason: `Unknown permission: ${resource}:${action}`,
+          };
+        }
+
+        const allowed = await checkPermission(ctx, {
+          action,
+          feature: resource,
+          orgId: organizationId,
+          userId: ctx.user._id,
+        });
+
+        if (!allowed) {
+          return {
+            allowed: false,
+            reason: `Missing permission: ${resource}:${action}`,
+          };
+        }
+      }
+
+      continue;
     }
 
-    return canUpdate.success;
-  } catch (e) {
-    if (e instanceof ConvexError) throw e;
+    if (!isOrganizationalResource(resource)) {
+      return {
+        allowed: false,
+        reason: `Unknown permission resource: ${resource}`,
+      };
+    }
+
+    if (!roleAllows(role, resource, actions)) {
+      return {
+        allowed: false,
+        reason: `Missing permission: ${resource}:${actions.join(', ')}`,
+      };
+    }
+  }
+
+  return { allowed: true };
+};
+
+export const hasPermission = async (
+  ctx: AuthCtx,
+  body: PermissionRequest,
+  shouldThrow = true
+) => {
+  const result = await evaluatePermissions(ctx, body);
+
+  if (!result.allowed) {
     if (shouldThrow) {
       throw new ConvexError({
         code: 'FORBIDDEN',
-        message: 'Insufficient permissions for this action',
+        message: result.reason ?? 'Insufficient permissions for this action',
       });
     }
+
     return false;
   }
+
+  return true;
 };

@@ -11,6 +11,7 @@ import { env } from '@/env';
 import { signIn } from '@/lib/convex/auth-client';
 import { routes } from '@/lib/navigation/routes';
 import { cn } from '@/lib/utils';
+import { resolveCallbackUrl } from '@convex/helpers/callbackUrl';
 import type { LucideProps } from 'lucide-react';
 
 export function SignForm() {
@@ -19,13 +20,16 @@ export function SignForm() {
   const searchParams = useSearchParams();
   const hasGoogleAuth = Boolean(env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
-  const resolvedCallback = callbackUrl
-    ? decodeURIComponent(callbackUrl)
-    : '/';
+  // The callback URL comes from the query string. Only a target on the same
+  // origin is allowed. Every other value falls back to the site root.
+  const callbackURL = resolveCallbackUrl({
+    callbackUrl,
+    siteUrl: env.NEXT_PUBLIC_SITE_URL,
+  });
 
   const handleGoogleSignIn = () => {
     signIn.social({
-      callbackURL: `${env.NEXT_PUBLIC_SITE_URL}${resolvedCallback}`,
+      callbackURL,
       provider: 'google',
     });
   };

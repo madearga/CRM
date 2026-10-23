@@ -79,46 +79,34 @@ export const authClient = createClient<DataModel>(
             await table('user').getX(mainUser._id).patch({ role: 'admin' });
           }
 
-          // Create personal organization if not exists
-          if (!mainUser.personalOrganizationId) {
-            const safeName = (typeof user.name === 'string' && user.name.trim()) ? user.name : 'User';
-            const slug = `personal-${String(mainUser._id).slice(-8)}`;
-            const orgId = await table('organization').insert({
-              logo: user.image || undefined,
-              monthlyCredits: 0,
-              name: `${safeName}'s Organization`,
-              slug,
-              createdAt: Date.now(),
-            });
-            await table('member').insert({
-              createdAt: Date.now(),
-              role: 'owner',
-              organizationId: orgId,
-              userId: mainUser._id,
-            });
-            await table('user').getX(mainUser._id).patch({
-              lastActiveOrganizationId: orgId,
-              personalOrganizationId: orgId,
-            });
-          }
+          // Create personal organization if not exists.
+          // The helper owns the personal organization, the owner membership
+          // and the default permission templates.
+          const safeName =
+            (typeof user.name === 'string' && user.name.trim()) || 'User';
+
+          await createPersonalOrganization(ctx as any, {
+            image: user.image || null,
+            name: safeName,
+            userId: mainUser._id,
+          });
         },
       },
       session: {
         onCreate: async (ctx, session) => {
-          // Auto-set activeOrganizationId on the session so the user
-          // has an active org immediately after login.
-          // This is critical — without it, all CRM operations fail with
-          // "No active organization" because getSessionData reads
-          // session.activeOrganizationId.
-          const table: any = entsTableFactory(ctx as any, entDefinitions);
-
-          // session.userId is a COMPONENT table ID — find user in main table by email
+          // The session document of the auth component has no organization
+          // field. The active organization lives in the CRM user row, so this
+          // trigger only makes sure that the CRM user and the personal
+          // organization exist.
           const componentUserId = session.userId as any;
-          let componentUser;
+          let componentUser: any = null;
           try {
-            componentUser = await (ctx as any).db.get(componentUserId);
+            componentUser = await authClient.getAnyUserById(
+              ctx as any,
+              componentUserId
+            );
           } catch (err) {
-            console.warn('[session.onCreate] Failed to fetch component user:', err);
+            console.warn('[session.onCreate] Failed to read the component user:', err);
             return;
           }
 
@@ -129,28 +117,20 @@ export const authClient = createClient<DataModel>(
           }
 
           // Use shared helper to find main user by email
+          const table: any = entsTableFactory(ctx as any, entDefinitions);
           const mainUser = await findMainUserByEmail(table, email);
           if (!mainUser) return;
 
-          // Use personalOrganizationId (preferred) or lastActiveOrganizationId
-          const orgId =
-            mainUser.personalOrganizationId ??
-            mainUser.lastActiveOrganizationId;
+          const safeName =
+            (typeof componentUser?.name === 'string' &&
+              componentUser.name.trim()) ||
+            'User';
 
-          if (!orgId) return;
-
-          // Set activeOrganizationId on the session document.
-          // session._id is a COMPONENT table ID. We must use ctx.db.patch (raw Convex)
-          // instead of entsTableFactory because the session lives in the component's table,
-          // not our main table.
-          if (!session._id) return;
-          try {
-            await (ctx as any).db.patch(session._id, {
-              activeOrganizationId: orgId,
-            });
-          } catch (err) {
-            console.warn('[session.onCreate] Failed to patch session activeOrganizationId:', err);
-          }
+          await createPersonalOrganization(ctx as any, {
+            image: componentUser?.image || null,
+            name: safeName,
+            userId: mainUser._id,
+          });
         },
       },
     } as any,
@@ -163,6 +143,11 @@ type GenericCtx = QueryCtx | MutationCtx | ActionCtx;
 
 export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
   const baseURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // The Google provider needs the server side variables. The browser only
+  // knows the client id. When the server side variables are missing the
+  // provider is not registered and the sign in fails with an unknown
+  // provider. The variables must be set on the deployment that runs the
+  // functions.
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const socialProviders: Record<string, any> = {};
@@ -235,6 +220,11 @@ export const createAuth = (ctx: GenericCtx, { optionsOnly = false } = {}) => {
   });
 };
 
+// The options only instance carries the options for the client plugins and
+// for the request instances. It has no database, so Better Auth falls back to
+// the memory adapter and logs a warning. The memory adapter never stores a
+// request. Every request uses getAuth below, which uses the adapter of the
+// auth component.
 export const auth = createAuth({} as any, { optionsOnly: true });
 
 export const getAuth = <Ctx extends QueryCtx | MutationCtx>(ctx: Ctx) => {

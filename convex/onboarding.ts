@@ -1,12 +1,12 @@
-import type { Id } from './_generated/dataModel';
-
 import { createAuthMutation } from './functions';
-import { seedDefaultTemplates } from './permissionHelpers';
+import {
+  countOwnedOrganizations,
+  createCrmOrganization,
+  ORGANIZATION_LIMIT,
+} from './organizationHelpers';
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
-
-const DEFAULT_ORG_CURRENCY = 'IDR' as const;
 
 export const completeOnboarding = createAuthMutation({
   rateLimit: 'organization/create',
@@ -29,6 +29,20 @@ export const completeOnboarding = createAuthMutation({
 
     // 1. Update user name
     await ctx.user.patch({ name: args.userName });
+
+    // 2. The user may own only a limited number of organizations. The
+    // personal organization counts as one.
+    const ownedCount = await countOwnedOrganizations(
+      ctx.table as any,
+      ctx.user._id
+    );
+
+    if (ownedCount >= ORGANIZATION_LIMIT) {
+      throw new ConvexError({
+        code: 'LIMIT_EXCEEDED',
+        message: `Organization limit reached. Maximum ${ORGANIZATION_LIMIT} organizations per user.`,
+      });
+    }
 
     // 2. Generate slug from org name
     let slug = args.organizationName
@@ -54,54 +68,34 @@ export const completeOnboarding = createAuthMutation({
       });
     }
 
-    // 3. Create organization via Better Auth
-    const org = await ctx.auth.api.createOrganization({
-      body: {
-        monthlyCredits: 0,
+    // 3. Create the organization in the CRM tables. The CRM tables own the
+    // business organization and the business member. The helper also creates
+    // the owner membership and the default permission templates.
+    const { id: organizationId } = await createCrmOrganization(
+      ctx.table as any,
+      {
         name: args.organizationName,
+        ownerUserId: ctx.user._id,
         slug,
-      },
-      headers: ctx.auth.headers,
-    });
-
-    if (!org) {
-      throw new ConvexError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create organization',
-      });
-    }
-
-    // 4. Patch org settings
-    await ctx
-      .table('organization')
-      .getX(org.id as Id<'organization'>)
-      .patch({
-        settings: { currency: DEFAULT_ORG_CURRENCY },
-      });
-
-    // 5. Seed default permission templates
-    await seedDefaultTemplates(
-      ctx,
-      org.id as Id<'organization'>,
-      ctx.user._id as Id<'user'>
+      }
     );
 
-    // 5b. Auto-create ecommerce plugin instance
+    // 3b. Auto-create ecommerce plugin instance
     await ctx.table('pluginInstances').insert({
-      organizationId: org.id as Id<'organization'>,
+      organizationId,
       pluginId: 'ecommerce',
       isActive: true,
       publicSlug: slug,
     });
 
-    // 6. Set as active organization
-    await ctx.auth.api.setActiveOrganization({
-      body: { organizationId: org.id },
-      headers: ctx.auth.headers,
+    // 4. Set as active organization. The active organization lives in the CRM
+    // user row. The session of the auth component has no organization field.
+    await ctx.table('user').getX(ctx.user._id).patch({
+      lastActiveOrganizationId: organizationId,
     });
 
     return {
-      organizationId: org.id as Id<'organization'>,
+      organizationId,
     };
   },
 });
