@@ -1,6 +1,6 @@
 import { zid } from 'convex-helpers/server/zod';
 import { ConvexError } from 'convex/values';
-import type { Id } from './convex/_generated/dataModel';
+import type { Id } from './_generated/dataModel';
 import { z } from 'zod';
 
 import { createOrgMutation, createOrgPaginatedQuery, createOrgQuery } from './functions';
