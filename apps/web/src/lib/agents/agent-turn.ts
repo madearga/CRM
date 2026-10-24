@@ -36,6 +36,10 @@ export interface AgentTurnInput {
   readonly transcript: string;
   /** The implementation of the `propose_operation` tool. */
   readonly proposeOperation?: ProposeOperationHandler;
+  /** Extra read-only tools, for example the CRM lookup. */
+  readonly extraTools?: import('./pi-harness').PiHarnessOptions['extraTools'];
+  /** A compact block of CRM data the agent may speak about. */
+  readonly crmContext?: string;
   /** The longest the turn may take. It defaults to 55 seconds. */
   readonly timeoutMs?: number;
 }
@@ -66,7 +70,12 @@ export function buildAgentInstructions(input: AgentTurnInput): string {
     'You answer the last message of the person in short, clear sentences.',
     'You never change data yourself. When the CRM must change data, you call the tool propose_operation with one operation name and a JSON payload. The tool only records the proposal. A person approves it.',
     'The operation names are create_activity and update_deal_stage.',
+    'You may read CRM data through the query_crm tool (deals, contacts, companies, activities). Reads are read-only and scoped to the person who asked.',
   ];
+  if (input.crmContext !== undefined && input.crmContext.trim() !== '') {
+    lines.push('The current CRM data of this person (you may answer from it, and call query_crm for more):');
+    lines.push(input.crmContext);
+  }
 
   if (input.transcript.trim() === '') {
     lines.push('The room has no earlier message.');
@@ -127,6 +136,7 @@ export async function runAgentTurn(
     ...(input.proposeOperation === undefined
       ? {}
       : { proposeOperation: input.proposeOperation }),
+    ...(input.extraTools === undefined ? {} : { extraTools: input.extraTools }),
   });
 
   let timer: ReturnType<typeof setTimeout> | undefined;

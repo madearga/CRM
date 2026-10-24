@@ -25,6 +25,8 @@ import {
   getSessionToken,
 } from '@/lib/convex/server';
 import { runAgentTurn, AgentTurnTimeoutError } from '@/lib/agents/agent-turn';
+import { createCrmReader } from '@/lib/agents/crm-access';
+import { createQueryCrmTool } from '@/lib/agents/crm-tools';
 import {
   bridgeCall,
   BRIDGE_MESSAGE_PATH,
@@ -304,12 +306,20 @@ export async function POST(
       }
     };
 
+    // The CRM reads of this turn run with the session of the person, so the
+    // agent sees what that person may see, and writes still need approval.
+    const crmReader = createCrmReader(token);
+    const crmContext = await crmReader.buildContextPack().catch(() => undefined);
+    const extraTools = [createQueryCrmTool(crmReader)];
+
     const turn = await runAgentTurn({
       agentName: agent.name,
       roomName: room.name,
       userText: text,
       transcript,
       proposeOperation,
+      crmContext,
+      extraTools,
     });
 
     if (turn.reply !== '') {

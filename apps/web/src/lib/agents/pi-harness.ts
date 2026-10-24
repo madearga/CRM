@@ -35,6 +35,14 @@ import {
   type ProposeOperationHandler,
 } from './propose-operation';
 
+/** The extension name of the extra read-only tools. */
+export const EXTRA_TOOLS_EXTENSION_NAME = 'ruang.crm';
+
+/** Any tool registration of the harness, independent of its parameter type. */
+type RuangTool = NonNullable<
+  Parameters<Registry['install']>[0]['tools']
+>[number];
+
 /**
  * The in-memory storage of pi-durable.
  *
@@ -61,6 +69,8 @@ export interface PiHarnessOptions {
    * no tools at all.
    */
   readonly proposeOperation?: ProposeOperationHandler;
+  /** Extra read-only tools, for example the CRM lookup tool. */
+  readonly extraTools?: readonly RuangTool[];
   /** The clock of the harness. Every process on one storage must use it. */
   readonly now?: () => number;
   /**
@@ -89,7 +99,8 @@ export const PI_AGENT: AgentChange = {
  * `propose_operation` tool when an implementation is supplied.
  */
 export function createPiRegistry(
-  proposeOperation?: ProposeOperationHandler
+  proposeOperation?: ProposeOperationHandler,
+  extraTools?: readonly RuangTool[]
 ): Registry {
   const registry = createRegistry();
   if (proposeOperation !== undefined) {
@@ -97,6 +108,9 @@ export function createPiRegistry(
       name: PROPOSE_OPERATION_EXTENSION_NAME,
       tools: [createProposeOperationTool(proposeOperation)],
     });
+  }
+  if (extraTools !== undefined && extraTools.length > 0) {
+    registry.install({ name: EXTRA_TOOLS_EXTENSION_NAME, tools: [...extraTools] });
   }
   return registry;
 }
@@ -110,7 +124,7 @@ export async function openPiHarness(
   options: PiHarnessOptions
 ): Promise<PiHarness> {
   const context = options.context ?? BACKGROUND_CONTEXT;
-  const registry = createPiRegistry(options.proposeOperation);
+  const registry = createPiRegistry(options.proposeOperation, options.extraTools);
   const models = createPiModels();
   return Harness.open(
     options.storage,
