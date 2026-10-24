@@ -222,7 +222,8 @@ export async function POST(
     const session = await fetchAuthQuery(api.user.getSessionUser, {});
     const organizationId =
       session?.activeOrganization?.id ?? session?.personalOrganizationId;
-    if (!organizationId) {
+    const requestingUserId = session?.id;
+    if (!organizationId || !requestingUserId) {
       return NextResponse.json(
         { ok: false, error: 'The session has no organization' },
         { status: 400 }
@@ -255,6 +256,10 @@ export async function POST(
     await fetchAuthMutation(api.rooms.postMessage, { roomId, text });
 
     const proposals: ProposalResult[] = [];
+    // The turn is guarded at 55 s; this abort fires just before it, so a
+    // proposal never lands after the person saw a timeout.
+    const turnAbort = new AbortController();
+    const turnAbortTimer = setTimeout(() => turnAbort.abort(), 50_000);
 
     const proposeOperation: ProposeOperationHandler = async (proposal) => {
       const kind = toOperationKind(proposal.operation);
@@ -274,10 +279,14 @@ export async function POST(
             organizationId,
             roomId,
             agentId: agent.agentId,
+            // The operation belongs to the person who asked, so the ledger
+            // names a human and the permission check runs on that person.
+            requestingUserId,
             operationKind: kind,
             payload: proposal.payload ?? {},
             summary,
-          }
+          },
+          { signal: turnAbort.signal }
         );
 
         const result: ProposalResult = {
@@ -312,15 +321,20 @@ export async function POST(
     const crmContext = await crmReader.buildContextPack().catch(() => undefined);
     const extraTools = [createQueryCrmTool(crmReader)];
 
-    const turn = await runAgentTurn({
-      agentName: agent.name,
-      roomName: room.name,
-      userText: text,
-      transcript,
-      proposeOperation,
-      crmContext,
-      extraTools,
-    });
+    let turn;
+    try {
+      turn = await runAgentTurn({
+        agentName: agent.name,
+        roomName: room.name,
+        userText: text,
+        transcript,
+        proposeOperation,
+        crmContext,
+        extraTools,
+      });
+    } finally {
+      clearTimeout(turnAbortTimer);
+    }
 
     if (turn.reply !== '') {
       try {

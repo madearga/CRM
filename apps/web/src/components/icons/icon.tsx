@@ -1,14 +1,23 @@
 'use client';
 
-// The icon entry point for the Ruang surfaces. Icons resolve through
-// Iconify: `lucide:*` today (the same vectors the app used before, so the
-// swap is invisible), and any other Iconify collection later by changing
-// the name — that is the reason this indirection exists.
+// The icon entry point for the Ruang surfaces.
 //
-// Iconify loads icon data on demand and caches it; a production build of
-// the app should pin the used collection offline before shipping.
+// Icons resolve through Iconify. The `lucide:*` set is bundled with the app
+// (see icon-data.ts), so a page renders its icons with no network call and
+// keeps working offline; any other Iconify collection can be added by name.
+//
+// Iconify loads a collection on demand and caches it. A bundled collection
+// is registered once, on the client, before any icon renders.
 
-import { Icon, type IconProps } from '@iconify/react';
+import { Icon, addCollection, type IconProps } from '@iconify/react';
+
+import { RUANG_ICONS } from './icon-data';
+
+// Register once, at module scope: the bundle is part of the app, so no icon
+// ever waits for a network request. addCollection is a no-op on the server.
+if (typeof window !== 'undefined') {
+  addCollection(RUANG_ICONS);
+}
 
 export type RuangIconName =
   | 'lucide:circle-alert'

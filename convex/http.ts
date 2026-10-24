@@ -128,6 +128,9 @@ const bridgeProposalArgs = z.object({
   organizationId: z.string().min(1),
   roomId: z.string().min(1),
   agentId: z.string().min(1).max(60),
+  // The person whose session the agent acted with. The operation is
+  // attributed to that person, not to whoever created the room.
+  requestingUserId: z.string().min(1),
   operationKind: z.enum(['create_activity', 'update_deal_stage']),
   payload: z.record(z.unknown()),
   summary: z.string().max(500).optional(),
@@ -260,6 +263,7 @@ const agentBridgeProposal = httpAction(async (ctx, request) => {
         organizationId: parsed.data.organizationId as Id<'organization'>,
         roomId: parsed.data.roomId as Id<'rooms'>,
         agentId: parsed.data.agentId,
+        requestingUserId: parsed.data.requestingUserId as Id<'user'>,
         operationKind: parsed.data.operationKind,
         payload: parsed.data.payload,
         summary: parsed.data.summary,

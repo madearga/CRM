@@ -71,6 +71,8 @@ export default function RoomPage() {
   const canCreate = usePermission('rooms', 'create');
   const canManage = usePermission('rooms', 'manage');
   const canViewAgents = usePermission('agents', 'view');
+  // A decision needs the ledger permission, not the room write permission.
+  const canDecideOperations = usePermission('agents', 'manage');
 
   const user = useCurrentUser();
   const orgSlug = user?.activeOrganization?.slug;
@@ -556,8 +558,8 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <div className="min-w-0 flex-1 space-y-4">
+    <div className="flex min-h-0 flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         <div className="space-y-3">
           <Link
             href="/rooms"
@@ -631,12 +633,12 @@ export default function RoomPage() {
             </span>
           </div>
 
-          <ScrollArea ref={threadRef} className="h-[55dvh] lg:h-[55vh]">
+          <ScrollArea ref={threadRef} className="h-[52dvh] min-h-40 lg:h-[55vh]">
             <RoomMessageList
               messages={listMessages}
               agentName={agentName}
               isThinking={isSending}
-              canDecide={write.allowed}
+              canDecide={canDecideOperations}
               decidingOperationId={decidingOperationId}
               proposals={proposals}
               trailingProposals={trailingProposals}
@@ -713,7 +715,7 @@ export default function RoomPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        className="h-11 w-11 text-muted-foreground hover:text-destructive sm:h-7 sm:w-7"
                         onClick={() =>
                           handleRemoveMember(member.id, member.displayName)
                         }
@@ -749,7 +751,7 @@ export default function RoomPage() {
       </aside>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Tambah anggota</DialogTitle>
             <DialogDescription>

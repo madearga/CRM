@@ -23,7 +23,7 @@
 
 /* The composer grows with the text, up to six rows. */
 .room-composer-input {
-  field-sizing: fixed;
+  field-sizing: content;
   resize: none;
   min-height: 2.5rem;
   overflow-y: hidden;

@@ -106,6 +106,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
         summary: 'Follow up with the client',
@@ -149,6 +150,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       })
@@ -168,6 +170,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       })
@@ -184,6 +187,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       })
@@ -225,6 +229,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: otherRoom!._id,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       })
@@ -239,6 +244,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       }
@@ -249,6 +255,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       }
@@ -268,12 +275,115 @@ describe('a proposal of an agent service', () => {
     ).toHaveLength(1);
   });
 
+  it('attributes the operation to the person who asked, not the room creator', async () => {
+    const f = await fixture();
+    const requesterId = await f.t.run(async (ctx) => {
+      const id = await ctx.db.insert('user', {
+        email: 'asker@example.com',
+        name: 'Asker',
+        emailVerified: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await ctx.db.insert('member', {
+        organizationId: f.organizationId,
+        userId: id,
+        role: 'owner',
+        createdAt: Date.now(),
+      });
+      return id;
+    });
+
+    const result = await f.t.mutation(
+      internal.agentOperations.proposeFromService,
+      {
+        organizationId: f.organizationId,
+        roomId: f.roomId,
+        agentId: f.agentId,
+        requestingUserId: requesterId,
+        operationKind: 'create_activity',
+        payload,
+        summary: 'Ask on behalf of another person',
+      }
+    );
+
+    const operation = await f.t.run((ctx) =>
+      ctx.db.get(result.id as Id<'agentOperations'>)
+    );
+    expect(operation?.requestedByUserId).toBe(requesterId);
+    expect(operation?.requestedByUserId).not.toBe(f.userId);
+
+    const approval = await f.t.run((ctx) =>
+      ctx.db.get(result.approvalId as Id<'approvals'>)
+    );
+    expect(approval?.requestedByUserId).toBe(requesterId);
+  });
+
+  it('refuses a requester who is not a member of the organization', async () => {
+    const f = await fixture();
+    const strangerId = await f.t.run((ctx) =>
+      ctx.db.insert('user', {
+        email: 'stranger@example.com',
+        name: 'Stranger',
+        emailVerified: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    );
+
+    await expect(
+      f.t.mutation(internal.agentOperations.proposeFromService, {
+        organizationId: f.organizationId,
+        roomId: f.roomId,
+        agentId: f.agentId,
+        requestingUserId: strangerId,
+        operationKind: 'create_activity',
+        payload,
+      })
+    ).rejects.toThrow(/not a member/i);
+    expect(
+      await f.t.run((ctx) => ctx.db.query('agentOperations').collect())
+    ).toHaveLength(0);
+  });
+
+  it('refuses a requester who may not cause the effect', async () => {
+    const f = await fixture();
+    const viewerId = await f.t.run(async (ctx) => {
+      const id = await ctx.db.insert('user', {
+        email: 'viewer@example.com',
+        name: 'Viewer',
+        emailVerified: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await ctx.db.insert('member', {
+        organizationId: f.organizationId,
+        userId: id,
+        role: 'member',
+        createdAt: Date.now(),
+      });
+      return id;
+    });
+
+    await expect(
+      f.t.mutation(internal.agentOperations.proposeFromService, {
+        organizationId: f.organizationId,
+        roomId: f.roomId,
+        agentId: f.agentId,
+        requestingUserId: viewerId,
+        operationKind: 'create_activity',
+        payload,
+      })
+    ).rejects.toThrow(/may not cause this effect/i);
+  });
+
   it('refuses a different proposal under the same key', async () => {
     const f = await fixture();
     await f.t.mutation(internal.agentOperations.proposeFromService, {
       organizationId: f.organizationId,
       roomId: f.roomId,
       agentId: f.agentId,
+        requestingUserId: f.userId,
       operationKind: 'create_activity',
       payload,
     });
@@ -285,6 +395,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'update_deal_stage',
         payload,
       })
@@ -297,6 +408,7 @@ describe('a proposal of an agent service', () => {
       organizationId: f.organizationId,
       roomId: f.roomId,
       agentId: f.agentId,
+        requestingUserId: f.userId,
       operationKind: 'create_activity',
       payload,
     });
@@ -327,6 +439,7 @@ describe('a proposal of an agent service', () => {
         organizationId: f.organizationId,
         roomId: f.roomId,
         agentId: f.agentId,
+        requestingUserId: f.userId,
         operationKind: 'create_activity',
         payload,
       })

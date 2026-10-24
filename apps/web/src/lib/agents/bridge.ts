@@ -52,6 +52,11 @@ export interface BridgeCallOptions {
   readonly now?: () => number;
   /** The fetch of the call. It exists for tests. */
   readonly fetchImpl?: typeof fetch;
+  /**
+   * Aborts the call. A turn that runs out of time must not record a proposal
+   * after the person has already received a timeout.
+   */
+  readonly signal?: AbortSignal;
 }
 
 /**
@@ -189,6 +194,7 @@ export async function bridgeCall<T = BridgeEnvelope>(
       rawBody,
     }),
     body: rawBody,
+    ...(options?.signal === undefined ? {} : { signal: options.signal }),
   });
 
   if (!response.ok) {

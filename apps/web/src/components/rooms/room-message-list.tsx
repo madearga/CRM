@@ -52,7 +52,6 @@ export function RoomMessageList({
     <div
       className="flex flex-col gap-3 p-4"
       role="log"
-      aria-live="polite"
       aria-label="Percakapan ruang"
     >
       {isEmpty && !isThinking ? (

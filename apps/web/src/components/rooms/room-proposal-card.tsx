@@ -22,6 +22,11 @@ const STATUS_META: Record<
     className: 'border-orange-500/30 bg-orange-500/10 text-orange-400',
     icon: 'lucide:clock',
   },
+  executing: {
+    label: 'Sedang dijalankan',
+    className: 'border-chart-1/30 bg-chart-1/10 text-chart-1',
+    icon: 'lucide:loader-circle',
+  },
   pending: {
     label: 'Menunggu eksekusi',
     className: 'border-border bg-muted text-muted-foreground',
@@ -72,15 +77,17 @@ export function RoomProposalCard({
   const canApprove = canDecide && proposal.status === 'awaiting_approval';
 
   return (
-    <div className="glass backdrop-blur-xl rounded-md p-3">
+    <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className="h-5 text-[11px]">
           {kindLabel}
         </Badge>
-        <Badge className={`h-5 gap-1 text-[11px] ${status.className}`}>
+        <span
+          className={`inline-flex h-5 items-center gap-1 rounded-md border px-1.5 text-[11px] ${status.className}`}
+        >
           <RuangIcon name={status.icon} className="h-3 w-3" />
           {status.label}
-        </Badge>
+        </span>
         <OperationTag operationId={proposal.operationId} className="ml-auto" />
         {proposal.duplicate ? (
           <span className="text-[11px] text-muted-foreground">
@@ -99,7 +106,7 @@ export function RoomProposalCard({
             size="sm"
             disabled={isDeciding}
             onClick={() => onDecide(proposal.operationId, 'approve')}
-            className="transition-transform duration-[160ms] ease-out active:scale-[0.97]"
+            className="h-11 sm:h-8"
           >
             Setujui
           </Button>
@@ -108,7 +115,7 @@ export function RoomProposalCard({
             variant="outline"
             disabled={isDeciding}
             onClick={() => onDecide(proposal.operationId, 'reject')}
-            className="transition-transform duration-[160ms] ease-out active:scale-[0.97]"
+            className="h-11 sm:h-8"
           >
             Tolak
           </Button>

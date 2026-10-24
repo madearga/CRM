@@ -126,7 +126,7 @@ export function RoomComposer({
         <Button
           onClick={() => void handleSend()}
           disabled={disabled || empty}
-          className="transition-transform duration-[160ms] ease-out active:scale-[0.97]"
+          className="h-11 sm:h-9"
         >
           {isSending ? (
             <>

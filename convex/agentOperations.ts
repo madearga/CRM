@@ -355,6 +355,8 @@ export const proposeFromService = createInternalMutation()({
     organizationId: zid('organization'),
     roomId: zid('rooms'),
     agentId: z.string().min(1).max(60),
+    // The person whose session the agent acted with.
+    requestingUserId: zid('user'),
     operationKind: z.enum(AGENT_OPERATION_KINDS),
     payload: z
       .record(z.unknown())
@@ -366,6 +368,40 @@ export const proposeFromService = createInternalMutation()({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+
+    // The operation is attributed to the person who asked, so the ledger
+    // always names a human. A person who left the organization, or who lost
+    // the right to cause this effect, cannot start an operation.
+    const requester = await ctx.db
+      .query('member')
+      .withIndex('organizationId_userId', (q) =>
+        q
+          .eq('organizationId', args.organizationId)
+          .eq('userId', args.requestingUserId)
+      )
+      .first();
+    if (!requester) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'The requesting person is not a member of this organization',
+      });
+    }
+    for (const permission of [
+      permissionForKind(args.operationKind),
+      { feature: 'agents', action: 'create' },
+    ]) {
+      const allowed = await checkPermission(ctx, {
+        userId: args.requestingUserId,
+        orgId: args.organizationId,
+        ...permission,
+      });
+      if (!allowed) {
+        throw new ConvexError({
+          code: 'FORBIDDEN',
+          message: 'The requesting person may not cause this effect',
+        });
+      }
+    }
 
     const agent = await findAgentByKey(
       ctx,
@@ -476,7 +512,7 @@ export const proposeFromService = createInternalMutation()({
       summary: args.summary,
       agentId: agent.agentId,
       agentLabel: agent.name,
-      requestedByUserId: room.createdByUserId,
+      requestedByUserId: args.requestingUserId,
       attempts: 0,
       expiresAt,
       roomId: room._id,
@@ -491,7 +527,7 @@ export const proposeFromService = createInternalMutation()({
       payloadHash,
       payloadJson,
       revision: 1,
-      requestedByUserId: room.createdByUserId,
+      requestedByUserId: args.requestingUserId,
       expiresAt,
       createdAt: now,
     });
