@@ -24,6 +24,12 @@ export const rateLimiter = new RateLimiter(components.rateLimiter as any, {
   'activity/create:free': { kind: 'fixed window', period: MINUTE, rate: 30 },
   'activity/create:premium': { kind: 'fixed window', period: MINUTE, rate: 100 },
 
+  // One agent turn costs model tokens, so the person who starts it is
+  // limited. The room keeps the conversation; this bounds the spend.
+  'agent/turn:free': { kind: 'fixed window', period: MINUTE, rate: 6 },
+  'agent/turn:premium': { kind: 'fixed window', period: MINUTE, rate: 30 },
+  'agent/turn:public': { kind: 'fixed window', period: MINUTE, rate: 2 },
+
   // Organization limits
   'organization/create:free': { kind: 'fixed window', period: HOUR, rate: 3 },
   'organization/create:premium': {

@@ -2,6 +2,17 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 import { OperationTag } from './ascii';
 
@@ -75,6 +86,12 @@ export function RoomProposalCard({
   const status = STATUS_META[proposal.status] ?? STATUS_META.unknown;
   const kindLabel = KIND_LABEL[proposal.kind] ?? humanizeKind(proposal.kind);
   const canApprove = canDecide && proposal.status === 'awaiting_approval';
+  // The payload is the exact data the approval covers, so a person can read
+  // it before deciding instead of trusting a one-line summary.
+  const payloadText =
+    proposal.payload && Object.keys(proposal.payload).length > 0
+      ? JSON.stringify(proposal.payload, null, 2)
+      : null;
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
@@ -100,16 +117,50 @@ export function RoomProposalCard({
         <p className="mt-1.5 text-sm whitespace-pre-wrap">{proposal.summary}</p>
       ) : null}
 
+      {payloadText ? (
+        <details className="group mt-2.5">
+          <summary className="cursor-pointer list-none text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+            Lihat data yang akan diubah
+          </summary>
+          <pre className="mt-1.5 max-h-40 overflow-auto rounded-md border border-border bg-background/60 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+            {payloadText}
+          </pre>
+        </details>
+      ) : null}
+
       {canApprove ? (
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            disabled={isDeciding}
-            onClick={() => onDecide(proposal.operationId, 'approve')}
-            className="h-11 sm:h-8"
-          >
-            Setujui
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" disabled={isDeciding} className="h-11 sm:h-8">
+                Setujui
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Jalankan operasi ini?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {kindLabel}
+                  {proposal.summary ? ` — ${proposal.summary}` : ''}. Setelah
+                  disetujui, perubahan ini ditulis ke data CRM satu kali dan
+                  tercatat di riwayat.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {payloadText ? (
+                <pre className="max-h-48 overflow-auto rounded-md border border-border bg-background/60 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  {payloadText}
+                </pre>
+              ) : null}
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDecide(proposal.operationId, 'approve')}
+                >
+                  Setujui dan jalankan
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button
             size="sm"
             variant="outline"

@@ -1540,6 +1540,13 @@ const schema = defineEntSchema(
       .index('roomId_userId', ['roomId', 'userId'])
       .index('roomId_agentId', ['roomId', 'agentId']),
 
+    // One nonce per signed bridge message, so a captured request cannot post
+    // the same agent message twice inside the signature window.
+    agentBridgeNonces: defineEnt({
+      nonce: v.string(),
+      createdAt: v.number(),
+    }).index('nonce', ['nonce']),
+
     roomMessages: defineEnt({
       organizationId: v.id('organization'),
       roomId: v.id('rooms'),

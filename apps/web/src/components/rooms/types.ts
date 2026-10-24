@@ -14,6 +14,8 @@ export type RoomProposal = {
   summary: string;
   status: string;
   duplicate?: boolean;
+  /** What the operation would change. Shown before a person decides. */
+  payload?: Record<string, unknown>;
 };
 
 /** The answer of the room agent endpoint. */

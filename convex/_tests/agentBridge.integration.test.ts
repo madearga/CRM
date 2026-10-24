@@ -446,3 +446,45 @@ describe('a proposal of an agent service', () => {
     ).rejects.toThrow(/idempotency key/i);
   });
 });
+
+describe('the replay guard of the bridge', () => {
+  it('refuses the same nonce twice', async () => {
+    const f = await fixture();
+    const nonce = 'nonce-0000-1111-2222';
+
+    await f.t.mutation(internal.agentBridgeNonces.claim, { nonce });
+    await expect(
+      f.t.mutation(internal.agentBridgeNonces.claim, { nonce })
+    ).rejects.toThrow(/already delivered/i);
+
+    const rows = await f.t.run((ctx) =>
+      ctx.db.query('agentBridgeNonces').collect()
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it('accepts a different nonce', async () => {
+    const f = await fixture();
+    await f.t.mutation(internal.agentBridgeNonces.claim, { nonce: 'nonce-aaaa-0001' });
+    await expect(
+      f.t.mutation(internal.agentBridgeNonces.claim, { nonce: 'nonce-aaaa-0002' })
+    ).resolves.toEqual({ claimed: true });
+  });
+
+  it('forgets a nonce that is older than the window', async () => {
+    const f = await fixture();
+    await f.t.run((ctx) =>
+      ctx.db.insert('agentBridgeNonces', {
+        nonce: 'nonce-old-0001',
+        createdAt: Date.now() - 60 * 60 * 1000,
+      })
+    );
+
+    // A fresh claim prunes the stale row, so the table stays small.
+    await f.t.mutation(internal.agentBridgeNonces.claim, { nonce: 'nonce-new-0001' });
+    const rows = await f.t.run((ctx) =>
+      ctx.db.query('agentBridgeNonces').collect()
+    );
+    expect(rows.map((row) => row.nonce)).toEqual(['nonce-new-0001']);
+  });
+});

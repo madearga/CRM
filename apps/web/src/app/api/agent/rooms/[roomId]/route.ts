@@ -24,6 +24,8 @@ import {
   fetchAuthQuery,
   getSessionToken,
 } from '@/lib/convex/server';
+import { randomUUID } from 'node:crypto';
+
 import { runAgentTurn, AgentTurnTimeoutError } from '@/lib/agents/agent-turn';
 import { createCrmReader } from '@/lib/agents/crm-access';
 import { createQueryCrmTool } from '@/lib/agents/crm-tools';
@@ -56,6 +58,7 @@ type ProposalResult = {
   summary: string;
   status: string;
   duplicate: boolean;
+  payload: Record<string, unknown>;
 };
 
 /** The answer of the bridge for a proposal. */
@@ -86,11 +89,13 @@ function convexErrorStatus(error: unknown): number {
   if (code === 'NOT_FOUND') return 404;
   if (code === 'FORBIDDEN') return 403;
   if (code === 'BAD_REQUEST') return 400;
+  if (code === 'TOO_MANY_REQUESTS') return 429;
 
   const message = error instanceof Error ? error.message : '';
   if (message.includes('NOT_FOUND')) return 404;
   if (message.includes('FORBIDDEN')) return 403;
   if (message.includes('BAD_REQUEST')) return 400;
+  if (message.includes('TOO_MANY_REQUESTS')) return 429;
   return 500;
 }
 
@@ -211,6 +216,20 @@ export async function POST(
     }
     const requestedAgentId = readAgentId(body);
 
+    // One turn spends model tokens. The limit is enforced in Convex, so it
+    // holds across web instances; a refused call costs nothing.
+    try {
+      await fetchAuthMutation(api.agentTurns.consume, {});
+    } catch (error) {
+      if (convexErrorStatus(error) === 429) {
+        return NextResponse.json(
+          { ok: false, error: 'Terlalu banyak permintaan. Coba lagi sebentar.' },
+          { status: 429 }
+        );
+      }
+      throw error;
+    }
+
     const room = await fetchAuthQuery(api.rooms.get, { roomId });
     if (!room) {
       return NextResponse.json(
@@ -295,6 +314,7 @@ export async function POST(
           summary,
           status: envelope.status ?? 'pending',
           duplicate: envelope.duplicate === true,
+          payload: proposal.payload ?? {},
         };
         proposals.push(result);
 
@@ -343,6 +363,8 @@ export async function POST(
           roomId,
           agentId: agent.agentId,
           text: turn.reply,
+          // A fresh nonce makes a repeated delivery a refusal, not a copy.
+          nonce: randomUUID(),
         });
       } catch (error) {
         console.error(

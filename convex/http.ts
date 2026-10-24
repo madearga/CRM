@@ -122,6 +122,8 @@ const bridgeMessageArgs = z.object({
   roomId: z.string().min(1),
   agentId: z.string().min(1).max(60),
   text: z.string().min(1).max(4000),
+  // One nonce per delivery, so a captured request cannot post twice.
+  nonce: z.string().min(8).max(200),
 });
 
 const bridgeProposalArgs = z.object({
@@ -229,6 +231,10 @@ const agentBridgeMessage = httpAction(async (ctx, request) => {
   }
 
   try {
+    await ctx.runMutation(internal.agentBridgeNonces.claim, {
+      nonce: parsed.data.nonce,
+    });
+
     const message = await ctx.runMutation(internal.rooms.postFromAgent, {
       organizationId: parsed.data.organizationId as Id<'organization'>,
       roomId: parsed.data.roomId as Id<'rooms'>,
