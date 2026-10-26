@@ -1,0 +1,325 @@
+{
+  "tools": [
+    {
+      "name": "search_records",
+      "description": "Finds companies or contacts by name, or filters a page of deals by title. Use to resolve a named record before reading or proposing changes. Continue while has_more is true, even on an empty page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "enum": ["company", "contact", "deal"],
+            "description": "What to search for"
+          },
+          "query": {
+            "type": "string",
+            "description": "Company/contact name or deal title as the person said it",
+            "maxLength": 200
+          },
+          "stage": {
+            "type": "string",
+            "enum": ["new", "contacted", "proposal", "won", "lost"],
+            "description": "Only for deals: keep one stage"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Rows per page, 1 to 5 (default 3); use 1 if the output is too large",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "cursor": {
+            "type": ["string", "null"],
+            "maxLength": 1000,
+            "description": "Continue with next_cursor from the prior result; omit for the first page"
+          }
+        },
+        "required": ["entity", "query"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      }
+    },
+    {
+      "name": "get_record",
+      "description": "Reads the key facts of one company, contact or deal, without private notes. Use after finding a record when the person asks about it or wants a change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "enum": ["company", "contact", "deal"],
+            "description": "Kind of record"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id returned by search_records",
+            "maxLength": 100
+          }
+        },
+        "required": ["entity", "id"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      }
+    },
+    {
+      "name": "pipeline_overview",
+      "description": "Summarises deals by stage and currency, plus deals unchanged for over 14 days. Use to review pipeline health. Dates filter deal creation, not closing. A partial result covers at most 500 active deals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Start of the range as the person said it; the app resolves it",
+            "maxLength": 100
+          },
+          "to": {
+            "type": "string",
+            "description": "End of the range as the person said it; the app resolves it",
+            "maxLength": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      }
+    },
+    {
+      "name": "list_activities",
+      "description": "Lists recent activities, optionally for one company, contact or deal. Use to show what happened lately, or before proposing a new activity so you do not duplicate one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "enum": ["company", "contact", "deal"],
+            "description": "Limit to one kind of record"
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "Required when entity is set",
+            "maxLength": 100
+          },
+          "type": {
+            "type": "string",
+            "enum": ["call", "email", "meeting", "note", "status_change"],
+            "description": "Limit to one activity type"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Rows per page, 1 to 5 (default 3); use 1 if the output is too large",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "cursor": {
+            "type": ["string", "null"],
+            "maxLength": 1000,
+            "description": "Continue with next_cursor from the prior result; omit for the first page"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      }
+    },
+    {
+      "name": "list_invoices",
+      "description": "Lists invoices with status and amount due, optionally for one company. Use when the person asks what is unpaid, overdue or billed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["unpaid", "partially_paid", "paid", "overdue"],
+            "description": "Keep one status"
+          },
+          "company_id": {
+            "type": "string",
+            "description": "Limit to one company",
+            "maxLength": 100
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Rows per page, 1 to 5 (default 3); use 1 if the output is too large",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "cursor": {
+            "type": ["string", "null"],
+            "maxLength": 1000,
+            "description": "Continue with next_cursor from the prior result; omit for the first page"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      }
+    },
+    {
+      "name": "propose_activity",
+      "description": "Queues a call, email, meeting or note for approval. Use when the person describes something that happened or should happen next. It never saves directly; a person approves it in the app.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["call", "email", "meeting", "note"],
+            "description": "Kind of activity"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short summary the person would recognise",
+            "maxLength": 200
+          },
+          "entity": {
+            "type": "string",
+            "enum": ["company", "contact", "deal"],
+            "description": "What the activity belongs to"
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "Id of that company, contact or deal",
+            "maxLength": 100
+          },
+          "note": {
+            "type": "string",
+            "description": "Details to keep with the activity",
+            "maxLength": 4000
+          },
+          "scheduled_at": {
+            "type": "string",
+            "description": "When it should happen, as the person said it",
+            "maxLength": 100
+          }
+        },
+        "required": ["type", "title", "entity", "entity_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_deal_stage",
+      "description": "Queues a legal deal stage change for human approval. Use when the person wants to move a deal or mark it won or lost. Read the current deal first; a lost deal needs a reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deal_id": {
+            "type": "string",
+            "description": "Deal id from search_records",
+            "maxLength": 100
+          },
+          "stage": {
+            "type": "string",
+            "enum": ["new", "contacted", "proposal", "won", "lost"],
+            "description": "Stage to move to"
+          },
+          "lost_reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Reason when marking the deal lost"
+          }
+        },
+        "required": ["deal_id", "stage"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_deal",
+      "description": "Queues a new deal for approval, optionally linked to a company. Use when the person wants to add an opportunity. It is not created until a person approves it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Deal title",
+            "maxLength": 200
+          },
+          "company_id": {
+            "type": "string",
+            "description": "Company id from search_records",
+            "maxLength": 100
+          },
+          "value": {
+            "type": "number",
+            "description": "Amount in major units, for example 40000000",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Organization currency; omit to use its configured currency"
+          },
+          "close_date": {
+            "type": "string",
+            "description": "Expected close, as the person said it",
+            "maxLength": 100
+          }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "propose_company",
+      "description": "Queues a new company for approval. Use when the person asks to add a company that search_records cannot find. It is not created until a person approves it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Company name as the person said it",
+            "maxLength": 200
+          },
+          "domain": {
+            "type": "string",
+            "description": "Website domain, without protocol",
+            "maxLength": 200,
+            "pattern": "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$"
+          },
+          "industry": {
+            "type": "string",
+            "description": "Industry or sector",
+            "maxLength": 200
+          },
+          "location": {
+            "type": "string",
+            "description": "City or region",
+            "maxLength": 200
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "open_record",
+      "description": "Opens a company, contact, deal or invoice page after the person asks to see it. Refuses navigation while a form has unsaved changes or a dialog is open.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "enum": ["company", "contact", "deal", "invoices"],
+            "description": "Page to open"
+          },
+          "id": {
+            "type": "string",
+            "description": "Record id; omit to open the list",
+            "maxLength": 100
+          }
+        },
+        "required": ["entity"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

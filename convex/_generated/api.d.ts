@@ -10,8 +10,10 @@
 
 import type * as activities from "../activities.js";
 import type * as admin from "../admin.js";
+import type * as agentBridgeNonces from "../agentBridgeNonces.js";
 import type * as agentOperationHandlers from "../agentOperationHandlers.js";
 import type * as agentOperations from "../agentOperations.js";
+import type * as agentTurns from "../agentTurns.js";
 import type * as agents from "../agents.js";
 import type * as aggregates from "../aggregates.js";
 import type * as aiChat from "../aiChat.js";
@@ -107,6 +109,7 @@ import type * as taxes from "../taxes.js";
 import type * as triggers from "../triggers.js";
 import type * as user from "../user.js";
 import type * as userShared from "../userShared.js";
+import type * as webmcp from "../webmcp.js";
 import type * as weeklyDigest from "../weeklyDigest.js";
 import type * as weeklyDigestQueries from "../weeklyDigestQueries.js";
 
@@ -119,8 +122,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   activities: typeof activities;
   admin: typeof admin;
+  agentBridgeNonces: typeof agentBridgeNonces;
   agentOperationHandlers: typeof agentOperationHandlers;
   agentOperations: typeof agentOperations;
+  agentTurns: typeof agentTurns;
   agents: typeof agents;
   aggregates: typeof aggregates;
   aiChat: typeof aiChat;
@@ -216,6 +221,7 @@ declare const fullApi: ApiFromModules<{
   triggers: typeof triggers;
   user: typeof user;
   userShared: typeof userShared;
+  webmcp: typeof webmcp;
   weeklyDigest: typeof weeklyDigest;
   weeklyDigestQueries: typeof weeklyDigestQueries;
 }>;

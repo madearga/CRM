@@ -16,6 +16,9 @@ import {
   OPERATION_STATUSES,
   APPROVAL_STATUSES,
   AGENT_OPERATION_KINDS,
+  CREATE_COMPANY_PAYLOAD_FIELDS,
+  CREATE_DEAL_PAYLOAD_FIELDS,
+  unexpectedPayloadFields,
   TERMINAL_OPERATION_STATUSES,
   DEFAULT_OPERATION_EXPIRY_MINUTES,
   MAX_OPERATION_EXPIRY_MINUTES,
@@ -242,6 +245,38 @@ describe('approvalMatchesApproval', () => {
   });
 });
 
+describe('payload allowlists', () => {
+  it('accepts the company fields and refuses an owner or organization field', () => {
+    expect(
+      unexpectedPayloadFields(
+        { name: 'Acme', website: 'acme.test' },
+        CREATE_COMPANY_PAYLOAD_FIELDS
+      )
+    ).toEqual([]);
+    expect(
+      unexpectedPayloadFields(
+        { name: 'Acme', ownerId: 'user-1', organizationId: 'org-1' },
+        CREATE_COMPANY_PAYLOAD_FIELDS
+      )
+    ).toEqual(['ownerId', 'organizationId']);
+  });
+
+  it('accepts the deal fields and refuses a stage or owner field', () => {
+    expect(
+      unexpectedPayloadFields(
+        { title: 'Big deal', value: 10, currency: 'IDR' },
+        CREATE_DEAL_PAYLOAD_FIELDS
+      )
+    ).toEqual([]);
+    expect(
+      unexpectedPayloadFields(
+        { title: 'Big deal', stage: 'won', ownerId: 'user-1' },
+        CREATE_DEAL_PAYLOAD_FIELDS
+      )
+    ).toEqual(['stage', 'ownerId']);
+  });
+});
+
 // ============================================================
 // Constants
 // ============================================================
@@ -253,8 +288,13 @@ describe('agent operations constants', () => {
     );
   });
 
-  it('lists create_activity and update_deal_stage as the operation kinds', () => {
-    expect([...AGENT_OPERATION_KINDS]).toEqual(['create_activity', 'update_deal_stage']);
+  it('lists the supported operation kinds', () => {
+    expect([...AGENT_OPERATION_KINDS]).toEqual([
+      'create_activity',
+      'update_deal_stage',
+      'create_company',
+      'create_deal',
+    ]);
   });
 
   it('allows a maximum expiry that is at least the default expiry', () => {

@@ -18,6 +18,7 @@
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { NextResponse } from 'next/server';
+import { AGENT_OPERATION_KINDS } from '@crm/domain';
 
 import {
   fetchAuthMutation,
@@ -285,7 +286,7 @@ export async function POST(
       if (kind === null) {
         return {
           accepted: false,
-          summary: `The operation "${proposal.operation}" is not known. Use create_activity or update_deal_stage.`,
+          summary: `The operation "${proposal.operation}" is not known. Use ${AGENT_OPERATION_KINDS.join(", ")}.`,
         };
       }
 

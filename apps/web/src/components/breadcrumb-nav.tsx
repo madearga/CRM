@@ -24,6 +24,11 @@ export function BreadcrumbNav() {
   const pathname = usePathname();
   const user = useCurrentUser();
 
+  // The landing page keeps its own frame: no dashboard chrome.
+  if (pathname === '/welcome') {
+    return null;
+  }
+
   // Parse the pathname into segments
   const segments = pathname.split('/').filter(Boolean);
 

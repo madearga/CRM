@@ -12,3 +12,9 @@ convex/convex/
 .superpowers/
 .worktrees/
 .local/
+
+# agent tooling (installed skills, not app code)
+/.agents/
+/.claude/
+/agent/
+/skills-lock.json

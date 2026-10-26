@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { convexTest } from 'convex-test';
 import schema from '../schema';
 import aggregateSchema from '../../node_modules/@convex-dev/aggregate/src/component/schema';
-import { aggregateDealsByOrg, aggregateDealsByStage } from '../aggregates';
+import {
+  aggregateCompaniesByOrg,
+  aggregateDealsByOrg,
+  aggregateDealsByStage,
+} from '../aggregates';
 import { api, internal } from '../_generated/api';
 import type { Id } from '../_generated/dataModel';
 
@@ -38,6 +42,7 @@ async function fixture() {
     'aggregateActivitiesByOrg',
     'aggregateDealsByOrg',
     'aggregateDealsByStage',
+    'aggregateCompaniesByOrg',
   ]) {
     t.registerComponent(name, aggregateSchema, aggregateModules);
   }
@@ -113,6 +118,27 @@ async function approveAndClaim(
     attempt: claim.attempt,
     operationKey: args.idempotencyKey,
   };
+}
+
+async function proposeAndExecute(
+  f: Awaited<ReturnType<typeof fixture>>,
+  args: {
+    kind: 'create_company' | 'create_deal';
+    payload: Record<string, unknown>;
+    idempotencyKey: string;
+  }
+) {
+  const operation = await f.t.mutation(api.agentOperations.propose, {
+    ...args,
+    requiresApproval: true,
+  });
+  await f.t.mutation(api.agentOperations.decide, {
+    operationId: operation.id,
+    decision: 'approve',
+  });
+  return f.t.action(api.agentOperations.execute, {
+    operationId: operation.id,
+  });
 }
 
 beforeEach(() => {
@@ -503,5 +529,198 @@ describe('real operation mutations with a mocked external session', () => {
     expect(
       await f.t.run((ctx) => ctx.db.query('agentOperationEffects').collect())
     ).toHaveLength(1);
+  });
+
+  it('creates one company with the owner and tenant of the context', async () => {
+    const f = await fixture();
+    const args = {
+      kind: 'create_company' as const,
+      payload: { name: 'Acme', size: '11-50', tags: ['vip'] },
+      idempotencyKey: 'company-1',
+    };
+    const execution = await proposeAndExecute(f, args);
+    expect(execution.status).toBe('succeeded');
+
+    // A second delivery of the same operation returns the effect it made.
+    const again = await f.t.action(api.agentOperations.execute, {
+      operationId: (
+        await f.t.query(api.agentOperations.list, { kind: 'create_company' })
+      )[0].id,
+    });
+    expect(again.duplicate).toBe(true);
+
+    const companies = await f.t.run((ctx) => ctx.db.query('companies').collect());
+    expect(companies).toHaveLength(1);
+    expect(companies[0]).toMatchObject({
+      name: 'Acme',
+      size: '11-50',
+      tags: ['vip'],
+      organizationId: f.organizationId,
+      ownerId: f.userId,
+    });
+    expect(
+      await f.t.run((ctx) => ctx.db.query('agentOperationEffects').collect())
+    ).toHaveLength(1);
+  });
+
+  it('refuses a second company with the same name', async () => {
+    const f = await fixture();
+    await proposeAndExecute(f, {
+      kind: 'create_company',
+      payload: { name: 'Acme' },
+      idempotencyKey: 'company-a',
+    });
+    const execution = await proposeAndExecute(f, {
+      kind: 'create_company',
+      payload: { name: 'Acme' },
+      idempotencyKey: 'company-b',
+    });
+    expect(execution.status).toBe('failed');
+    expect(execution.error).toMatch(/already exists/i);
+    expect(
+      await f.t.run((ctx) => ctx.db.query('companies').collect())
+    ).toHaveLength(1);
+  });
+
+  it('creates a deal in the organization currency with the context owner', async () => {
+    const f = await fixture();
+    const execution = await proposeAndExecute(f, {
+      kind: 'create_deal',
+      payload: { title: 'Big deal', value: 500, currency: 'idr' },
+      idempotencyKey: 'deal-1',
+    });
+    expect(execution.status).toBe('succeeded');
+
+    const deals = await f.t.run((ctx) => ctx.db.query('deals').collect());
+    expect(deals).toHaveLength(1);
+    expect(deals[0]).toMatchObject({
+      title: 'Big deal',
+      value: 500,
+      currency: 'IDR',
+      stage: 'new',
+      organizationId: f.organizationId,
+      ownerId: f.userId,
+    });
+  });
+
+  it('refuses a deal whose company or currency is outside the organization', async () => {
+    const f = await fixture();
+    const otherOrganizationId = await f.t.run((ctx) =>
+      ctx.db.insert('organization', {
+        name: 'Other',
+        slug: 'other',
+        monthlyCredits: 0,
+        createdAt: Date.now(),
+      })
+    );
+    const foreignCompanyId = await f.t.run((ctx) =>
+      ctx.db.insert('companies', {
+        name: 'Foreign',
+        organizationId: otherOrganizationId,
+        ownerId: f.userId,
+      })
+    );
+
+    const foreign = await proposeAndExecute(f, {
+      kind: 'create_deal',
+      payload: { title: 'Foreign deal', companyId: foreignCompanyId },
+      idempotencyKey: 'deal-foreign',
+    });
+    expect(foreign.status).toBe('failed');
+    expect(foreign.error).toMatch(/company does not exist/i);
+
+    const currency = await proposeAndExecute(f, {
+      kind: 'create_deal',
+      payload: { title: 'Euro deal', currency: 'EUR' },
+      idempotencyKey: 'deal-eur',
+    });
+    expect(currency.status).toBe('failed');
+    expect(currency.error).toMatch(/currency/i);
+
+    expect(
+      await f.t.run((ctx) => ctx.db.query('deals').collect())
+    ).toHaveLength(0);
+  });
+
+  it('refuses a deal payload field outside the allowlist', async () => {
+    const f = await fixture();
+    const execution = await proposeAndExecute(f, {
+      kind: 'create_deal',
+      payload: { title: 'Won deal', stage: 'won', ownerId: f.userId },
+      idempotencyKey: 'deal-extra',
+    });
+    expect(execution.status).toBe('failed');
+    expect(execution.error).toMatch(/not allowed/i);
+    expect(
+      await f.t.run((ctx) => ctx.db.query('deals').collect())
+    ).toHaveLength(0);
+  });
+
+  it('requires companies create for create_company and deals create for create_deal', async () => {
+    const f = await fixture();
+    const memberUserId = await f.t.run(async (ctx) => {
+      const memberUserId = await ctx.db.insert('user', {
+        email: 'member@example.test',
+        name: 'Member',
+        emailVerified: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const templateId = await ctx.db.insert('permissionTemplates', {
+        name: 'Deals only',
+        isDefault: false,
+        organizationId: f.organizationId,
+        ownerId: f.userId,
+      });
+      for (const [feature, action] of [
+        ['agents', 'view'],
+        ['agents', 'create'],
+        ['deals', 'create'],
+      ] as const) {
+        await ctx.db.insert('permissionEntries', {
+          feature,
+          action,
+          allowed: true,
+          organizationId: f.organizationId,
+          templateId,
+        });
+      }
+      await ctx.db.insert('member', {
+        organizationId: f.organizationId,
+        userId: memberUserId,
+        role: 'member',
+        permissionTemplateId: templateId,
+        createdAt: Date.now(),
+      });
+      return memberUserId;
+    });
+
+    session.user = {
+      _id: memberUserId,
+      id: memberUserId,
+      isAdmin: false,
+      name: 'Member',
+      activeOrganization: {
+        id: f.organizationId,
+        role: 'member',
+        name: 'Ruang test',
+        slug: 'ruang-test',
+      },
+    };
+
+    await expect(
+      f.t.mutation(api.agentOperations.propose, {
+        kind: 'create_company',
+        payload: { name: 'Acme' },
+        idempotencyKey: 'member-company',
+      })
+    ).rejects.toThrow(/permission/i);
+
+    const deal = await f.t.mutation(api.agentOperations.propose, {
+      kind: 'create_deal',
+      payload: { title: 'Member deal' },
+      idempotencyKey: 'member-deal',
+    });
+    expect(deal.status).toBe('awaiting_approval');
   });
 });

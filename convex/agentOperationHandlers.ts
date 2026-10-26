@@ -7,7 +7,15 @@
 // scope of the effect.
 
 import { ConvexError } from 'convex/values';
-import { DEAL_STAGES, isValidTransition } from '@crm/domain';
+import {
+  CREATE_COMPANY_PAYLOAD_FIELDS,
+  CREATE_DEAL_PAYLOAD_FIELDS,
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  DEAL_STAGES,
+  isValidTransition,
+  unexpectedPayloadFields,
+} from '@crm/domain';
 import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
 
@@ -77,6 +85,64 @@ function optionalNumber(
   return value;
 }
 
+/** Read an optional string array field of the payload. */
+function optionalStringArray(
+  payload: Record<string, unknown>,
+  field: string
+): string[] | undefined {
+  const value = payload[field];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
+    badRequest(`Payload field "${field}" must be an array of strings`);
+  }
+  return value as string[];
+}
+
+/** Read an optional field that must be one of a fixed set of values. */
+function optionalEnum<T extends readonly string[]>(
+  payload: Record<string, unknown>,
+  field: string,
+  allowed: T
+): T[number] | undefined {
+  const value = optionalString(payload, field);
+  if (value === undefined) return undefined;
+  if (!(allowed as readonly string[]).includes(value)) {
+    badRequest(`Payload field "${field}" must be one of ${allowed.join(', ')}`);
+  }
+  return value as T[number];
+}
+
+/** Refuse a payload field that the kind does not accept. */
+function requireAllowedFields(
+  payload: Record<string, unknown>,
+  allowed: readonly string[],
+  kind: string
+) {
+  const [field] = unexpectedPayloadFields(payload, allowed);
+  if (field !== undefined) {
+    badRequest(`Payload field "${field}" is not allowed for ${kind}`);
+  }
+}
+
+/** The company fields whose values are fixed sets. */
+const COMPANY_SIZES = [
+  '1-10',
+  '11-50',
+  '51-200',
+  '201-500',
+  '501-1000',
+  '1000+',
+] as const;
+const COMPANY_SOURCES = [
+  'referral',
+  'website',
+  'linkedin',
+  'cold',
+  'event',
+  'other',
+] as const;
+const COMPANY_STATUSES = ['active', 'inactive', 'prospect'] as const;
+
 /** The activity kinds the activities table accepts. */
 const ACTIVITY_TYPES = [
   'call',
@@ -138,6 +204,43 @@ async function requireActiveClaim(
 }
 
 /**
+ * Claim check and effect lookup, shared by every effect mutation.
+ *
+ * Returns the effect of an earlier execution of the same key, or null when the
+ * effect must still be caused. A key that belongs to another effect conflicts,
+ * so a key always names one effect.
+ */
+async function previousEffect(
+  ctx: MutationCtx,
+  args: {
+    organizationId: Id<'organization'>;
+    operationId: Id<'agentOperations'>;
+    operationKey: string;
+    attempt: number;
+  },
+  kind: string
+): Promise<{ effectId: string; duplicate: true } | null> {
+  await requireActiveClaim(ctx, args, kind);
+  const existing = await ctx.db
+    .query('agentOperationEffects')
+    .withIndex('organizationId_operationKey', (q) =>
+      q
+        .eq('organizationId', args.organizationId)
+        .eq('operationKey', args.operationKey)
+    )
+    .first();
+
+  if (!existing) return null;
+  if (existing.operationId !== args.operationId || existing.kind !== kind) {
+    throw new ConvexError({
+      code: 'CONFLICT',
+      message: 'This key belongs to another effect',
+    });
+  }
+  return { effectId: existing.effectId, duplicate: true };
+}
+
+/**
  * Create the activity of an operation, once.
  *
  * The lookup and the write happen in one transaction, so two executions of
@@ -159,28 +262,8 @@ export const createActivityOnce = createInternalMutation()({
     dueAt: z.number().optional(),
   },
   handler: async (ctx, args) => {
-    await requireActiveClaim(ctx, args, 'create_activity');
-    const existing = await ctx.db
-      .query('agentOperationEffects')
-      .withIndex('organizationId_operationKey', (q) =>
-        q
-          .eq('organizationId', args.organizationId)
-          .eq('operationKey', args.operationKey)
-      )
-      .first();
-
-    if (existing) {
-      if (
-        existing.operationId !== args.operationId ||
-        existing.kind !== 'create_activity'
-      ) {
-        throw new ConvexError({
-          code: 'CONFLICT',
-          message: 'This key belongs to another effect',
-        });
-      }
-      return { effectId: existing.effectId, duplicate: true };
-    }
+    const previous = await previousEffect(ctx, args, 'create_activity');
+    if (previous) return previous;
 
     const table = ENTITY_TABLES[args.entityType as keyof typeof ENTITY_TABLES];
     const entityId = table ? ctx.db.normalizeId(table, args.entityId) : null;
@@ -227,27 +310,9 @@ export const updateDealStageOnce = createInternalMutation()({
     lostReason: z.string().optional(),
   },
   handler: async (ctx, args) => {
-    await requireActiveClaim(ctx, args, 'update_deal_stage');
-    const existing = await ctx.db
-      .query('agentOperationEffects')
-      .withIndex('organizationId_operationKey', (q) =>
-        q
-          .eq('organizationId', args.organizationId)
-          .eq('operationKey', args.operationKey)
-      )
-      .first();
-    if (existing) {
-      if (
-        existing.operationId !== args.operationId ||
-        existing.kind !== 'update_deal_stage'
-      ) {
-        throw new ConvexError({
-          code: 'CONFLICT',
-          message: 'This key belongs to another effect',
-        });
-      }
-      return { effectId: existing.effectId, duplicate: true };
-    }
+    const previous = await previousEffect(ctx, args, 'update_deal_stage');
+    if (previous) return previous;
+
     const deal = await ctx.db.get(args.id);
     if (
       !deal ||
@@ -293,6 +358,191 @@ export const updateDealStageOnce = createInternalMutation()({
       createdAt: now,
     });
     return { effectId: deal._id, duplicate: false };
+  },
+});
+
+/**
+ * Create a company, once. The organization and the owner always come from the
+ * operation context, so a payload cannot place the company in another
+ * organization or give it to another owner.
+ */
+export const createCompanyOnce = createInternalMutation()({
+  args: {
+    organizationId: zid('organization'),
+    userId: zid('user'),
+    operationId: zid('agentOperations'),
+    operationKey: z.string().min(1).max(200),
+    attempt: z.number().int().positive(),
+    name: z.string().min(1).max(200),
+    website: z.string().optional(),
+    industry: z.string().optional(),
+    size: z.enum(COMPANY_SIZES).optional(),
+    address: z.string().optional(),
+    country: z.string().optional(),
+    source: z.enum(COMPANY_SOURCES).optional(),
+    tags: z.array(z.string()).optional(),
+    status: z.enum(COMPANY_STATUSES).optional(),
+    notes: z.string().optional(),
+  },
+  handler: async (ctx, args) => {
+    const previous = await previousEffect(ctx, args, 'create_company');
+    if (previous) return previous;
+
+    const existing = await ctx.db
+      .query('companies')
+      .withIndex('organizationId_name', (q) =>
+        q.eq('organizationId', args.organizationId).eq('name', args.name)
+      )
+      .first();
+    if (existing) {
+      throw new ConvexError({
+        code: 'CONFLICT',
+        message: `A company named "${args.name}" already exists in this organization`,
+      });
+    }
+
+    const companyId = await ctx.db.insert('companies', {
+      organizationId: args.organizationId,
+      ownerId: args.userId,
+      name: args.name,
+      website: args.website,
+      industry: args.industry,
+      size: args.size,
+      address: args.address,
+      country: args.country,
+      source: args.source,
+      tags: args.tags,
+      status: args.status,
+      notes: args.notes,
+    } as any);
+
+    await ctx.db.insert('agentOperationEffects', {
+      organizationId: args.organizationId,
+      operationKey: args.operationKey,
+      operationId: args.operationId,
+      kind: 'create_company',
+      effectId: companyId,
+      createdAt: Date.now(),
+    });
+
+    return { effectId: companyId, duplicate: false };
+  },
+});
+
+/**
+ * Create a deal, once. The organization and the owner come from the operation
+ * context. A company or contact of another organization is refused, and the
+ * currency must match the currency of the organization.
+ */
+export const createDealOnce = createInternalMutation()({
+  args: {
+    organizationId: zid('organization'),
+    userId: zid('user'),
+    operationId: zid('agentOperations'),
+    operationKey: z.string().min(1).max(200),
+    attempt: z.number().int().positive(),
+    title: z.string().min(1).max(200),
+    value: z.number().optional(),
+    currency: z.string().optional(),
+    probability: z.number().optional(),
+    expectedCloseDate: z.number().optional(),
+    companyId: z.string().optional(),
+    primaryContactId: z.string().optional(),
+  },
+  handler: async (ctx, args) => {
+    const previous = await previousEffect(ctx, args, 'create_deal');
+    if (previous) return previous;
+
+    const organization = await ctx.db.get(args.organizationId);
+    if (!organization) {
+      throw new ConvexError({
+        code: 'NOT_FOUND',
+        message: 'Organization not found',
+      });
+    }
+
+    const orgCurrency = organization.settings?.currency ?? DEFAULT_CURRENCY;
+    const requestedCurrency = (args.currency ?? orgCurrency).toUpperCase();
+    if (!(CURRENCIES as readonly string[]).includes(requestedCurrency)) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: `Unsupported currency "${requestedCurrency}"`,
+      });
+    }
+    if (requestedCurrency !== orgCurrency) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: `Organization currency is "${orgCurrency}". Deals must use the same currency.`,
+      });
+    }
+    if (args.value !== undefined && args.value < 0) {
+      throw new ConvexError({
+        code: 'BAD_REQUEST',
+        message: 'Payload field "value" must not be negative',
+      });
+    }
+
+    let companyId: Id<'companies'> | undefined;
+    if (args.companyId !== undefined) {
+      const normalized = ctx.db.normalizeId('companies', args.companyId);
+      const company = normalized ? await ctx.db.get(normalized) : null;
+      if (
+        !normalized ||
+        !company ||
+        company.organizationId !== args.organizationId ||
+        company.archivedAt !== undefined
+      ) {
+        throw new ConvexError({
+          code: 'NOT_FOUND',
+          message: 'The company does not exist in this organization',
+        });
+      }
+      companyId = normalized;
+    }
+
+    let primaryContactId: Id<'contacts'> | undefined;
+    if (args.primaryContactId !== undefined) {
+      const normalized = ctx.db.normalizeId('contacts', args.primaryContactId);
+      const contact = normalized ? await ctx.db.get(normalized) : null;
+      if (
+        !normalized ||
+        !contact ||
+        contact.organizationId !== args.organizationId ||
+        contact.archivedAt !== undefined
+      ) {
+        throw new ConvexError({
+          code: 'NOT_FOUND',
+          message: 'The contact does not exist in this organization',
+        });
+      }
+      primaryContactId = normalized;
+    }
+
+    const now = Date.now();
+    const dealId = await ctx.db.insert('deals', {
+      organizationId: args.organizationId,
+      ownerId: args.userId,
+      title: args.title,
+      value: args.value,
+      currency: requestedCurrency,
+      probability: args.probability,
+      expectedCloseDate: args.expectedCloseDate,
+      companyId,
+      primaryContactId,
+      stage: 'new',
+      stageEnteredAt: now,
+    });
+
+    await ctx.db.insert('agentOperationEffects', {
+      organizationId: args.organizationId,
+      operationKey: args.operationKey,
+      operationId: args.operationId,
+      kind: 'create_deal',
+      effectId: dealId,
+      createdAt: now,
+    });
+
+    return { effectId: dealId, duplicate: false };
   },
 });
 
@@ -362,6 +612,81 @@ export const AGENT_OPERATION_HANDLERS: Record<string, AgentOperationHandler> = {
     }
 
     return updated;
+  },
+
+  create_company: async (payload, context) => {
+    requireAllowedFields(
+      payload,
+      CREATE_COMPANY_PAYLOAD_FIELDS,
+      'create_company'
+    );
+    const name = requireString(payload, 'name');
+    const website = optionalString(payload, 'website');
+    const industry = optionalString(payload, 'industry');
+    const size = optionalEnum(payload, 'size', COMPANY_SIZES);
+    const address = optionalString(payload, 'address');
+    const country = optionalString(payload, 'country');
+    const source = optionalEnum(payload, 'source', COMPANY_SOURCES);
+    const tags = optionalStringArray(payload, 'tags');
+    const status = optionalEnum(payload, 'status', COMPANY_STATUSES);
+    const notes = optionalString(payload, 'notes');
+
+    return await context.ctx.runMutation(
+      internal.agentOperationHandlers.createCompanyOnce,
+      {
+        organizationId: context.organizationId,
+        userId: context.userId,
+        operationId: context.operationId,
+        operationKey: context.operationKey,
+        attempt: context.attempt,
+        name,
+        ...(website !== undefined ? { website } : {}),
+        ...(industry !== undefined ? { industry } : {}),
+        ...(size !== undefined ? { size } : {}),
+        ...(address !== undefined ? { address } : {}),
+        ...(country !== undefined ? { country } : {}),
+        ...(source !== undefined ? { source } : {}),
+        ...(tags !== undefined ? { tags } : {}),
+        ...(status !== undefined ? { status } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+      }
+    );
+  },
+
+  create_deal: async (payload, context) => {
+    requireAllowedFields(payload, CREATE_DEAL_PAYLOAD_FIELDS, 'create_deal');
+    const title = requireString(payload, 'title');
+    const value = optionalNumber(payload, 'value');
+    const currency = optionalString(payload, 'currency');
+    const probability = optionalNumber(payload, 'probability');
+    const expectedCloseDate = optionalNumber(payload, 'expectedCloseDate');
+    const companyId = optionalString(payload, 'companyId');
+    const primaryContactId = optionalString(payload, 'primaryContactId');
+
+    if (value !== undefined && value < 0) {
+      badRequest('Payload field "value" must not be negative');
+    }
+    if (probability !== undefined && (probability < 0 || probability > 100)) {
+      badRequest('Payload field "probability" must be between 0 and 100');
+    }
+
+    return await context.ctx.runMutation(
+      internal.agentOperationHandlers.createDealOnce,
+      {
+        organizationId: context.organizationId,
+        userId: context.userId,
+        operationId: context.operationId,
+        operationKey: context.operationKey,
+        attempt: context.attempt,
+        title,
+        ...(value !== undefined ? { value } : {}),
+        ...(currency !== undefined ? { currency } : {}),
+        ...(probability !== undefined ? { probability } : {}),
+        ...(expectedCloseDate !== undefined ? { expectedCloseDate } : {}),
+        ...(companyId !== undefined ? { companyId } : {}),
+        ...(primaryContactId !== undefined ? { primaryContactId } : {}),
+      }
+    );
   },
 };
 

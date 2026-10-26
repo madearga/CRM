@@ -1,0 +1,422 @@
+[
+  {
+    "name": "Company lookup then key facts",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Show the key facts for Nusantara Logistik."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_records",
+        "arguments": {
+          "entity": "company",
+          "query": "Nusantara Logistik"
+        },
+        "mockOutput": {
+          "items": [
+            {
+              "id": "c1",
+              "name": "Nusantara Logistik"
+            }
+          ],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      },
+      {
+        "functionName": "get_record",
+        "arguments": {
+          "entity": "company",
+          "id": "c1"
+        },
+        "mockOutput": {
+          "id": "c1",
+          "name": "Nusantara Logistik"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Ambiguous company must not open an arbitrary record",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Pull up Nusantara."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_records",
+        "arguments": {
+          "entity": "company",
+          "query": "Nusantara"
+        },
+        "mockOutput": {
+          "items": [
+            {
+              "id": "c1",
+              "name": "Nusantara Logistik"
+            },
+            {
+              "id": "c2",
+              "name": "Nusantara Digital"
+            }
+          ],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    ]
+  },
+  {
+    "name": "Pipeline by creation quarter",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Summarise the pipeline for deals created this quarter."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "pipeline_overview",
+        "arguments": {
+          "from": "this quarter"
+        },
+        "mockOutput": {
+          "by_stage": [],
+          "partial": false,
+          "date_basis": "created_at"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Log call as proposal",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Record a call titled Pricing follow-up for company c1: Budi wants pricing by Friday. Keep that sentence as the note; do not schedule another activity."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "propose_activity",
+        "arguments": {
+          "type": "call",
+          "title": "Pricing follow-up",
+          "entity": "company",
+          "entity_id": "c1",
+          "note": {
+            "$pattern": "Budi.*Friday"
+          }
+        },
+        "mockOutput": {
+          "status": "awaiting_approval",
+          "operation_id": "op1",
+          "approval_path": "/approvals"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Resolve a deal before proposing stage",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Move the Nusantara renewal to proposal."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_records",
+        "arguments": {
+          "entity": "deal",
+          "query": "Nusantara renewal"
+        },
+        "mockOutput": {
+          "items": [
+            {
+              "id": "d1",
+              "title": "Nusantara renewal",
+              "stage": "contacted"
+            }
+          ],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      },
+      {
+        "functionName": "propose_deal_stage",
+        "arguments": {
+          "deal_id": "d1",
+          "stage": "proposal"
+        },
+        "mockOutput": {
+          "status": "awaiting_approval",
+          "operation_id": "op1",
+          "approval_path": "/approvals"
+        }
+      }
+    ]
+  },
+  {
+    "name": "New company pauses for human approval before linked deal",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Add PT Sinar Jaya, with a warehouse audit deal of IDR 40000000. Search for duplicates first, and wait for my company approval before proposing the linked deal."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_records",
+        "arguments": {
+          "entity": "company",
+          "query": "PT Sinar Jaya"
+        },
+        "mockOutput": {
+          "items": [],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      },
+      {
+        "functionName": "propose_company",
+        "arguments": {
+          "name": "PT Sinar Jaya"
+        },
+        "mockOutput": {
+          "status": "awaiting_approval",
+          "operation_id": "op1",
+          "approval_path": "/approvals"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Linked deal after a human has created the approved company",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I approved and executed the company proposal. The resulting company id is c9. Now propose its Warehouse audit deal of IDR 40000000."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "propose_deal",
+        "arguments": {
+          "title": "Warehouse audit",
+          "company_id": "c9",
+          "value": 40000000,
+          "currency": "IDR"
+        },
+        "mockOutput": {
+          "status": "awaiting_approval",
+          "operation_id": "op1",
+          "approval_path": "/approvals"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Unpaid customer invoices",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "List unpaid customer invoices."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "list_invoices",
+        "arguments": {
+          "status": "unpaid"
+        },
+        "mockOutput": {
+          "items": [],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    ]
+  },
+  {
+    "name": "Coreference uses IDs supplied by prior result",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Find Nusantara deals."
+      },
+      {
+        "role": "model",
+        "type": "functioncall",
+        "name": "search_records",
+        "arguments": {
+          "entity": "deal",
+          "query": "Nusantara"
+        }
+      },
+      {
+        "role": "user",
+        "type": "functionresponse",
+        "name": "search_records",
+        "response": {
+          "result": {
+            "items": [
+              {
+                "id": "d1",
+                "title": "Renewal Q1"
+              },
+              {
+                "id": "d2",
+                "title": "Warehouse audit"
+              }
+            ],
+            "page_size": 3,
+            "total_count": null,
+            "next_cursor": null,
+            "has_more": false
+          }
+        }
+      },
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Open the second one."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "open_record",
+        "arguments": {
+          "entity": "deal",
+          "id": "d2"
+        },
+        "mockOutput": {
+          "status": "opened",
+          "path": "/deals/d2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Zero matches does not invent a record",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Find the Sinar Jaya deal."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_records",
+        "arguments": {
+          "entity": "deal",
+          "query": "Sinar Jaya"
+        },
+        "mockOutput": {
+          "items": [],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    ]
+  },
+  {
+    "name": "Mid-chain oversize recovery uses a smaller page",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "List unpaid invoices."
+      },
+      {
+        "role": "model",
+        "type": "functioncall",
+        "name": "list_invoices",
+        "arguments": {
+          "status": "unpaid",
+          "limit": 5
+        }
+      },
+      {
+        "role": "user",
+        "type": "functionresponse",
+        "name": "list_invoices",
+        "response": {
+          "result": {
+            "error": "Result exceeds the tool budget. Use limit 1; no text was truncated.",
+            "code": "OUTPUT_TOO_LARGE"
+          }
+        }
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "list_invoices",
+        "arguments": {
+          "status": "unpaid",
+          "limit": 1
+        },
+        "mockOutput": {
+          "items": [],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    ]
+  },
+  {
+    "name": "Activity lookup for an identified company",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Show recent calls for company c1."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "list_activities",
+        "arguments": {
+          "entity": "company",
+          "entity_id": "c1",
+          "type": "call"
+        },
+        "mockOutput": {
+          "items": [],
+          "page_size": 3,
+          "total_count": null,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    ]
+  }
+]

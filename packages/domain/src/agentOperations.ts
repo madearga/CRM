@@ -27,9 +27,47 @@ export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 export const AGENT_OPERATION_KINDS = [
   'create_activity',
   'update_deal_stage',
+  'create_company',
+  'create_deal',
 ] as const;
 
 export type AgentOperationKind = (typeof AGENT_OPERATION_KINDS)[number];
+
+/**
+ * The payload fields each create kind accepts. A field that is not named here
+ * never reaches the write, so a payload cannot set the owner or the
+ * organization.
+ */
+export const CREATE_COMPANY_PAYLOAD_FIELDS = [
+  'name',
+  'website',
+  'industry',
+  'size',
+  'address',
+  'country',
+  'source',
+  'tags',
+  'status',
+  'notes',
+] as const;
+
+export const CREATE_DEAL_PAYLOAD_FIELDS = [
+  'title',
+  'value',
+  'currency',
+  'probability',
+  'expectedCloseDate',
+  'companyId',
+  'primaryContactId',
+] as const;
+
+/** The payload fields that the allowlist does not name. */
+export function unexpectedPayloadFields(
+  payload: Record<string, unknown>,
+  allowed: readonly string[]
+): string[] {
+  return Object.keys(payload).filter((field) => !allowed.includes(field));
+}
 
 /** Statuses an operation cannot leave any more. */
 export const TERMINAL_OPERATION_STATUSES: OperationStatus[] = [

@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   },
   // Development access over Tailscale Serve (HTTPS). Production is unaffected.
   allowedDevOrigins: ['vmi3311790.taila50457.ts.net'],
+  // The dev badge sits on top of the landing footer; not needed while demoing.
+  devIndicators: false,
   images: {
     remotePatterns: [
       {

@@ -4,6 +4,7 @@ import { getSessionToken } from '@/lib/convex/server';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
+import { WebMCPTools } from '@/components/webmcp-tools';
 
 export async function Providers({ children }) {
   const token = await getSessionToken();
@@ -11,9 +12,15 @@ export async function Providers({ children }) {
   return (
     <ConvexProvider token={token}>
       <QueryClientProvider>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
           <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster />
+          <WebMCPTools />
         </ThemeProvider>
       </QueryClientProvider>
     </ConvexProvider>

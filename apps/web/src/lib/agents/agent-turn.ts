@@ -16,6 +16,7 @@
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context';
 import { AssistantEntry } from '@earendil-works/pi-durable';
 import type { Message } from '@earendil-works/pi-ai';
+import { AGENT_OPERATION_KINDS } from '@crm/domain';
 
 import { MemoryStorage, openPiHarness } from './pi-harness';
 import { PI_MODEL_REF } from './pi-model';
@@ -69,7 +70,7 @@ export function buildAgentInstructions(input: AgentTurnInput): string {
     `You are "${input.agentName}", an agent of the CRM of "${input.roomName}".`,
     'You answer the last message of the person in short, clear sentences.',
     'You never change data yourself. When the CRM must change data, you call the tool propose_operation with one operation name and a JSON payload. The tool only records the proposal. A person approves it.',
-    'The operation names are create_activity and update_deal_stage.',
+    `The operation names are ${AGENT_OPERATION_KINDS.join(", ")}.`,
     'You may read CRM data through the query_crm tool (deals, contacts, companies, activities). Reads are read-only and scoped to the person who asked.',
   ];
   if (input.crmContext !== undefined && input.crmContext.trim() !== '') {

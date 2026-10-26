@@ -4,6 +4,7 @@ import { httpAction } from './_generated/server';
 import { internal } from './_generated/api';
 import { ConvexError } from 'convex/values';
 import { z } from 'zod';
+import { AGENT_OPERATION_KINDS } from '@crm/domain';
 
 import type { Id } from './_generated/dataModel';
 import { authClient } from './auth';
@@ -133,7 +134,7 @@ const bridgeProposalArgs = z.object({
   // The person whose session the agent acted with. The operation is
   // attributed to that person, not to whoever created the room.
   requestingUserId: z.string().min(1),
-  operationKind: z.enum(['create_activity', 'update_deal_stage']),
+  operationKind: z.enum(AGENT_OPERATION_KINDS),
   payload: z.record(z.unknown()),
   summary: z.string().max(500).optional(),
 });
