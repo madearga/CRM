@@ -23,7 +23,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
   if (!data || data.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-muted-foreground">
-        No revenue data yet
+        Belum ada nilai invoice pada periode ini
       </p>
     );
   }
@@ -57,7 +57,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             cursor={{ fill: 'transparent' }}
           />
           {/* One hue on the data, square corners. */}
-          <Bar dataKey="revenue" radius={0} fill="#f2b33d" name="Revenue" />
+          <Bar dataKey="revenue" radius={0} fill="#f2b33d" name="Nilai invoice" />
         </BarChart>
       </ResponsiveContainer>
     </div>

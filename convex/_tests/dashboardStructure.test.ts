@@ -1,124 +1,95 @@
-/**
- * Integration tests for dashboard overview query structure.
- *
- * These verify that the query's Zod return type schema matches
- * what the frontend expects. If the schema changes, these tests break.
- */
-import { describe, it, expect } from 'vitest';
+/// <reference types="vite/client" />
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { convexTest } from "convex-test";
+import aggregateSchema from "../../node_modules/@convex-dev/aggregate/src/component/schema";
+import schema from "../schema";
+import { api } from "../_generated/api";
 
-// Mirror the dashboard overview return type from convex/dashboard.ts
-// If the backend schema changes, these tests should break.
-const OVERVIEW_SHAPE = {
-  pipelineValue: 'number',
-  totalDeals: 'number',
-  totalCompanies: 'number',
-  totalActivities: 'number',
-  dealsByStage: 'array',        // { stage, count, value }[]
-  recentActivities: 'array',    // { id, title, type, entityType, entityId, createdAt }[]
-  upcomingActivities: 'array',  // { id, title, type, entityType, entityId, dueAt }[]
-  agingDeals: 'array',          // { id, title, stage, value, daysInStage, isAging }[]
-} as const;
-
-describe('Dashboard Overview Query Structure', () => {
-  it('has all required top-level fields', () => {
-    const requiredKeys = [
-      'pipelineValue',
-      'totalDeals',
-      'totalCompanies',
-      'totalActivities',
-      'dealsByStage',
-      'recentActivities',
-      'upcomingActivities',
-      'agingDeals',
-    ];
-    expect(Object.keys(OVERVIEW_SHAPE)).toEqual(requiredKeys);
-  });
-
-  it('numeric fields are number type', () => {
-    expect(OVERVIEW_SHAPE.pipelineValue).toBe('number');
-    expect(OVERVIEW_SHAPE.totalDeals).toBe('number');
-    expect(OVERVIEW_SHAPE.totalCompanies).toBe('number');
-    expect(OVERVIEW_SHAPE.totalActivities).toBe('number');
-  });
-
-  it('array fields are array type', () => {
-    expect(OVERVIEW_SHAPE.dealsByStage).toBe('array');
-    expect(OVERVIEW_SHAPE.recentActivities).toBe('array');
-    expect(OVERVIEW_SHAPE.upcomingActivities).toBe('array');
-    expect(OVERVIEW_SHAPE.agingDeals).toBe('array');
-  });
+// Replace the old static-object assertions with the actual query interface.
+const session = vi.hoisted(() => ({
+  user: null as Record<string, unknown> | null,
+}));
+vi.mock("../auth", () => ({
+  authClient: { getHeaders: async () => new Headers() },
+  getAuth: () => ({ api: {} }),
+}));
+vi.mock("../authHelpers", () => ({
+  getSessionUser: async () => session.user,
+  getSessionUserWriter: async () => session.user,
+}));
+const modules = import.meta.glob([
+  "../**/*.{ts,js}",
+  "!../__tests__/**",
+  "!../convex/**",
+]);
+const aggregates = import.meta.glob([
+  "../../node_modules/@convex-dev/aggregate/src/component/**/*.ts",
+  "!../../node_modules/@convex-dev/aggregate/src/component/**/*.test.ts",
+]);
+afterEach(() => {
+  session.user = null;
 });
 
-describe('Deals By Stage Item Structure', () => {
-  const item = { stage: 'new', count: 3, value: 500000000 };
-
-  it('has stage string', () => {
-    expect(typeof item.stage).toBe('string');
+describe("dashboard overview query interface", () => {
+  it("returns honest zero values and the real snapshot shape for an empty workspace", async () => {
+    const t = convexTest(schema, modules);
+    for (const name of [
+      "aggregateCompaniesByOrg",
+      "aggregateDealsByOrg",
+      "aggregateDealsByStage",
+      "aggregateActivitiesByOrg",
+    ]) {
+      t.registerComponent(name, aggregateSchema, aggregates);
+    }
+    const { userId, organizationId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const organizationId = await ctx.db.insert("organization", {
+        name: "Empty workspace",
+        slug: "empty-workspace",
+        createdAt: now,
+        monthlyCredits: 0,
+      });
+      const userId = await ctx.db.insert("user", {
+        name: "Owner",
+        email: "owner@example.test",
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("member", {
+        organizationId,
+        userId,
+        role: "owner",
+        createdAt: now,
+      });
+      return { userId, organizationId };
+    });
+    session.user = {
+      _id: userId,
+      id: userId,
+      activeOrganization: { id: organizationId, role: "owner" },
+    };
+    const result = await t.query(api.dashboard.overview, {});
+    expect(result).toMatchObject({
+      pipelineValue: 0,
+      totalDeals: 0,
+      totalCompanies: 0,
+      totalActivities: 0,
+      recentActivities: [],
+      upcomingActivities: [],
+      agingDeals: [],
+    });
+    expect(result.dealsByStage).toEqual(
+      ["new", "contacted", "proposal", "won", "lost"].map((stage) => ({
+        stage,
+        count: 0,
+        value: 0,
+      })),
+    );
   });
 
-  it('has count number', () => {
-    expect(typeof item.count).toBe('number');
-  });
-
-  it('has value number', () => {
-    expect(typeof item.value).toBe('number');
-  });
-});
-
-describe('Aging Deal Item Structure', () => {
-  const item = {
-    id: 'deal_123',
-    title: 'Test Deal',
-    stage: 'proposal',
-    value: 100000000,
-    daysInStage: 15,
-    isAging: true,
-  };
-
-  it('has id', () => expect(typeof item.id).toBe('string'));
-  it('has title', () => expect(typeof item.title).toBe('string'));
-  it('has stage', () => expect(typeof item.stage).toBe('string'));
-  it('has value (number or undefined)', () => expect(typeof item.value).toBe('number'));
-  it('has daysInStage', () => expect(typeof item.daysInStage).toBe('number'));
-  it('has isAging boolean', () => expect(typeof item.isAging).toBe('boolean'));
-});
-
-describe('Activity Item Structure', () => {
-  const recentItem = {
-    id: 'act_123',
-    title: 'Call with Budi',
-    type: 'call',
-    entityType: 'deal',
-    entityId: 'deal_456',
-    createdAt: Date.now(),
-  };
-
-  const upcomingItem = {
-    id: 'act_789',
-    title: 'Meeting with Sari',
-    type: 'meeting',
-    entityType: 'contact',
-    entityId: 'contact_012',
-    dueAt: Date.now() + 86400000,
-  };
-
-  it('recent activity has createdAt', () => {
-    expect(typeof recentItem.createdAt).toBe('number');
-  });
-
-  it('upcoming activity has dueAt', () => {
-    expect(typeof upcomingItem.dueAt).toBe('number');
-  });
-
-  it('activity type is one of call/email/meeting/note/status_change', () => {
-    const validTypes = ['call', 'email', 'meeting', 'note', 'status_change'];
-    expect(validTypes).toContain(recentItem.type);
-    expect(validTypes).toContain(upcomingItem.type);
-  });
-
-  it('entityType is one of company/contact/deal', () => {
-    const validTypes = ['company', 'contact', 'deal'];
-    expect(validTypes).toContain(recentItem.entityType);
-    expect(validTypes).toContain(upcomingItem.entityType);
+  it("rejects a signed-out snapshot query", async () => {
+    const t = convexTest(schema, modules);
+    await expect(t.query(api.dashboard.overview, {})).rejects.toThrow();
   });
 });

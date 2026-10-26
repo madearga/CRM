@@ -72,7 +72,9 @@ import { InsightsWidget } from "@/components/insights-widget";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function ChangeIndicator({ value }: { value: number }) {
+function ChangeIndicator({ value }: { value: number | null | undefined }) {
+  if (value === undefined) return <span className="text-xs text-muted-foreground">—</span>;
+  if (value === null) return <span className="text-xs text-muted-foreground">Baru</span>;
   if (value === 0) return <span className="text-xs text-muted-foreground">0%</span>;
   const positive = value > 0;
   return (
@@ -126,9 +128,9 @@ export default function DashboardPage() {
     api.dashboard.overview,
     {}
   );
-  const { data: revenueData, isLoading: revenueLoading } = useAuthQuery(
+  const { data: revenueData, isLoading: revenueLoading, error: revenueError } = useAuthQuery(
     api.analytics.revenueByMonth,
-    {}
+    { range }
   );
   const { data: salesData, isLoading: salesLoading } = useAuthQuery(
     api.analytics.salesPerformance,
@@ -142,13 +144,13 @@ export default function DashboardPage() {
     api.analytics.invoiceAging,
     {}
   );
-  const { data: topProductsData, isLoading: productsLoading } = useAuthQuery(
+  const { data: topProductsData, isLoading: productsLoading, error: productsError } = useAuthQuery(
     api.analytics.topProducts,
-    {}
+    { range }
   );
-  const { data: comparisonData, isLoading: comparisonLoading } = useAuthQuery(
+  const { data: comparisonData, isLoading: comparisonLoading, error: comparisonError } = useAuthQuery(
     api.analytics.monthlyComparison,
-    {}
+    { range }
   );
   const { data: analyticsOverview } = useAuthQuery(
     api.analytics.getOverview,
@@ -166,7 +168,7 @@ export default function DashboardPage() {
   );
 
   const isLoading =
-    overviewLoading || revenueLoading || salesLoading || forecastLoading;
+    overviewLoading || salesLoading || forecastLoading;
 
   if (isLoading) return <SkeletonDashboard />;
 
@@ -184,15 +186,14 @@ export default function DashboardPage() {
     .filter((s) => s.stage !== "won" && s.stage !== "lost")
     .reduce((sum, s) => sum + s.value, 0);
 
-  const wonDealsMonth = comparisonData?.current.dealsWon ?? 0;
-  const conversionRate =
-    comparisonData && comparisonData.current.dealsCreated > 0
-      ? Math.round(
-          (comparisonData.current.dealsWon /
-            comparisonData.current.dealsCreated) *
-            100
-        )
-      : 0;
+  const periodLabel = comparisonData?.period.label;
+  const comparisonLabel = comparisonData?.period.comparisonLabel;
+  const closedDeals = comparisonData
+    ? comparisonData.current.dealsWon + comparisonData.current.dealsLost
+    : undefined;
+  const winRate = comparisonData?.current.winRate;
+  const periodValue = (value: number | undefined, money = false) =>
+    comparisonLoading ? "Memuat…" : value === undefined ? "—" : money ? formatCurrency(value) : String(value);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -211,7 +212,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={range} onValueChange={(v) => setRange(v as DateRange)}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[140px]" aria-label="Periode dashboard">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -228,43 +229,50 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {comparisonError
+          ? "Metrik periode gagal dimuat. Coba pilih ulang periode."
+          : periodLabel ?? "Memuat periode…"}
+        {" · Pipeline, invoice belum dibayar, dan aktivitas: kondisi terkini."}
+      </p>
+
       {/* Row 1: KPI strip — one container split by hairlines, labels above values */}
       <Card className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-6 lg:divide-x">
         {[
           {
-            label: "Revenue (Month)",
-            value: formatCurrency(comparisonData?.current.revenue ?? 0),
+            label: "Nilai invoice",
+            value: periodValue(comparisonData?.current.revenue, true),
             caption: (
               <>
-                <ChangeIndicator value={comparisonData?.change.revenue ?? 0} />
-                <span className="ml-1">vs last month</span>
+                <ChangeIndicator value={comparisonData?.change.revenue} />
+                {comparisonLabel && <span className="ml-1">vs {comparisonLabel}</span>}
               </>
             ),
           },
           {
             label: "Active Pipeline",
             value: formatCurrency(activePipelineValue),
-            caption: <>{overview.totalDeals} total deals</>,
+            caption: <>Kondisi terkini</>,
           },
           {
-            label: "Deals Won (Month)",
-            value: String(wonDealsMonth),
+            label: "Deals won",
+            value: periodValue(comparisonData?.current.dealsWon),
             caption: (
               <>
-                <ChangeIndicator value={comparisonData?.change.dealsWon ?? 0} />
-                <span className="ml-1">vs last month</span>
+                <ChangeIndicator value={comparisonData?.change.dealsWon} />
+                {comparisonLabel && <span className="ml-1">vs {comparisonLabel}</span>}
               </>
             ),
           },
           {
-            label: "Conversion Rate",
-            value: `${conversionRate}%`,
-            caption: <>{comparisonData?.current.dealsCreated ?? 0} deals created</>,
+            label: "Win rate",
+            value: comparisonLoading ? "Memuat…" : winRate == null ? "—" : `${winRate}%`,
+            caption: <>{closedDeals === undefined ? "Belum tersedia" : `${closedDeals} deal selesai (menang + kalah)`}</>,
           },
           {
             label: "Outstanding Invoices",
             value: formatCurrency(analyticsOverview?.outstandingAmount ?? 0),
-            caption: <>Posted invoices awaiting payment</>,
+            caption: <>Belum dibayar · kondisi terkini</>,
           },
           {
             label: "Overdue Amount",
@@ -282,7 +290,7 @@ export default function DashboardPage() {
             >
               {kpi.value}
             </p>
-            <p className="flex items-center text-xs text-muted-foreground">
+            <p className="flex flex-wrap items-center text-xs text-muted-foreground">
               {kpi.caption}
             </p>
           </div>
@@ -297,10 +305,13 @@ export default function DashboardPage() {
         {/* Revenue by Month */}
         <Card className="">
           <CardHeader>
-            <CardTitle>Revenue by Month</CardTitle>
+            <CardTitle>Nilai invoice</CardTitle>
+            <CardDescription>{periodLabel} · bukan kas masuk</CardDescription>
           </CardHeader>
           <CardContent>
-            <RevenueChart data={revenueData ?? []} />
+            {revenueLoading ? <Skeleton className="h-[300px]" /> : revenueError ? (
+              <p role="status" className="py-8 text-sm text-muted-foreground">Nilai invoice gagal dimuat. Coba pilih ulang periode.</p>
+            ) : <RevenueChart data={revenueData ?? []} />}
           </CardContent>
         </Card>
 
@@ -308,6 +319,7 @@ export default function DashboardPage() {
         <Card className="">
           <CardHeader>
             <CardTitle>Pipeline Forecast</CardTitle>
+            <CardDescription>Kondisi terkini</CardDescription>
           </CardHeader>
           <CardContent>
             {forecastData && forecastData.length > 0 ? (
@@ -327,9 +339,12 @@ export default function DashboardPage() {
         <Card className="">
           <CardHeader>
             <CardTitle>Top Products</CardTitle>
+            <CardDescription>{periodLabel} · berdasarkan tanggal sales order</CardDescription>
           </CardHeader>
           <CardContent>
-            {topProductsData && topProductsData.length > 0 ? (
+            {productsLoading ? <Skeleton className="h-48" /> : productsError ? (
+              <p role="status" className="py-8 text-sm text-muted-foreground">Top Products gagal dimuat. Coba pilih ulang periode.</p>
+            ) : topProductsData && topProductsData.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -373,6 +388,7 @@ export default function DashboardPage() {
         <Card className="">
           <CardHeader>
             <CardTitle>Invoice Aging</CardTitle>
+            <CardDescription>Kondisi terkini</CardDescription>
           </CardHeader>
           <CardContent>
             {agingData && agingData.some((b) => b.count > 0) ? (
@@ -409,6 +425,7 @@ export default function DashboardPage() {
       <Card className="">
         <CardHeader>
           <CardTitle>Sales Performance</CardTitle>
+          <CardDescription>Semua waktu · tidak mengikuti periode terpilih</CardDescription>
         </CardHeader>
         <CardContent>
           {salesData && salesData.length > 0 ? (
@@ -418,7 +435,7 @@ export default function DashboardPage() {
                   <TableHead>Owner</TableHead>
                   <TableHead className="text-right">Deals</TableHead>
                   <TableHead className="text-right">Won</TableHead>
-                  <TableHead className="text-right">Win rate</TableHead>
+                  <TableHead className="text-right">Won / total deals</TableHead>
                   <TableHead className="text-right">Total value</TableHead>
                   <TableHead className="text-right">Avg close (days)</TableHead>
                 </TableRow>
@@ -556,7 +573,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Agen Widgets</CardTitle>
             <CardDescription>
-              Dibuat oleh agen, disetujui oleh kamu.
+              Dibuat oleh agen, disetujui oleh kamu. Kondisi terkini.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

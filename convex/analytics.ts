@@ -2,12 +2,37 @@ import { zid } from 'convex-helpers/server/zod';
 import { z } from 'zod';
 
 import { createAuthQuery } from './functions';
+import {
+  bucketsForPeriod,
+  dashboardRangeSchema,
+  lostDealsInPeriod,
+  percentDelta,
+  resolveComparisonPeriods,
+  revenueInvoicesInPeriod,
+  saleOrdersInPeriod,
+  sumRevenue,
+  winRate,
+  wonDealsInPeriod,
+  type DashboardRange,
+} from './helpers/dashboardMetrics';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
 const DAY_MS = 86_400_000;
+
+// Scoped-row cap for dashboard scans. Exceeding it fails loudly instead of
+// silently dropping newer records.
+const DASHBOARD_SCAN_CAP = 20_000;
+
+function assertScanCap(count: number, what: string) {
+  if (count > DASHBOARD_SCAN_CAP) {
+    throw new Error(
+      `${what} exceeds the dashboard scan cap of ${DASHBOARD_SCAN_CAP} rows; narrow the range or archive old records`
+    );
+  }
+}
 
 function monthRange(monthsAgo: number) {
   const now = new Date();
@@ -160,7 +185,7 @@ export const getDealPipeline = createAuthQuery()({
 // ---------------------------------------------------------------------------
 
 export const revenueByMonth = createAuthQuery()({
-  args: {},
+  args: { range: dashboardRangeSchema.optional() },
   returns: z.array(
     z.object({
       month: z.string(),
@@ -168,22 +193,55 @@ export const revenueByMonth = createAuthQuery()({
       count: z.number(),
     })
   ),
-  handler: async (ctx) => {
+  handler: async (ctx, { range }) => {
     const orgId = ctx.user.activeOrganization?.id;
     if (!orgId) return [];
 
-    const invoices = await ctx
-      .table('invoices', 'organizationId_invoiceDate', (q) =>
-        q.eq('organizationId', orgId)
+    if (range) {
+      const periods = resolveComparisonPeriods(Date.now(), range);
+      const invoices = await ctx.db
+        .query('invoices')
+        .withIndex('organizationId_invoiceDate', (q) =>
+          q
+            .eq('organizationId', orgId)
+            .gte('invoiceDate', periods.current.start)
+            .lt('invoiceDate', periods.current.end)
+        )
+        .collect();
+      assertScanCap(invoices.length, 'invoices');
+      const valid = revenueInvoicesInPeriod(invoices, periods.current);
+      return bucketsForPeriod(periods.current, range as DashboardRange).map(
+        (bucket) => {
+          const inBucket = valid.filter(
+            (inv) =>
+              inv.invoiceDate >= bucket.start && inv.invoiceDate < bucket.end
+          );
+          return {
+            month: bucket.label,
+            revenue: inBucket.reduce((s, inv) => s + (inv.totalAmount ?? 0), 0),
+            count: inBucket.length,
+          };
+        }
+      );
+    }
+
+    const invoices = await ctx.db
+      .query('invoices')
+      .withIndex('organizationId_invoiceDate', (q) =>
+        q
+          .eq('organizationId', orgId)
+          .gte('invoiceDate', monthRange(11).start)
+          .lt('invoiceDate', monthRange(0).end)
       )
-      .take(2000);
+      .collect();
+    assertScanCap(invoices.length, 'invoices');
 
     // Only customer invoices that are posted/paid (not cancelled)
     const valid = invoices.filter(
       (inv) =>
         inv.type === 'customer_invoice' &&
         inv.state !== 'cancel' &&
-        !inv.archivedAt
+        inv.archivedAt == null
     );
 
     const months: { month: string; revenue: number; count: number }[] = [];
@@ -414,7 +472,7 @@ export const invoiceAging = createAuthQuery()({
 // ---------------------------------------------------------------------------
 
 export const topProducts = createAuthQuery()({
-  args: {},
+  args: { range: dashboardRangeSchema.optional() },
   returns: z.array(
     z.object({
       productId: zid('products').optional(),
@@ -423,20 +481,29 @@ export const topProducts = createAuthQuery()({
       totalRevenue: z.number(),
     })
   ),
-  handler: async (ctx) => {
+  handler: async (ctx, { range }) => {
     const orgId = ctx.user.activeOrganization?.id;
     if (!orgId) return [];
 
     // Get sale order lines via saleOrders
-    const saleOrders = await ctx
-      .table('saleOrders', 'organizationId', (q) =>
-        q.eq('organizationId', orgId)
-      )
-      .take(1000);
+    const period = range
+      ? resolveComparisonPeriods(Date.now(), range).current
+      : null;
+    const saleOrders = await (period
+      ? ctx.table('saleOrders', 'organizationId_orderDate', (q) =>
+          q.eq('organizationId', orgId)
+            .gte('orderDate', period.start)
+            .lt('orderDate', period.end)
+        )
+      : ctx.table('saleOrders', 'organizationId', (q) => q.eq('organizationId', orgId))
+    ).take(DASHBOARD_SCAN_CAP + 1);
+    assertScanCap(saleOrders.length, 'sale orders');
 
-    const activeOrders = saleOrders.filter(
-      (so) => so.state !== 'cancel' && !so.archivedAt
-    );
+    const activeOrders = period
+      ? saleOrdersInPeriod(saleOrders, period)
+      : saleOrders.filter(
+          (so) => so.state !== 'cancel' && so.archivedAt == null
+        );
 
     // Accumulate lines
     const productMap = new Map<
@@ -526,121 +593,163 @@ export const conversionFunnel = createAuthQuery()({
 // ---------------------------------------------------------------------------
 
 export const monthlyComparison = createAuthQuery()({
-  args: {},
+  args: { range: dashboardRangeSchema.optional() },
   returns: z.object({
     current: z.object({
       dealsCreated: z.number(),
       dealsWon: z.number(),
+      dealsLost: z.number(),
+      winRate: z.number().nullable(),
       revenue: z.number(),
       newCompanies: z.number(),
     }),
     previous: z.object({
       dealsCreated: z.number(),
       dealsWon: z.number(),
+      dealsLost: z.number(),
+      winRate: z.number().nullable(),
       revenue: z.number(),
       newCompanies: z.number(),
     }),
     change: z.object({
-      dealsCreated: z.number(),
-      dealsWon: z.number(),
-      revenue: z.number(),
-      newCompanies: z.number(),
+      dealsCreated: z.number().nullable(),
+      dealsWon: z.number().nullable(),
+      revenue: z.number().nullable(),
+      newCompanies: z.number().nullable(),
+    }),
+    period: z.object({
+      start: z.number(),
+      end: z.number(),
+      previousStart: z.number(),
+      previousEnd: z.number(),
+      label: z.string(),
+      comparisonLabel: z.string(),
     }),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, { range: rangeArg }) => {
     const orgId = ctx.user.activeOrganization?.id;
+    const range = rangeArg ?? 'this_month';
+    const { current, previous, label, comparisonLabel } =
+      resolveComparisonPeriods(Date.now(), range);
     if (!orgId) {
       return {
-        current: { dealsCreated: 0, dealsWon: 0, revenue: 0, newCompanies: 0 },
-        previous: { dealsCreated: 0, dealsWon: 0, revenue: 0, newCompanies: 0 },
-        change: { dealsCreated: 0, dealsWon: 0, revenue: 0, newCompanies: 0 },
+        current: {
+          dealsCreated: 0,
+          dealsWon: 0,
+          dealsLost: 0,
+          winRate: null,
+          revenue: 0,
+          newCompanies: 0,
+        },
+        previous: {
+          dealsCreated: 0,
+          dealsWon: 0,
+          dealsLost: 0,
+          winRate: null,
+          revenue: 0,
+          newCompanies: 0,
+        },
+        change: {
+          dealsCreated: 0,
+          dealsWon: 0,
+          revenue: 0,
+          newCompanies: 0,
+        },
+        period: {
+          start: current.start,
+          end: current.end,
+          previousStart: previous.start,
+          previousEnd: previous.end,
+          label,
+          comparisonLabel,
+        },
       };
     }
 
-    const { start: curStart, end: curEnd } = monthRange(0);
-    const { start: prevStart, end: prevEnd } = monthRange(1);
+    const { start: curStart, end: curEnd } = current;
+    const { start: prevStart, end: prevEnd } = previous;
 
-    // Fetch data
+    // Fetch data. Invoice bounds cover both periods; deals and companies
+    // have no usable time index, so scoped rows are collected and capped.
     const [deals, invoices, companies] = await Promise.all([
-      ctx
-        .table('deals', 'organizationId', (q) => q.eq('organizationId', orgId))
-        .take(2000),
-      ctx
-        .table('invoices', 'organizationId_invoiceDate', (q) =>
-          q.eq('organizationId', orgId)
+      ctx.db
+        .query('deals')
+        .withIndex('organizationId', (q) => q.eq('organizationId', orgId))
+        .collect(),
+      ctx.db
+        .query('invoices')
+        .withIndex('organizationId_invoiceDate', (q) =>
+          q
+            .eq('organizationId', orgId)
+            .gte('invoiceDate', prevStart)
+            .lt('invoiceDate', curEnd)
         )
-        .take(2000),
-      ctx
-        .table('companies', 'organizationId', (q) =>
-          q.eq('organizationId', orgId)
-        )
-        .take(2000),
+        .collect(),
+      ctx.db
+        .query('companies')
+        .withIndex('organizationId', (q) => q.eq('organizationId', orgId))
+        .collect(),
     ]);
+    assertScanCap(deals.length, 'deals');
+    assertScanCap(invoices.length, 'invoices');
+    assertScanCap(companies.length, 'companies');
 
-    // Current month metrics
     const curDealsCreated = deals.filter(
       (d) => d._creationTime >= curStart && d._creationTime < curEnd
     ).length;
-    const curDealsWon = deals.filter(
-      (d) => d.wonAt && d.wonAt >= curStart && d.wonAt < curEnd
-    ).length;
-    const curRevenue = invoices
-      .filter(
-        (inv) =>
-          inv.type === 'customer_invoice' &&
-          inv.state !== 'cancel' &&
-          !inv.archivedAt &&
-          inv.invoiceDate >= curStart &&
-          inv.invoiceDate < curEnd
-      )
-      .reduce((s, inv) => s + (inv.totalAmount ?? 0), 0);
+    const curWon = wonDealsInPeriod(deals, current);
+    const curLost = lostDealsInPeriod(deals, current);
+    const curDealsWon = curWon.length;
+    const curDealsLost = curLost.length;
+    const curRevenue = sumRevenue(revenueInvoicesInPeriod(invoices, current));
     const curCompanies = companies.filter(
       (c) => c._creationTime >= curStart && c._creationTime < curEnd
     ).length;
 
-    // Previous month metrics
     const prevDealsCreated = deals.filter(
       (d) => d._creationTime >= prevStart && d._creationTime < prevEnd
     ).length;
-    const prevDealsWon = deals.filter(
-      (d) => d.wonAt && d.wonAt >= prevStart && d.wonAt < prevEnd
-    ).length;
-    const prevRevenue = invoices
-      .filter(
-        (inv) =>
-          inv.type === 'customer_invoice' &&
-          inv.state !== 'cancel' &&
-          !inv.archivedAt &&
-          inv.invoiceDate >= prevStart &&
-          inv.invoiceDate < prevEnd
-      )
-      .reduce((s, inv) => s + (inv.totalAmount ?? 0), 0);
+    const prevWon = wonDealsInPeriod(deals, previous);
+    const prevLost = lostDealsInPeriod(deals, previous);
+    const prevDealsWon = prevWon.length;
+    const prevDealsLost = prevLost.length;
+    const prevRevenue = sumRevenue(revenueInvoicesInPeriod(invoices, previous));
     const prevCompanies = companies.filter(
       (c) => c._creationTime >= prevStart && c._creationTime < prevEnd
     ).length;
-
-    const pct = (cur: number, prev: number) =>
-      prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100);
 
     return {
       current: {
         dealsCreated: curDealsCreated,
         dealsWon: curDealsWon,
+        dealsLost: curDealsLost,
+        winRate: winRate(curDealsWon, curDealsLost),
         revenue: curRevenue,
         newCompanies: curCompanies,
       },
       previous: {
         dealsCreated: prevDealsCreated,
         dealsWon: prevDealsWon,
+        dealsLost: prevDealsLost,
+        winRate: winRate(prevDealsWon, prevDealsLost),
         revenue: prevRevenue,
         newCompanies: prevCompanies,
       },
       change: {
-        dealsCreated: pct(curDealsCreated, prevDealsCreated),
-        dealsWon: pct(curDealsWon, prevDealsWon),
-        revenue: pct(curRevenue, prevRevenue),
-        newCompanies: pct(curCompanies, prevCompanies),
+        dealsCreated: percentDelta(curDealsCreated, prevDealsCreated),
+        dealsWon: percentDelta(curDealsWon, prevDealsWon),
+        revenue: percentDelta(curRevenue, prevRevenue),
+        newCompanies: percentDelta(curCompanies, prevCompanies),
+      },
+      period: {
+        start: curStart,
+        end: curEnd,
+        previousStart: prevStart,
+        previousEnd: prevEnd,
+        label,
+        comparisonLabel,
       },
     };
   },
+
 });

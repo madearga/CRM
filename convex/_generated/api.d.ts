@@ -54,6 +54,7 @@ import type * as externalPlugins from "../externalPlugins.js";
 import type * as functions from "../functions.js";
 import type * as helpers_agentBridge from "../helpers/agentBridge.js";
 import type * as helpers_callbackUrl from "../helpers/callbackUrl.js";
+import type * as helpers_dashboardMetrics from "../helpers/dashboardMetrics.js";
 import type * as helpers_getEnv from "../helpers/getEnv.js";
 import type * as helpers_premiumGuard from "../helpers/premiumGuard.js";
 import type * as helpers_rateLimiter from "../helpers/rateLimiter.js";
@@ -167,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   functions: typeof functions;
   "helpers/agentBridge": typeof helpers_agentBridge;
   "helpers/callbackUrl": typeof helpers_callbackUrl;
+  "helpers/dashboardMetrics": typeof helpers_dashboardMetrics;
   "helpers/getEnv": typeof helpers_getEnv;
   "helpers/premiumGuard": typeof helpers_premiumGuard;
   "helpers/rateLimiter": typeof helpers_rateLimiter;
