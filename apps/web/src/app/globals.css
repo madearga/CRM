@@ -132,8 +132,32 @@
   }
 }
 
+/* Dashboard sections: one gentle entrance per page load. Stagger is capped
+   at 8 children; beyond that they simply arrive with the last delay. */
+.rise-stagger > * {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 360ms var(--ease-out),
+    transform 360ms var(--ease-out);
+}
+
+.rise-stagger > *:nth-child(2) { transition-delay: 45ms; }
+.rise-stagger > *:nth-child(3) { transition-delay: 90ms; }
+.rise-stagger > *:nth-child(4) { transition-delay: 135ms; }
+.rise-stagger > *:nth-child(5) { transition-delay: 180ms; }
+.rise-stagger > *:nth-child(n + 6) { transition-delay: 225ms; }
+
+@starting-style {
+  .rise-stagger > * {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rise {
+  .rise,
+  .rise-stagger > * {
     transform: none;
     transition: opacity 200ms ease;
   }

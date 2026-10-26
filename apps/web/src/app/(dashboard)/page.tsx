@@ -203,7 +203,7 @@ export default function DashboardPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-6">
+    <div className="rise-stagger container mx-auto space-y-6 px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -629,7 +629,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {agentWidgets.map((widget: { id: string; title: string; source: string }) =>
+            {(agentWidgets ?? []).map((widget: { id: string; title: string; source: string }) =>
               widget.source === "pipeline_overview" ? (
                 <div key={widget.id}>
                   <p className="mb-2 text-sm font-medium">{widget.title}</p>
