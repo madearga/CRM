@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 const facts = [
   ['Pipeline', 'Prospek'],
@@ -17,27 +18,24 @@ export default function WelcomePage() {
 
       <div className="flex flex-1 items-center py-16">
         <div className="w-full max-w-xl">
-          <h1 className="text-balance text-4xl font-medium tracking-tight text-foreground sm:text-5xl">
+          <h1 className="rise text-balance text-4xl font-medium tracking-tight text-foreground sm:text-5xl">
             Ruang kerja untuk orang dan agen.
           </h1>
-          <p className="mt-5 max-w-md text-pretty text-base leading-relaxed text-muted-foreground">
+          <p className="rise mt-5 max-w-md text-pretty text-base leading-relaxed text-muted-foreground" style={{ '--rise-delay': '60ms' } as React.CSSProperties}>
             Satu tempat untuk pipeline, klien, dan pekerjaan harian. Tanpa tab
             yang berserakan, tanpa data yang tertinggal.
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Link
-              href="/login"
-              className="inline-flex h-10 items-center rounded-md px-5 text-sm font-medium transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none" style={{ backgroundColor: '#f0f0fa', color: '#0b0b10', boxShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
-            >
-              Masuk
-            </Link>
+          <div className="rise mt-9 flex flex-wrap items-center gap-4" style={{ '--rise-delay': '120ms' } as React.CSSProperties}>
+            <Button asChild size="lg">
+              <Link href="/login">Masuk</Link>
+            </Button>
             <span className="text-sm text-muted-foreground">
               Akses dengan undangan dari tim.
             </span>
           </div>
 
-          <dl className="mt-16 grid max-w-lg grid-cols-3 gap-5 border-t border-border pt-6">
+          <dl className="rise mt-16 grid max-w-lg grid-cols-3 gap-5 border-t border-border pt-6" style={{ '--rise-delay': '180ms' } as React.CSSProperties}>
             {facts.map(([label, value]) => (
               <div key={label}>
                 <dt className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">

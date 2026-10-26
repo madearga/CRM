@@ -108,6 +108,37 @@
    Dark-first glassmorphism: translucent surfaces over a quiet
    indigo ambience. Hairline borders carry separation; blur is
    large and slow. Reduced motion is unaffected (no motion here). */
+/* Motion tokens (Emil Kowalski curves): strong ease-out for entrances. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Landing hero: first-visit page, so a gentle stagger is allowed. Pure CSS
+   entry via @starting-style; reduced motion keeps the fade only. */
+.rise {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 420ms var(--ease-out),
+    transform 420ms var(--ease-out);
+  transition-delay: var(--rise-delay, 0ms);
+}
+
+@starting-style {
+  .rise {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
+}
+
 .glass {
   border: 1px solid rgba(240, 240, 250, 0.1);
   background: rgba(240, 240, 250, 0.05);
