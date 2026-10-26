@@ -16,6 +16,8 @@ const envSchema = z.object({
 
   // AI Chat
   OPENROUTER_API_KEY: z.string().optional(),
+  AI_CHAT_API_KEY: z.string().optional(),
+  AI_CHAT_BASE_URL: z.string().optional(),
   AI_CHAT_MODEL: z.string().optional(),
 
   // Polar (new payment provider)

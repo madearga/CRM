@@ -119,7 +119,9 @@ async function handleAiChatBody(
 
   // --- Check configuration and conversation bounds ---
   const env = getEnv();
-  if (!env.OPENROUTER_API_KEY) {
+  // shortcut: AI_CHAT_API_KEY/BASE_URL point the same OpenAI-compatible client at any provider; OPENROUTER_* stays as the legacy fallback.
+  const apiKey = env.AI_CHAT_API_KEY ?? env.OPENROUTER_API_KEY;
+  if (!apiKey) {
     return new Response(
       JSON.stringify({ error: 'AI chat is not configured' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -162,11 +164,11 @@ async function handleAiChatBody(
   });
 
   // --- Setup LLM ---
-  const model = env.AI_CHAT_MODEL || 'openrouter/owl-alpha';
+  const model = env.AI_CHAT_MODEL || 'glm-5.3-flash';
 
   const client = new OpenAI({
-    apiKey: env.OPENROUTER_API_KEY,
-    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey,
+    baseURL: env.AI_CHAT_BASE_URL ?? 'https://api.z.ai/api/coding/paas/v4',
   });
 
   const systemPrompt = buildSystemPrompt({

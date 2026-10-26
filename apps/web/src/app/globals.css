@@ -4,7 +4,7 @@
 /* Hallmark v2.0.0 · shape: app screen · theme: none — DESIGN.md locked system (dark glass v2, by request) · genre: modern-minimal
  * waive 64: mono is the material of the ASCII accents (op ids, status glyphs) · waive 26b: control states live in the shared Button
  * critique: audited with sloplint --scope app; glass is translucent over a fixed indigo ambience, hairline borders carry separation
- * deviation 20: Tailwind v4 requires @import first; the stamp sits below the imports.
+ * deviation 20: Tailwind v4 requires @import first; the stamp sits below the imports. */
 
 
 @custom-variant dark (&:is(.dark *));
