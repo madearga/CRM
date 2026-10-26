@@ -7,6 +7,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  CREATE_WIDGET_PAYLOAD_FIELDS,
+  WIDGET_SOURCES,
+  WIDGET_TYPES,
   stableStringify,
   hashPayload,
   canTransition,
@@ -29,6 +32,37 @@ import {
 // ============================================================
 // stableStringify
 // ============================================================
+
+describe('create_widget contract', () => {
+  it('is a supported kind with an allowlist of exactly type, title and source', () => {
+    expect(AGENT_OPERATION_KINDS).toContain('create_widget');
+    expect([...CREATE_WIDGET_PAYLOAD_FIELDS].sort()).toEqual([
+      'source',
+      'title',
+      'type',
+    ]);
+  });
+
+  it('flags payload fields the allowlist does not name', () => {
+    expect(
+      unexpectedPayloadFields(
+        { type: 'bar', title: 'Pipeline', source: 'pipeline_overview' },
+        CREATE_WIDGET_PAYLOAD_FIELDS
+      )
+    ).toEqual([]);
+    expect(
+      unexpectedPayloadFields(
+        { type: 'bar', title: 'x', source: 'pipeline_overview', jsx: '<b/>' },
+        CREATE_WIDGET_PAYLOAD_FIELDS
+      )
+    ).toEqual(['jsx']);
+  });
+
+  it('whitelists exactly one widget type and one data source', () => {
+    expect(WIDGET_TYPES).toEqual(['bar']);
+    expect(WIDGET_SOURCES).toEqual(['pipeline_overview']);
+  });
+});
 
 describe('stableStringify', () => {
   it('gives the same text for the same keys in a different order', () => {
@@ -294,6 +328,7 @@ describe('agent operations constants', () => {
       'update_deal_stage',
       'create_company',
       'create_deal',
+      'create_widget',
     ]);
   });
 

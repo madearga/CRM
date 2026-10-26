@@ -10,6 +10,9 @@ import { ConvexError } from 'convex/values';
 import {
   CREATE_COMPANY_PAYLOAD_FIELDS,
   CREATE_DEAL_PAYLOAD_FIELDS,
+  CREATE_WIDGET_PAYLOAD_FIELDS,
+  WIDGET_SOURCES,
+  WIDGET_TYPES,
   CURRENCIES,
   DEFAULT_CURRENCY,
   DEAL_STAGES,
@@ -546,6 +549,44 @@ export const createDealOnce = createInternalMutation()({
   },
 });
 
+export const createWidgetOnce = createInternalMutation()({
+  args: {
+    organizationId: zid('organization'),
+    userId: zid('user'),
+    operationId: zid('agentOperations'),
+    operationKey: z.string().min(1).max(200),
+    attempt: z.number().int().positive(),
+    title: z.string().min(1).max(120),
+    type: z.string(),
+    source: z.string(),
+  },
+  handler: async (ctx, args) => {
+    const previous = await previousEffect(ctx, args, 'create_widget');
+    if (previous) return previous;
+
+    const now = Date.now();
+    const widgetId = await ctx.db.insert('widgets', {
+      organizationId: args.organizationId,
+      createdByUserId: args.userId,
+      title: args.title,
+      type: args.type,
+      source: args.source,
+      createdAt: now,
+    });
+
+    await ctx.db.insert('agentOperationEffects', {
+      organizationId: args.organizationId,
+      operationKey: args.operationKey,
+      operationId: args.operationId,
+      kind: 'create_widget',
+      effectId: widgetId,
+      createdAt: now,
+    });
+
+    return { effectId: widgetId, duplicate: false };
+  },
+});
+
 export const AGENT_OPERATION_HANDLERS: Record<string, AgentOperationHandler> = {
   create_activity: async (payload, context) => {
     const type = requireString(payload, 'type');
@@ -685,6 +726,38 @@ export const AGENT_OPERATION_HANDLERS: Record<string, AgentOperationHandler> = {
         ...(expectedCloseDate !== undefined ? { expectedCloseDate } : {}),
         ...(companyId !== undefined ? { companyId } : {}),
         ...(primaryContactId !== undefined ? { primaryContactId } : {}),
+      }
+    );
+  },
+  create_widget: async (payload, context) => {
+    requireAllowedFields(
+      payload,
+      CREATE_WIDGET_PAYLOAD_FIELDS,
+      'create_widget'
+    );
+    const type = requireString(payload, 'type');
+    const title = requireString(payload, 'title');
+    const source = requireString(payload, 'source');
+    if (!(WIDGET_TYPES as readonly string[]).includes(type)) {
+      badRequest(`Payload field "type" must be one of ${WIDGET_TYPES.join(', ')}`);
+    }
+    if (!(WIDGET_SOURCES as readonly string[]).includes(source)) {
+      badRequest(
+        `Payload field "source" must be one of ${WIDGET_SOURCES.join(', ')}`
+      );
+    }
+
+    return await context.ctx.runMutation(
+      internal.agentOperationHandlers.createWidgetOnce,
+      {
+        organizationId: context.organizationId,
+        userId: context.userId,
+        operationId: context.operationId,
+        operationKey: context.operationKey,
+        attempt: context.attempt,
+        title: title.slice(0, 120),
+        type,
+        source,
       }
     );
   },

@@ -29,6 +29,7 @@ export const AGENT_OPERATION_KINDS = [
   'update_deal_stage',
   'create_company',
   'create_deal',
+  'create_widget',
 ] as const;
 
 export type AgentOperationKind = (typeof AGENT_OPERATION_KINDS)[number];
@@ -50,6 +51,16 @@ export const CREATE_COMPANY_PAYLOAD_FIELDS = [
   'status',
   'notes',
 ] as const;
+
+/** Widget specs the agent may propose. Rendered by built-in components only. */
+export const CREATE_WIDGET_PAYLOAD_FIELDS = [
+  'type',
+  'title',
+  'source',
+] as const;
+
+export const WIDGET_TYPES = ['bar'] as const;
+export const WIDGET_SOURCES = ['pipeline_overview'] as const;
 
 export const CREATE_DEAL_PAYLOAD_FIELDS = [
   'title',

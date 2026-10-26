@@ -112,6 +112,7 @@ import type * as userShared from "../userShared.js";
 import type * as webmcp from "../webmcp.js";
 import type * as weeklyDigest from "../weeklyDigest.js";
 import type * as weeklyDigestQueries from "../weeklyDigestQueries.js";
+import type * as widgets from "../widgets.js";
 
 import type {
   ApiFromModules,
@@ -224,6 +225,7 @@ declare const fullApi: ApiFromModules<{
   webmcp: typeof webmcp;
   weeklyDigest: typeof weeklyDigest;
   weeklyDigestQueries: typeof weeklyDigestQueries;
+  widgets: typeof widgets;
 }>;
 
 /**

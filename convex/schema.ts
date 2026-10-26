@@ -484,6 +484,16 @@ const schema = defineEntSchema(
       .index('organizationId_name', ['organizationId', 'name'])
       .index('qrCode', ['qrCode']),
 
+    widgets: defineEnt({
+      title: v.string(),
+      type: v.string(),
+      source: v.string(),
+      createdAt: v.number(),
+    })
+      .field('organizationId', v.id('organization'), { index: true })
+      .field('createdByUserId', v.id('user'))
+      .index('organizationId_createdAt', ['organizationId', 'createdAt']),
+
     employees: defineEnt({
       name: v.string(),
       nik: v.string(),

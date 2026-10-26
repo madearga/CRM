@@ -192,6 +192,14 @@ function RegisteredTool({
           ...(args.location ? { address: args.location } : {}),
         });
       }
+      case 'propose_widget': {
+        const args = inputs.propose_widget.parse(raw);
+        return propose('create_widget', {
+          type: args.type,
+          title: args.title,
+          source: args.source,
+        });
+      }
       case 'propose_deal': {
         const args = inputs.propose_deal.parse(raw);
         return propose('create_deal', {
@@ -212,7 +220,8 @@ function RegisteredTool({
       | 'create_activity'
       | 'update_deal_stage'
       | 'create_company'
-      | 'create_deal',
+      | 'create_deal'
+      | 'create_widget',
     payload: Record<string, unknown>
   ) {
     // shortcut: identical proposals reuse one operation for this mounted tab; reload for a deliberate repeat.

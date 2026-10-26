@@ -89,6 +89,7 @@ function permissionForKind(kind: string) {
   if (kind === 'create_company')
     return { feature: 'companies', action: 'create' };
   if (kind === 'create_deal') return { feature: 'deals', action: 'create' };
+  if (kind === 'create_widget') return { feature: 'agents', action: 'create' };
   throw new ConvexError({
     code: 'BAD_REQUEST',
     message: 'Unsupported operation kind',

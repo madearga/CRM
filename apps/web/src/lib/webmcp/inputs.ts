@@ -85,6 +85,13 @@ export const inputs = {
       location: text.optional(),
     })
     .strict(),
+  propose_widget: z
+    .object({
+      type: z.enum(['bar']),
+      title: text,
+      source: z.enum(['pipeline_overview']),
+    })
+    .strict(),
   open_record: z
     .object({
       entity: z.enum(['company', 'contact', 'deal', 'invoices']),

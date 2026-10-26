@@ -159,6 +159,16 @@ export default function DashboardPage() {
     {}
   );
 
+  // Widgets proposed by an agent and approved by a person. Spec only; built-in components render it.
+  const { data: agentWidgets } = useAuthQuery(api.widgets.listWidgets, {});
+  const wantsPipeline = (agentWidgets ?? []).some(
+    (widget: { source: string }) => widget.source === "pipeline_overview"
+  );
+  const { data: widgetPipeline } = useAuthQuery(
+    api.webmcp.pipelineOverview,
+    wantsPipeline ? {} : "skip"
+  );
+
   const isLoading =
     overviewLoading || revenueLoading || salesLoading || forecastLoading;
 
@@ -609,6 +619,35 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {(agentWidgets ?? []).length > 0 && widgetPipeline && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Agen Widgets</CardTitle>
+            <CardDescription>
+              Dibuat oleh agen, disetujui oleh kamu.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {agentWidgets.map((widget: { id: string; title: string; source: string }) =>
+              widget.source === "pipeline_overview" ? (
+                <div key={widget.id}>
+                  <p className="mb-2 text-sm font-medium">{widget.title}</p>
+                  <PipelineChart
+                    dealsByStage={
+                      widgetPipeline.by_stage.map((s: { stage: string; count: number; value: number }) => ({
+                        stage: s.stage,
+                        count: s.count,
+                        value: s.value,
+                      })) ?? []
+                    }
+                  />
+                </div>
+              ) : null
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <QuickAddDealDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} />
     </div>

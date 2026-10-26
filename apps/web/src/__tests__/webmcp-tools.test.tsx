@@ -47,9 +47,9 @@ afterEach(() => {
 });
 
 describe('WebMCP registration and execution', () => {
-  it('registers the ten documented tools and unregisters on unmount', () => {
+  it('registers the eleven documented tools and unregisters on unmount', () => {
     const view = render(<WebMCPTools />);
-    expect(register).toHaveBeenCalledTimes(10);
+    expect(register).toHaveBeenCalledTimes(11);
     for (const tool of spec.tools)
       expect(captured(tool.name).inputSchema).toEqual(tool.inputSchema);
     const signals = register.mock.calls.map(([, options]) => options.signal);
