@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuthQuery } from '@/lib/convex/hooks';
+import { BreadcrumbNav } from '@/components/breadcrumb-nav';
 import { api } from '@convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,92 +101,97 @@ export default function OrganizationPage() {
   const isOwner = organization?.role === 'owner';
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <WithSkeleton isLoading={isLoading} className="w-full">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={organization?.logo || ''} />
-                <AvatarFallback className="text-lg">
-                  <Building2 className="h-8 w-8" />
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-bold">{organization?.name}</h1>
-                  {organization?.isPersonal && (
-                    <Badge variant="secondary">Personal</Badge>
-                  )}
-                  {organization?.isActive && (
-                    <Badge variant="default">Active</Badge>
-                  )}
-                </div>
-                <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    <span>{organization?.membersCount} members</span>
+    <>
+      <BreadcrumbNav />
+      <div className="container mx-auto px-4 py-6">
+        <WithSkeleton isLoading={isLoading} className="w-full">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={organization?.logo || ''} />
+                  <AvatarFallback className="text-lg">
+                    <Building2 className="h-8 w-8" />
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-bold">{organization?.name}</h1>
+                    {organization?.isPersonal && (
+                      <Badge variant="secondary">Personal</Badge>
+                    )}
+                    {organization?.isActive && (
+                      <Badge variant="default">Active</Badge>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      Created{' '}
-                      {organization?.createdAt
-                        ? new Date(organization.createdAt).toLocaleDateString()
-                        : 'Unknown'}
-                    </span>
-                  </div>
-                  {organization?.role && (
+                  <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <Crown className="h-4 w-4" />
-                      <span className="capitalize">{organization.role}</span>
+                      <Users className="h-4 w-4" />
+                      <span>{organization?.membersCount} members</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        Created{' '}
+                        {organization?.createdAt
+                          ? new Date(
+                              organization.createdAt
+                            ).toLocaleDateString()
+                          : 'Unknown'}
+                      </span>
+                    </div>
+                    {organization?.role && (
+                      <div className="flex items-center gap-1">
+                        <Crown className="h-4 w-4" />
+                        <span className="capitalize">{organization.role}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-2">
-              {isOwner && (
-                <Button variant="outline" size="sm">
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-              )}
-              {!organization?.isPersonal && !isOwner && (
-                <Button variant="outline" size="sm">
-                  <LogOut className="h-4 w-4" />
-                  Leave
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {isOwner && (
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
+                )}
+                {!organization?.isPersonal && !isOwner && (
+                  <Button variant="outline" size="sm">
+                    <LogOut className="h-4 w-4" />
+                    Leave
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
-          </TabsList>
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-4"
+          >
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="members">Members</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <OrganizationOverview organization={organization} />
-          </TabsContent>
+            <TabsContent value="overview" className="space-y-4">
+              <OrganizationOverview organization={organization} />
+            </TabsContent>
 
-          <TabsContent value="members" className="space-y-4">
-            <OrganizationMembers
-              organization={organization}
-              members={members}
-              isLoading={membersLoading}
-            />
-          </TabsContent>
-        </Tabs>
-      </WithSkeleton>
-    </div>
+            <TabsContent value="members" className="space-y-4">
+              <OrganizationMembers
+                organization={organization}
+                members={members}
+                isLoading={membersLoading}
+              />
+            </TabsContent>
+          </Tabs>
+        </WithSkeleton>
+      </div>
+    </>
   );
 }

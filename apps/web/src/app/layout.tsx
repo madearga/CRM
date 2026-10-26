@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/providers';
-import { BreadcrumbNav } from '@/components/breadcrumb-nav';
 
 export const metadata: Metadata = {
   title: 'Ruang',
@@ -28,7 +27,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <Providers>
-          <BreadcrumbNav />
           {children}
         </Providers>
       </body>

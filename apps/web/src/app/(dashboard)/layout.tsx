@@ -138,7 +138,7 @@ export default function DashboardLayout({
           <button
             type="button"
             onClick={openCommandPalette}
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg bg-sidebar-accent px-3 text-left text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring active:scale-[0.98]"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg bg-sidebar-accent px-3 text-left text-[13px] text-sidebar-foreground/50 transition-[background-color,color,transform] duration-150 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring active:scale-[0.98]"
           >
             <Search className="size-3.5 shrink-0" />
             <span className="truncate">Find anything</span>
@@ -224,12 +224,12 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center gap-3 border-b border-border/40 px-4">
           <SidebarTrigger className="size-8 rounded-lg active:scale-[0.97]" />
           <Separator orientation="vertical" className="h-4" />
-          <h1 className="text-[13px] font-medium tracking-tight text-foreground/70">
+          <span className="text-[13px] font-medium tracking-tight text-foreground/70">
             {getPageTitle(pathname, pluginNavItems)}
-          </h1>
+          </span>
         </header>
         <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}>
+          <Suspense fallback={<div className="flex items-center justify-center py-16 text-sm text-muted-foreground">Loading...</div>}>
             <ErrorBoundary>{children}</ErrorBoundary>
           </Suspense>
         </main>

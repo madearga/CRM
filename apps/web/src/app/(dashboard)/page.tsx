@@ -8,13 +8,9 @@ import {
   FileText,
   Mail,
   Phone,
-  TrendingUp,
   Activity,
   AlertTriangle,
   Plus,
-  Target,
-  BarChart3,
-  Clock,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "@/lib/format-date";
 import { useState } from "react";
@@ -301,10 +297,7 @@ export default function DashboardPage() {
         {/* Revenue by Month */}
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Revenue by Month
-            </CardTitle>
+            <CardTitle>Revenue by Month</CardTitle>
           </CardHeader>
           <CardContent>
             <RevenueChart data={revenueData ?? []} />
@@ -314,10 +307,7 @@ export default function DashboardPage() {
         {/* Pipeline Forecast */}
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Pipeline Forecast
-            </CardTitle>
+            <CardTitle>Pipeline Forecast</CardTitle>
           </CardHeader>
           <CardContent>
             {forecastData && forecastData.length > 0 ? (
@@ -336,10 +326,7 @@ export default function DashboardPage() {
         {/* Top Products */}
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Top Products
-            </CardTitle>
+            <CardTitle>Top Products</CardTitle>
           </CardHeader>
           <CardContent>
             {topProductsData && topProductsData.length > 0 ? (
@@ -385,10 +372,7 @@ export default function DashboardPage() {
         {/* Invoice Aging */}
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Invoice Aging
-            </CardTitle>
+            <CardTitle>Invoice Aging</CardTitle>
           </CardHeader>
           <CardContent>
             {agingData && agingData.some((b) => b.count > 0) ? (
@@ -424,10 +408,7 @@ export default function DashboardPage() {
       {/* Row 4: Sales Performance */}
       <Card className="">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Sales Performance
-          </CardTitle>
+          <CardTitle>Sales Performance</CardTitle>
         </CardHeader>
         <CardContent>
           {salesData && salesData.length > 0 ? (

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Lightbulb, AlertTriangle, Clock, ArrowRight } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -113,16 +113,18 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
             : "text-amber-600 dark:text-amber-400";
 
         return (
-          <Card key={insight.id} className="gap-3 py-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <span className={iconColor}>{insight.icon}</span>
-                {insight.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <div>{insight.description}</div>
-              <Button variant="outline" size="sm" asChild className="gap-1">
+          <Card key={insight.id} className="py-4">
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-2">
+                <span className={`mt-0.5 ${iconColor}`}>{insight.icon}</span>
+                <div>
+                  <p className="font-medium">{insight.title}</p>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {insight.description}
+                  </div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild className="shrink-0 gap-1 self-start">
                 <Link href={insight.cta.href}>
                   {insight.cta.label}
                   <ArrowRight className="h-3.5 w-3.5" />
