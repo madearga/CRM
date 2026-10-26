@@ -8,13 +8,16 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import { formatCurrency } from '@/lib/format';
 
 interface RevenueChartProps {
   data: { month: string; revenue: number }[];
 }
+
+// Short axis ticks that stay readable when the amounts are small.
+const tick = (v: number) =>
+  v >= 1_000_000 ? `${v / 1_000_000}M` : v >= 1_000 ? `${v / 1_000}k` : `${v}`;
 
 export function RevenueChart({ data }: RevenueChartProps) {
   if (!data || data.length === 0) {
@@ -29,19 +32,20 @@ export function RevenueChart({ data }: RevenueChartProps) {
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <CartesianGrid vertical={false} className="stroke-border" />
           <XAxis
             dataKey="month"
-            className="text-xs"
+            tickLine={false}
+            axisLine={false}
+            interval="preserveStartEnd"
             tick={{ fontSize: 11 }}
-            angle={-45}
-            textAnchor="end"
-            height={60}
           />
           <YAxis
-            className="text-xs"
+            tickLine={false}
+            axisLine={false}
+            width={44}
             tick={{ fontSize: 11 }}
-            tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
+            tickFormatter={tick}
           />
           <Tooltip
             formatter={(value: number) => formatCurrency(value)}
@@ -50,12 +54,10 @@ export function RevenueChart({ data }: RevenueChartProps) {
               border: '1px solid hsl(var(--border))',
               background: 'hsl(var(--card))',
             }}
+            cursor={{ fill: 'transparent' }}
           />
-          <Bar dataKey="revenue" radius={[6, 6, 0, 0]} name="Revenue">
-            {data.map((_, i) => (
-              <Cell key={i} fill="#6366f1" />
-            ))}
-          </Bar>
+          {/* One hue on the data, square corners. */}
+          <Bar dataKey="revenue" radius={0} fill="#f2b33d" name="Revenue" />
         </BarChart>
       </ResponsiveContainer>
     </div>

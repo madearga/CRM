@@ -9,9 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { STAGE_CHART_COLORS, STAGE_BAR_COLORS as STAGE_COLORS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 
 interface StageData {
@@ -48,35 +46,37 @@ export const PipelineChart = memo(function PipelineChart({ dealsByStage }: Pipel
             data={chartData}
             margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
           >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis dataKey="stage" className="text-xs" tick={{ fontSize: 12 }} />
-            <YAxis className="text-xs" tick={{ fontSize: 12 }} />
-            <Tooltip formatter={chartFormatter} contentStyle={tooltipStyle} />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Deals">
-              {dealsByStage.map((stage) => (
-                <Cell
-                  key={stage.stage}
-                  fill={STAGE_CHART_COLORS[stage.stage] ?? "#6366f1"}
-                />
-              ))}
-            </Bar>
+            <CartesianGrid vertical={false} className="stroke-border" />
+            <XAxis
+              dataKey="stage"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={36}
+              tick={{ fontSize: 12 }}
+            />
+            <Tooltip formatter={chartFormatter} contentStyle={tooltipStyle} cursor={{ fill: "transparent" }} />
+            {/* One hue on the data; square corners, as measured screens do. */}
+            <Bar dataKey="count" radius={0} fill="#f2b33d" name="Deals" />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      {/* Value summary */}
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+      {/* Per-stage values: neutral, aligned, no hue per stage. */}
+      <dl className="mt-4 divide-y divide-border border-t border-border">
         {dealsByStage.map((stage) => (
-          <div key={stage.stage} className="rounded-lg border p-2 text-center">
-            <div
-              className={`mx-auto mb-1 h-1.5 w-8 rounded-full ${STAGE_COLORS[stage.stage] ?? "bg-primary"}`}
-            />
-            <p className="text-xs font-medium capitalize">{stage.stage}</p>
-            <p className="font-mono text-xs text-muted-foreground">
-              {formatCurrency(stage.value)}
-            </p>
+          <div
+            key={stage.stage}
+            className="flex items-baseline justify-between gap-3 py-1.5 text-xs"
+          >
+            <dt className="capitalize text-muted-foreground">{stage.stage}</dt>
+            <dd className="font-mono tabular-nums">{formatCurrency(stage.value)}</dd>
           </div>
         ))}
-      </div>
+      </dl>
     </>
   );
 });

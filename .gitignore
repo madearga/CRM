@@ -18,3 +18,4 @@ convex/convex/
 /.claude/
 /agent/
 /skills-lock.json
+.taste-skill/

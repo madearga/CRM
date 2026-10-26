@@ -1,18 +1,17 @@
 "use client";
 
 import {
+  ArrowRight,
   ArrowRightLeft,
   Building2,
   Calendar,
   FileText,
-  Handshake,
   Mail,
   Phone,
   TrendingUp,
   Activity,
   AlertTriangle,
   Plus,
-  DollarSign,
   Target,
   BarChart3,
   Clock,
@@ -20,19 +19,20 @@ import {
 import { formatDistanceToNow, format } from "@/lib/format-date";
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 
 const RevenueChart = dynamic(
   () => import("./revenue-chart").then((m) => ({ default: m.RevenueChart })),
   {
     ssr: false,
-    loading: () => <div className="h-[300px] animate-pulse rounded-lg bg-muted" />,
+    loading: () => <div className="h-[300px] rounded-lg bg-muted" />,
   }
 );
 const PipelineChart = dynamic(() => import("./pipeline-chart"), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] animate-pulse rounded-lg bg-muted" />
+    <div className="h-[300px] rounded-lg bg-muted" />
   ),
 });
 
@@ -205,10 +205,17 @@ export default function DashboardPage() {
   return (
     <div className="rise-stagger container mx-auto space-y-6 px-4 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Active pipeline {formatCurrency(activePipelineValue)} across{" "}
+            {overview.totalDeals} deals
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <Select value={range} onValueChange={(v) => setRange(v as DateRange)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -218,141 +225,73 @@ export default function DashboardPage() {
               <SelectItem value="this_year">This year</SelectItem>
             </SelectContent>
           </Select>
+          <Button size="sm" onClick={() => setShowQuickAdd(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            Quick Add Deal
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setShowQuickAdd(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          Quick Add Deal
-        </Button>
       </div>
 
-      {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <DollarSign className="h-4 w-4" />
-              Revenue (Month)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">
-              {formatCurrency(comparisonData?.current.revenue ?? 0)}
-            </CardTitle>
-            <div className="mt-1 flex items-center gap-2">
-              <ChangeIndicator value={comparisonData?.change.revenue ?? 0} />
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4" />
-              Active Pipeline
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">
-              {formatCurrency(activePipelineValue)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {overview.totalDeals} total deals
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <Handshake className="h-4 w-4" />
-              Deals Won (Month)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="text-3xl">{wonDealsMonth}</CardTitle>
-            <div className="mt-1 flex items-center gap-2">
-              <ChangeIndicator value={comparisonData?.change.dealsWon ?? 0} />
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <Target className="h-4 w-4" />
-              Conversion Rate
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-3xl">{conversionRate}%</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {comparisonData?.current.dealsCreated ?? 0} deals created
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Row 1b: Outstanding & Overdue KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
-        <Card className="transition-shadow hover:shadow-md border-t-2 border-t-orange-400">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <span className="inline-block size-2 rounded-full bg-orange-400" aria-hidden="true" />
-              <FileText className="h-4 w-4" />
-              Outstanding Invoices
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle className="font-mono text-2xl text-orange-600 dark:text-orange-400">
-              {formatCurrency(analyticsOverview?.outstandingAmount ?? 0)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Posted invoices awaiting payment
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`transition-shadow hover:shadow-md border-t-2 ${
-            (analyticsOverview?.overdueAmount ?? 0) > 0
-              ? "border-t-red-500"
-              : "border-t-green-500"
-          }`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <span
-                className={`inline-block size-2 rounded-full ${
-                  (analyticsOverview?.overdueAmount ?? 0) > 0
-                    ? "bg-red-500"
-                    : "bg-green-500"
-                }`}
-                aria-hidden="true"
-              />
-              <AlertTriangle className="h-4 w-4" />
-              Overdue Amount
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <CardTitle
+      {/* Row 1: KPI strip — one container split by hairlines, labels above values */}
+      <Card className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-6 lg:divide-x">
+        {[
+          {
+            label: "Revenue (Month)",
+            value: formatCurrency(comparisonData?.current.revenue ?? 0),
+            caption: (
+              <>
+                <ChangeIndicator value={comparisonData?.change.revenue ?? 0} />
+                <span className="ml-1">vs last month</span>
+              </>
+            ),
+          },
+          {
+            label: "Active Pipeline",
+            value: formatCurrency(activePipelineValue),
+            caption: <>{overview.totalDeals} total deals</>,
+          },
+          {
+            label: "Deals Won (Month)",
+            value: String(wonDealsMonth),
+            caption: (
+              <>
+                <ChangeIndicator value={comparisonData?.change.dealsWon ?? 0} />
+                <span className="ml-1">vs last month</span>
+              </>
+            ),
+          },
+          {
+            label: "Conversion Rate",
+            value: `${conversionRate}%`,
+            caption: <>{comparisonData?.current.dealsCreated ?? 0} deals created</>,
+          },
+          {
+            label: "Outstanding Invoices",
+            value: formatCurrency(analyticsOverview?.outstandingAmount ?? 0),
+            caption: <>Posted invoices awaiting payment</>,
+          },
+          {
+            label: "Overdue Amount",
+            value: formatCurrency(analyticsOverview?.overdueAmount ?? 0),
+            danger: (analyticsOverview?.overdueAmount ?? 0) > 0,
+            caption: (analyticsOverview?.overdueAmount ?? 0) > 0 ? <>Past due date — needs attention</> : <>All invoices current</>,
+          },
+        ].map((kpi) => (
+          <div key={kpi.label} className="flex flex-col gap-1.5 p-4">
+            <p className="text-sm text-muted-foreground">{kpi.label}</p>
+            <p
               className={`font-mono text-2xl ${
-                (analyticsOverview?.overdueAmount ?? 0) > 0
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-green-600 dark:text-green-400"
+                kpi.danger ? "text-red-600 dark:text-red-400" : ""
               }`}
             >
-              {formatCurrency(analyticsOverview?.overdueAmount ?? 0)}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {(analyticsOverview?.overdueAmount ?? 0) > 0
-                ? "Past due date — needs attention"
-                : "All invoices current"}
+              {kpi.value}
             </p>
-          </CardContent>
-        </Card>
-      </div>
+            <p className="flex items-center text-xs text-muted-foreground">
+              {kpi.caption}
+            </p>
+          </div>
+        ))}
+      </Card>
 
       {/* Insights */}
       <InsightsWidget overview={overview} isLoading={overviewLoading} />
@@ -360,7 +299,7 @@ export default function DashboardPage() {
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Revenue by Month */}
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
@@ -373,7 +312,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Pipeline Forecast */}
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
@@ -393,9 +332,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 3: Tables */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {/* Top Products */}
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
@@ -413,7 +352,7 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topProductsData.map((p) => (
+                  {topProductsData.slice(0, 5).map((p) => (
                     <TableRow key={p.productId ?? p.productName}>
                       <TableCell className="font-medium">
                         {p.productName}
@@ -431,11 +370,20 @@ export default function DashboardPage() {
                 No product data yet
               </p>
             )}
+            {topProductsData && topProductsData.length > 5 && (
+              <Link
+                href="/products"
+                className="mt-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
+                View all {topProductsData.length} products
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </CardContent>
         </Card>
 
         {/* Invoice Aging */}
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
@@ -474,7 +422,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 4: Sales Performance */}
-      <Card className="transition-shadow hover:shadow-md">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -528,10 +476,12 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Aging Deals */}
         {overview.agingDeals && overview.agingDeals.length > 0 ? (
-          <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-700">
-                <AlertTriangle className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-4 w-4" />
+                </span>
                 Deals Needing Attention
               </CardTitle>
             </CardHeader>

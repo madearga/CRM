@@ -87,15 +87,13 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
 
   if (insights.length === 0) {
     return (
-      <Card className="border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20">
-        <CardContent className="flex items-center gap-4 py-5">
-          <div className="rounded-full bg-green-100 p-2.5 dark:bg-green-900/40">
-            <Lightbulb className="h-5 w-5 text-green-600 dark:text-green-400" />
-          </div>
+      <Card>
+        <CardContent className="flex items-center gap-3 py-5">
+          <Lightbulb className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
-            <p className="font-medium text-green-700 dark:text-green-300">All clear</p>
+            <p className="font-medium">All clear</p>
             <p className="text-sm text-muted-foreground">
-              No aging deals or urgent activities right now. Great job!
+              No aging deals or urgent activities right now.
             </p>
           </div>
         </CardContent>
@@ -104,22 +102,21 @@ export function InsightsWidget({ overview, isLoading }: { overview: any | undefi
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div
+      className={`grid grid-cols-1 gap-4 ${insights.length > 1 ? "sm:grid-cols-2" : ""}`}
+    >
       {insights.map((insight) => {
-        const borderColor =
+        // Colour only on the mark that needs attention; the card stays neutral.
+        const iconColor =
           insight.severity === "high"
-            ? "border-red-300 dark:border-red-700"
-            : "border-amber-300 dark:border-amber-700";
-        const iconBg =
-          insight.severity === "high"
-            ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
-            : "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400";
+            ? "text-red-600 dark:text-red-400"
+            : "text-amber-600 dark:text-amber-400";
 
         return (
-          <Card key={insight.id} className={`border-l-4 ${borderColor}`}>
+          <Card key={insight.id} className="gap-3 py-4">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                <span className={`rounded-full p-1.5 ${iconBg}`}>{insight.icon}</span>
+                <span className={iconColor}>{insight.icon}</span>
                 {insight.title}
               </CardTitle>
             </CardHeader>
